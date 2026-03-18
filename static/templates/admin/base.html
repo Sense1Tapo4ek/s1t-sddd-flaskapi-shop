@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/css/vars.css">
+  <!-- <link rel="stylesheet" href="/static/css/themes/neutral.css"> -->
+  <link rel="stylesheet" href="/static/css/layout.css">
+  <link rel="stylesheet" href="/static/css/components/buttons.css">
+  <link rel="stylesheet" href="/static/css/components/forms.css">
+  <link rel="stylesheet" href="/static/css/components/tables.css">
+  <link rel="stylesheet" href="/static/css/components/badges.css">
+  <link rel="stylesheet" href="/static/css/components/images.css">
+  <link rel="stylesheet" href="/static/css/components/modals.css">
+  <link rel="stylesheet" href="/static/css/components/toasts.css">
+  <link rel="stylesheet" href="/static/css/components/utils.css">
+  <link rel="stylesheet" href="/static/css/components/smart-table.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <span class="sidebar__logo">{{ app_name }}</span>
+        <span class="sidebar__sub">Админ панель</span>
+      </div>
+      <nav class="sidebar__nav">
+        <a href="/admin/products/" class="nav-link {% if active == 'products' %}nav-link--active{% endif %}">Товары</a>
+        <a href="/admin/orders/" class="nav-link {% if active == 'orders' %}nav-link--active{% endif %}" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Заказы</span>
+          <span
+            id="orders-badge"
+            hx-get="/admin/orders/badge"
+            hx-trigger="load, every 30s"
+            hx-swap="innerHTML"></span>
+        </a>
+
+        <div class="sidebar__section-title">Настройки</div>
+        <a href="/admin/settings/store" class="nav-link {% if active == 'settings' and tab == 'store' %}nav-link--active{% endif %}">Магазин</a>
+        <a href="/admin/settings/telegram" class="nav-link {% if active == 'settings' and tab == 'telegram' %}nav-link--active{% endif %}">Оповещения</a>
+        <a href="/admin/settings/security" class="nav-link {% if active == 'settings' and tab == 'security' %}nav-link--active{% endif %}">Безопасность</a>
+        <a href="/admin/help" class="nav-link {% if active == 'help' %}nav-link--active{% endif %}">Помощь</a>
+      </nav>
+      <div class="sidebar__footer">
+        <a href="#"
+          class="nav-link"
+          hx-delete="/admin/logout"
+          hx-confirm="Выйти из панели?"
+          style="color:var(--color-text-muted);">Выйти</a>
+      </div>
+    </aside>
+    <main class="content">
+      <div class="content__inner">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <div id="modal-container"></div>
+
+  <!-- Global confirm modal (used by showConfirmModal) -->
+  <div class="modal-overlay" id="globalModalOverlay">
+    <div class="modal">
+      <div class="modal__header"><span id="globalModalTitle"></span></div>
+      <div class="modal__body"><p id="globalModalText" style="white-space:pre-line; color:var(--color-text-muted); font-size:13px;"></p></div>
+      <div class="modal__footer">
+        <button id="globalModalCancel" class="btn btn--ghost">Отмена</button>
+        <button id="globalModalConfirm" class="btn btn--primary">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="/static/js/modal.js"></script>
+  <script>
+  document.body.addEventListener("showToast", function(e) {
+      var d = e.detail, el = document.createElement("div");
+      el.className = "toast toast--" + (d.type || "info");
+      el.textContent = d.message;
+      document.getElementById("toast-container").appendChild(el);
+      setTimeout(function() { el.remove(); }, d.type === "error" ? 6000 : 4000);
+  });
+
+  document.body.addEventListener("closeModal", function() {
+      document.getElementById("modal-container").innerHTML = "";
+  });
+
+  document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+          document.querySelectorAll(".modal-overlay--active").forEach(function(m) {
+              m.classList.remove("modal-overlay--active");
+          });
+          document.getElementById("modal-container").innerHTML = "";
+      }
+  });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

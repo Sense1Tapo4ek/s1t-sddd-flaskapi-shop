@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./media:/app/media
+      - ./data:/app/data
+    environment:
+      PYTHONPATH: /app/src
+      INFRA_DATABASE_URL: sqlite:///data/shop.db
+      ACCESS_JWT_SECRET: ${ACCESS_JWT_SECRET:-change-me-in-production}
+      ACCESS_DEFAULT_LOGIN: ${ACCESS_DEFAULT_LOGIN:-admin}
+      ACCESS_DEFAULT_PASSWORD: ${ACCESS_DEFAULT_PASSWORD:-changeme}
+      CATALOG_UPLOAD_DIR: media/products
+      SYSTEM_RECOVERY_TOKEN: ${SYSTEM_RECOVERY_TOKEN:-change-me-in-production}
+      ROOT_APP_ENV: ${ROOT_APP_ENV:-dev}
+      FLASK_DEBUG: "0"
+    restart: unless-stopped

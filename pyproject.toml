@@ -1,0 +1,21 @@
+[project]
+name = "s1t-sddd-flaskapi-shop"
+version = "0.1.0"
+description = "Universal forkable e-commerce boilerplate — Flask/APIFlask + SQLAlchemy + Dishka DI, S-DDD hexagonal architecture"
+requires-python = ">=3.11"
+dependencies = [
+    "apiflask>=3.0.2",
+    "dishka[flask]>=1.9.1",
+    "flask>=3.1.3",
+    "flask-cors>=6.0.2",
+    "flask-limiter>=4.1.1",
+    "gunicorn>=25.1.0",
+    "httpx>=0.28.1",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "pyjwt>=2.12.1",
+    "sqlalchemy>=2.0.48",
+    "werkzeug>=3.1.6",
+    "pyyaml>=6.0",
+    "faker>=24.0",
+]

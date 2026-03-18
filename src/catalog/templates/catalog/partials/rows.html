@@ -1,0 +1,23 @@
+{% for product in products.items %}
+<tr>
+  <td>{{ product.id }}</td>
+  <td>{{ product.title }}</td>
+  <td>{{ "%.2f"|format(product.price) }}</td>
+  <td>{{ product.created_at }}</td>
+  <td class="actions">
+    <button class="btn btn--ghost btn--sm"
+            hx-get="/admin/products/{{ product.id }}/form"
+            hx-target="#modal-container"
+            hx-swap="innerHTML">Edit</button>
+    <button class="btn btn--danger btn--sm"
+            hx-delete="/admin/products/{{ product.id }}"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            hx-confirm="Delete this product?">Delete</button>
+  </td>
+</tr>
+{% else %}
+<tr>
+  <td colspan="5" style="text-align:center; color: var(--color-text-muted);">No products found.</td>
+</tr>
+{% endfor %}

@@ -1,0 +1,19 @@
+<p style="font-size:0.875rem; color:var(--color-text-muted); margin-bottom:1rem;">
+  Код отправлен в Telegram. Введите 6-значный код для входа.
+</p>
+<form hx-post="/admin/verify-code" hx-target="#code-error" hx-swap="innerHTML">
+    <div class="form-group">
+        <label class="form-label" for="code">Код восстановления</label>
+        <input class="form-input" type="text" id="code" name="code"
+               placeholder="000000" required autofocus
+               maxlength="6" pattern="\d{6}" inputmode="numeric"
+               style="letter-spacing:0.3em; text-align:center; font-size:1.25rem;">
+    </div>
+    <div class="error-msg" id="code-error"></div>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit" style="width:100%">Войти</button>
+    </div>
+    <div style="margin-top:0.75rem; text-align:center;">
+        <a href="/admin/login" class="btn btn--ghost btn--sm">Назад</a>
+    </div>
+</form>

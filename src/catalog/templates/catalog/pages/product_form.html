@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% set active = "products" %}
+
+{% block title %}{% if product_id %}Редактировать товар{% else %}Новый товар{% endif %} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h2 class="page-title">{% if product_id %}Редактировать товар{% else %}Новый товар{% endif %}</h2>
+  </div>
+</div>
+
+<div id="formAlert" class="alert alert--error" style="display:none; max-width:640px; margin-bottom:16px;"></div>
+
+<form id="productForm" class="form form--wide" enctype="multipart/form-data">
+
+  <div class="form-group">
+    <label class="form-label" for="f-title">Название *</label>
+    <input class="form-input" type="text" id="f-title" name="title" required>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="f-price">Цена (BYN) *</label>
+    <input class="form-input" type="number" id="f-price" name="price" step="0.01" min="0" required>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="f-description">Описание</label>
+    <textarea class="form-input form-textarea" id="f-description" name="description" rows="6"></textarea>
+  </div>
+
+  <div class="form-group" id="currentImagesBlock" style="display:none;">
+    <label class="form-label">Текущие фотографии</label>
+    <div id="currentImages" class="image-grid"></div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="f-images">{% if product_id %}Добавить фотографии{% else %}Фотографии{% endif %}</label>
+    <input class="form-input" type="file" id="f-images"
+           name="{% if product_id %}new_images{% else %}images{% endif %}"
+           multiple accept="image/*">
+    <div id="previewImages" class="image-grid" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="form-actions" style="margin-bottom:48px;">
+    <button class="btn btn--primary" type="submit">
+      {% if product_id %}Сохранить{% else %}Создать{% endif %}
+    </button>
+    <a href="/admin/products/" class="btn btn--ghost">Отмена</a>
+  </div>
+</form>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox__close" onclick="closeLightbox()">&times;</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script>
+const productId = {{ product_id | tojson }};
+
+// --- Lightbox ---
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('lightbox--active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('lightbox--active');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// --- Load product for edit ---
+async function loadProduct() {
+  if (!productId) return;
+  const detail = await api.get('/catalog/' + productId);
+  if (!detail || detail.error) return;
+  document.getElementById('f-title').value = detail.title || '';
+  document.getElementById('f-price').value = detail.price || '';
+  document.getElementById('f-description').value = detail.description || '';
+  renderCurrentImages(detail.images || []);
+}
+
+function renderCurrentImages(images) {
+  const block = document.getElementById('currentImagesBlock');
+  const grid  = document.getElementById('currentImages');
+  if (!images.length) { block.style.display = 'none'; grid.innerHTML = ''; return; }
+  block.style.display = 'block';
+  grid.innerHTML = images.map(src => `
+    <div class="image-thumb" id="thumb_${btoa(src).replace(/=/g,'')}">
+      <img src="${esc(src)}" alt="" onclick="openLightbox('${esc(src)}')">
+      <button type="button" class="image-thumb__del" onclick="deleteImage(this, '${esc(src)}')">&#215;</button>
+    </div>
+  `).join('');
+}
+
+async function deleteImage(btn, src) {
+  if (!productId) return;
+  btn.disabled = true;
+  const res = await api.del(`/catalog/${productId}/images`);
+  // API requires JSON body — use raw fetch since api.del doesn't accept body
+  const r = await fetch(`/catalog/${productId}/images`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_path: src }),
+  }).then(r => r.json()).catch(() => ({}));
+
+  if (r && (r.id || r.images !== undefined)) {
+    renderCurrentImages(r.images || []);
+  } else {
+    btn.disabled = false;
+    document.body.dispatchEvent(new CustomEvent('showToast', {
+      detail: { message: r.error || 'Ошибка удаления фото', type: 'error' }
+    }));
+  }
+}
+
+// --- Image preview on file select ---
+document.getElementById('f-images').addEventListener('change', function() {
+  const preview = document.getElementById('previewImages');
+  preview.innerHTML = '';
+  for (const file of this.files) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const div = document.createElement('div');
+      div.className = 'image-thumb';
+      div.innerHTML = `<img src="${e.target.result}" alt="" onclick="openLightbox(this.src)">`;
+      preview.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// --- Form submit ---
+document.getElementById('productForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const alertEl = document.getElementById('formAlert');
+  alertEl.style.display = 'none';
+
+  const fd = new FormData(this);
+  const url    = productId ? `/catalog/${productId}` : '/catalog';
+  const method = productId ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    credentials: 'same-origin',
+    body: fd,
+  }).then(r => r.json()).catch(err => ({ error: err.message }));
+
+  if (res.id || res.success) {
+    window.location = '/admin/products/';
+  } else {
+    alertEl.textContent = res.message || res.error || 'Ошибка сохранения';
+    alertEl.style.display = 'block';
+  }
+});
+
+loadProduct();
+</script>
+{% endblock %}

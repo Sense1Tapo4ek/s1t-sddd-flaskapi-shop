@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active = "settings" %}
+
+{% block title %}Settings — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h2 class="page-title">{{ tab_title }}</h2>
+  </div>
+  <div class="page-header__right">
+    <button class="help-badge" onclick="document.getElementById('settings-help-modal').classList.add('modal-overlay--active')" title="Help">?</button>
+  </div>
+</div>
+
+{% if tab == 'telegram' %}
+  {% include "system/partials/telegram_form.html" %}
+{% elif tab == 'security' %}
+  <form hx-put="/admin/settings/password"
+        hx-target="this"
+        hx-swap="none"
+        class="form form--wide">
+    <section class="form-section">
+      <h3 class="form-section__title">Смена пароля</h3>
+      <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+        Используйте надёжный пароль — не менее 5 символов, буквы и цифры.
+      </p>
+
+      <div class="form-group" style="max-width:320px;">
+        <label class="form-label" for="new_password">Новый пароль</label>
+        <input class="form-input" type="password" id="new_password" name="new_password"
+               placeholder="Минимум 5 символов" required minlength="5">
+      </div>
+    </section>
+
+    <div class="form-actions" style="margin-bottom:48px;">
+      <button class="btn btn--primary" type="submit">Сохранить пароль</button>
+    </div>
+  </form>
+{% else %}
+  {% include "system/partials/store_form.html" %}
+{% endif %}
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="settings-help-modal" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      {{ tab_title }} — Справка
+      <button class="modal__close" onclick="document.getElementById('settings-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      {% if tab == 'telegram' %}
+        <p style="margin-top:0;"><strong>Зачем:</strong> Telegram-бот нужен для мгновенных уведомлений о новых заказах и для восстановления пароля.</p>
+        <p><strong>Пошаговая настройка:</strong></p>
+        <ol style="padding-left:20px; margin:8px 0 0;">
+          <li>Откройте Telegram, найдите <code>@BotFather</code> и создайте нового бота. Скопируйте полученный Token.</li>
+          <li>Вставьте Token в поле «Bot Token» на этой странице.</li>
+          <li>Откройте диалог с вашим новым ботом в Telegram и нажмите «Запустить» (или отправьте <code>/start</code>).</li>
+          <li>Вернитесь сюда и нажмите «Get Chat ID» — система найдёт ваш диалог автоматически.</li>
+          <li>Нажмите «Save», затем «Send Test Message» для проверки связи.</li>
+        </ol>
+        <p style="margin-top:12px;"><strong>Важно:</strong> Между отправкой <code>/start</code> и нажатием «Get Chat ID» должно пройти не более 15 минут.</p>
+      {% elif tab == 'security' %}
+        <ul style="padding-left:18px; margin:0;">
+          <li><strong>Смена пароля:</strong> Введите новый пароль (минимум 5 символов) и подтвердите его. Текущий пароль не требуется — доступ уже подтверждён сессией.</li>
+          <li><strong>Хранение:</strong> Пароли хранятся в зашифрованном виде. Исходный пароль восстановить из базы невозможно.</li>
+          <li><strong>Восстановление через Telegram:</strong> Если вы забыли пароль, на странице входа можно получить одноразовый код в Telegram и войти без пароля. После входа смените пароль здесь.</li>
+          <li style="color:var(--color-danger);"><strong>⚠ Важно:</strong> Тот, у кого есть доступ к вашему Telegram-аккаунту, может войти в панель без пароля. Защитите Telegram двухфакторной аутентификацией.</li>
+        </ul>
+      {% else %}
+        <ul style="padding-left:18px; margin:0;">
+          <li><strong>Контакты:</strong> Телефон, email, адрес и режим работы — отображаются на публичных страницах (шапка, подвал, страница контактов).</li>
+          <li><strong>Карта:</strong> Укажите координаты (широту и долготу) для интерактивной карты на странице контактов.</li>
+          <li><strong>Соцсети:</strong> Полная ссылка на Instagram (начиная с <code>https://</code>). Пустое поле — иконка скрыта.</li>
+          <li><strong>Сохранение:</strong> Нажмите «Сохранить» внизу формы. Изменения применяются мгновенно.</li>
+        </ul>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

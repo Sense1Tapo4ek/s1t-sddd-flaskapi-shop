@@ -1,0 +1,15 @@
+/* Neutral alternative theme — overrides Japandi vars */
+:root {
+  --color-bg: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-sidebar: #1e293b;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-text: #1e293b;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #f8fafc;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --radius: 6px;
+}

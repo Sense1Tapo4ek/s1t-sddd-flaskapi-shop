@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% set active = "orders" %}
+
+{% block title %}Заказы — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h2 class="page-title">Заказы</h2>
+    <button class="help-badge" onclick="document.getElementById('orders-help-modal').classList.add('modal-overlay--active')" title="Help">?</button>
+  </div>
+  <button class="btn btn--ghost btn--sm" onclick="createTestOrder()">+ Тестовый заказ</button>
+</div>
+
+<div id="orders-container"></div>
+
+<div class="modal-overlay" id="orders-help-modal" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Заказы — Справка
+      <button class="modal__close" onclick="document.getElementById('orders-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <ul style="padding-left:18px; margin:0;">
+        <li><strong>Фильтрация:</strong> Нажмите «+» в заголовке колонки, чтобы добавить фильтр по этому полю. Активные фильтры отображаются сверху таблицы.</li>
+        <li><strong>Сортировка:</strong> Кликните на заголовок колонки — стрелка покажет направление. Повторный клик меняет порядок.</li>
+        <li><strong>Колонки:</strong> Кнопка «Колонки» позволяет скрыть ненужные колонки.</li>
+        <li><strong>Пагинация:</strong> Выберите количество строк (10 / 20 / 50) и переходите между страницами.</li>
+        <li><strong>Удаление:</strong> Кнопка «Удалить» в колонке «Действия» безвозвратно удаляет заказ после подтверждения.</li>
+        <li><strong>Фильтр по умолчанию:</strong> При открытии страницы отображаются только новые заказы. Снимите фильтр, чтобы увидеть все.</li>
+        <li><strong>Тестовый заказ:</strong> Кнопка «+ Тестовый заказ» создаёт тестовую заявку. Если Telegram настроен — придёт уведомление.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/smart-table.js"></script>
+<script>
+const STATUS_LABELS = {
+  new: 'Новый',
+  processing: 'В обработке',
+  done: 'Выполнен',
+  canceled: 'Отменён'
+};
+
+const STATUS_BADGE_CLASS = {
+  new: 'badge--new',
+  processing: '',
+  done: 'badge--done',
+  canceled: 'badge--trash'
+};
+
+function statusBadge(status) {
+  const cls = STATUS_BADGE_CLASS[status] || '';
+  const label = STATUS_LABELS[status] || status;
+  return `<span class="badge ${cls}">${esc(label)}</span>`;
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Удалить заказ #' + id + '?')) return;
+  const r = await api.del('/orders/' + id);
+  if (r.error) {
+    document.body.dispatchEvent(new CustomEvent('showToast', {
+      detail: { message: r.error, type: 'error' }
+    }));
+  } else {
+    document.body.dispatchEvent(new CustomEvent('showToast', {
+      detail: { message: 'Заказ #' + id + ' удалён', type: 'success' }
+    }));
+    window.ordersTable.load();
+  }
+}
+
+async function createTestOrder() {
+  await api.post('/orders', { name: 'Тестовый клиент', phone: '+375291234567', comment: 'Тестовый заказ' });
+  window.ordersTable.load();
+  document.body.dispatchEvent(new CustomEvent('showToast', {
+    detail: { message: 'Тестовый заказ создан', type: 'success' }
+  }));
+}
+
+window.ordersTable = new SmartTable({
+  instanceName: 'ordersTable',
+  endpoint: '/orders',
+  schemaEndpoint: '/orders/search/schema',
+  containerId: 'orders-container',
+  defaultSortBy: 'created_at',
+  defaultSortDir: 'desc',
+  columns: [
+    { key: 'id',         label: '#',           sortable: true  },
+    { key: 'name',       label: 'Имя',         sortable: true  },
+    { key: 'phone',      label: 'Телефон',      sortable: false },
+    { key: 'comment',    label: 'Комментарий',  sortable: false },
+    { key: 'created_at', label: 'Дата',         sortable: true  },
+    { key: 'status',     label: 'Статус',       sortable: true,  render: item => statusBadge(item.status) },
+    { key: 'actions',    label: 'Действия',     sortable: false, render: item => `<button class="btn btn--danger btn--sm" onclick="deleteOrder(${item.id})">Удалить</button>` },
+  ]
+});
+
+window.ordersTable.state.activeFilters = [
+  { key: 'status', op: 'eq', val: 'new', label: 'Статус' }
+];
+window.ordersTable.load();
+</script>
+{% endblock %}

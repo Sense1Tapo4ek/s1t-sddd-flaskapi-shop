@@ -1,0 +1,50 @@
+<div id="product-table-wrap">
+  <table class="table" id="product-table">
+    <thead>
+      <tr>
+        <th>
+          <a hx-get="/admin/products/table?sort_by=id&sort_dir=asc"
+             hx-target="#product-table-wrap" hx-swap="outerHTML"
+             class="sort-link">ID</a>
+        </th>
+        <th>
+          <a hx-get="/admin/products/table?sort_by=title&sort_dir=asc"
+             hx-target="#product-table-wrap" hx-swap="outerHTML"
+             class="sort-link">Title</a>
+        </th>
+        <th>
+          <a hx-get="/admin/products/table?sort_by=price&sort_dir=asc"
+             hx-target="#product-table-wrap" hx-swap="outerHTML"
+             class="sort-link">Price</a>
+        </th>
+        <th>
+          <a hx-get="/admin/products/table?sort_by=created_at&sort_dir=desc"
+             hx-target="#product-table-wrap" hx-swap="outerHTML"
+             class="sort-link">Created</a>
+        </th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% include "catalog/partials/rows.html" %}
+    </tbody>
+  </table>
+
+  {% if products.total > products.items | length %}
+  <div class="pagination">
+    {% set current_page = request.args.get('page', 1) | int %}
+    {% set total_pages = (products.total / request.args.get('limit', 20) | int) | round(0, 'ceil') | int %}
+    {% if current_page > 1 %}
+    <a class="btn btn--ghost btn--sm"
+       hx-get="/admin/products/table?page={{ current_page - 1 }}"
+       hx-target="#product-table-wrap" hx-swap="outerHTML">Prev</a>
+    {% endif %}
+    <span class="pagination__info">{{ products.total }} total</span>
+    {% if current_page < total_pages %}
+    <a class="btn btn--ghost btn--sm"
+       hx-get="/admin/products/table?page={{ current_page + 1 }}"
+       hx-target="#product-table-wrap" hx-swap="outerHTML">Next</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>

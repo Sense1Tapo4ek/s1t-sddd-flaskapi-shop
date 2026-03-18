@@ -1,0 +1,25 @@
+<tr>
+  <td>{{ order.id }}</td>
+  <td>{{ order.name }}</td>
+  <td>{{ order.phone }}</td>
+  <td>
+    <div style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+         title="{{ order.comment }}">{{ order.comment or "—" }}</div>
+  </td>
+  <td>{{ order.created_at }}</td>
+  <td>
+    <span class="badge badge--{{ order.status }}">{{ order.status }}</span>
+  </td>
+  <td>
+    <select class="form-input form-input--sm"
+            hx-patch="/admin/orders/{{ order.id }}/status"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            name="status">
+      <option value="new" {% if order.status == 'new' %}selected{% endif %}>New</option>
+      <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>Processing</option>
+      <option value="done" {% if order.status == 'done' %}selected{% endif %}>Done</option>
+      <option value="canceled" {% if order.status == 'canceled' %}selected{% endif %}>Canceled</option>
+    </select>
+  </td>
+</tr>

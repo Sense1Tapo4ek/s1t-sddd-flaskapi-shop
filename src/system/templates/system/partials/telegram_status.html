@@ -1,0 +1,7 @@
+{% if success is defined %}
+  {% if success %}
+    <span style="font-size:13px; color:var(--color-success);">Message sent successfully.</span>
+  {% else %}
+    <span style="font-size:13px; color:var(--color-danger);">Failed to send. Check bot token and chat ID.</span>
+  {% endif %}
+{% endif %}

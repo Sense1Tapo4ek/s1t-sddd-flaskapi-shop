@@ -1,0 +1,79 @@
+<form hx-put="/admin/settings/store"
+      hx-target="this"
+      hx-swap="outerHTML"
+      class="form form--wide">
+
+  <section class="form-section">
+    <h3 class="form-section__title">Контактная информация</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Отображается в шапке, подвале и на странице контактов.
+    </p>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="phone">Телефон</label>
+        <input class="form-input" type="tel" id="phone" name="phone"
+               placeholder="+375 (29) 000-00-00"
+               value="{{ settings.contacts.phone }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-input" type="email" id="email" name="email"
+               placeholder="mail@example.com"
+               value="{{ settings.contacts.email }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="address">Адрес</label>
+      <input class="form-input" type="text" id="address" name="address"
+             placeholder="Город, улица, дом"
+             value="{{ settings.contacts.address }}">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="working_hours">Режим работы</label>
+      <input class="form-input" type="text" id="working_hours" name="working_hours"
+             placeholder="Пн–Пт: 10:00–20:00"
+             value="{{ settings.contacts.working_hours }}">
+    </div>
+  </section>
+
+  <section class="form-section">
+    <h3 class="form-section__title">Карта</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Координаты для интерактивной карты на странице контактов.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="coords_lat">Широта</label>
+        <input class="form-input" type="number" id="coords_lat" name="coords_lat"
+               step="any" placeholder="53.900000"
+               value="{{ settings.coords.lat }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="coords_lon">Долгота</label>
+        <input class="form-input" type="number" id="coords_lon" name="coords_lon"
+               step="any" placeholder="27.566667"
+               value="{{ settings.coords.lon }}">
+      </div>
+    </div>
+  </section>
+
+  <section class="form-section">
+    <h3 class="form-section__title">Социальные сети</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Полная ссылка на профиль. Пустое поле — иконка скрыта.
+    </p>
+    <div class="form-group">
+      <label class="form-label" for="instagram">Instagram</label>
+      <input class="form-input" type="url" id="instagram" name="instagram"
+             placeholder="https://instagram.com/your_profile"
+             value="{{ settings.socials.instagram }}">
+    </div>
+  </section>
+
+  <div class="form-actions" style="margin-bottom:48px;">
+    <button class="btn btn--primary" type="submit">Сохранить</button>
+  </div>
+</form>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — {{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/vars.css">
+    <link rel="stylesheet" href="/static/css/components/forms.css">
+    <link rel="stylesheet" href="/static/css/components/buttons.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--color-bg); }
+        .login-card { background: var(--color-surface); padding: 2rem; border-radius: var(--radius); box-shadow: var(--shadow-md); width: 100%; max-width: 360px; }
+        .login-card h1 { margin: 0 0 1.5rem; font-size: 1.25rem; color: var(--color-text); }
+        .error-msg { color: var(--color-danger); font-size: 0.875rem; margin-top: 0.5rem; min-height: 1em; }
+        .recovery-desc { font-size: 0.875rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 1rem; }
+        .recovery-actions { display: flex; gap: 8px; }
+        .recovery-actions .btn { flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1>{{ app_name }}</h1>
+
+        <div id="login-form">
+            <form hx-post="/admin/login" hx-target="#login-error" hx-swap="innerHTML">
+                <div class="form-group">
+                    <label class="form-label" for="login">Login</label>
+                    <input class="form-input" type="text" id="login" name="login" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-input" type="password" id="password" name="password" required>
+                </div>
+                <div class="error-msg" id="login-error"></div>
+                <div class="form-actions">
+                    <button class="btn btn--primary" type="submit" style="width:100%">Login</button>
+                </div>
+            </form>
+            <div style="margin-top:0.75rem; text-align:center;">
+                <button class="btn btn--ghost btn--sm" type="button"
+                        onclick="showRecovery()">Forgot password?</button>
+            </div>
+        </div>
+
+        <div id="recovery-section" style="display:none">
+            <p class="recovery-desc">
+                Одноразовый код для входа будет отправлен в привязанный Telegram-чат администратора.
+                Код действителен 5 минут.
+            </p>
+            <div class="error-msg" id="recovery-error"></div>
+            <div class="recovery-actions">
+                <button class="btn btn--ghost" type="button" onclick="hideRecovery()">Отмена</button>
+                <button class="btn btn--primary" type="button" id="send-code-btn"
+                        hx-post="/admin/recover"
+                        hx-target="#recovery-section"
+                        hx-swap="innerHTML">Получить код</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function showRecovery() {
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('recovery-section').style.display = '';
+    }
+    function hideRecovery() {
+        document.getElementById('recovery-section').style.display = 'none';
+        document.getElementById('login-form').style.display = '';
+    }
+
+    // Handle HTMX errors on login page (no toast system here)
+    document.body.addEventListener('htmx:responseError', function(e) {
+        var xhr = e.detail.xhr;
+        var target = e.detail.target;
+        var msg = 'Ошибка сервера';
+        try {
+            // Try to get HX-Trigger toast message
+            var trigger = xhr.getResponseHeader('HX-Trigger');
+            if (trigger) {
+                var parsed = JSON.parse(trigger);
+                if (parsed.showToast) msg = parsed.showToast.message;
+            }
+        } catch(ex) {}
+        // Show error in nearest error-msg element
+        var errEl = target || document.getElementById('recovery-error');
+        if (errEl) errEl.textContent = msg;
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Руководство пользователя — {{ app_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/vars.css">
+  <link rel="stylesheet" href="/static/css/components/buttons.css">
+  <style>
+    html, body { height: auto; overflow: visible; }
+    body { background: var(--color-bg); padding: 40px 20px; font-family: var(--font-body); }
+    .help-container { max-width: 820px; margin: 0 auto; }
+
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+    .page-title { font-family: var(--font-serif); font-size: 24px; font-weight: 600; color: var(--color-text); margin: 0; }
+
+    .help-group { margin-bottom: 32px; }
+    .help-group__label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: 10px;
+      padding-left: 4px;
+    }
+
+    .help-card {
+      background: var(--color-surface);
+      padding: 28px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 12px;
+    }
+    .help-card:last-child { margin-bottom: 0; }
+
+    .help-card__header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .help-card__num {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      min-width: 20px;
+    }
+    .help-card__title {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .help-text { font-size: 13px; line-height: 1.75; color: var(--color-text-muted); }
+    .help-text strong { color: var(--color-text); font-weight: 500; }
+    .help-text code {
+      font-size: 12px;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: monospace;
+    }
+
+    .help-list { margin: 8px 0 0; padding-left: 20px; }
+    .help-list li { margin-bottom: 7px; }
+    .help-list li:last-child { margin-bottom: 0; }
+
+    .help-steps { margin: 8px 0 0; padding-left: 20px; }
+    .help-steps li { margin-bottom: 8px; }
+    .help-steps li:last-child { margin-bottom: 0; }
+
+    .help-section { margin-bottom: 20px; }
+    .help-section:last-child { margin-bottom: 0; }
+    .help-h3 { font-size: 13px; font-weight: 600; color: var(--color-text); margin: 0 0 7px; }
+
+    .help-kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 3px;
+      font-size: 12px;
+      font-family: monospace;
+      line-height: 1.6;
+    }
+
+    .help-note {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--color-bg);
+      border-left: 3px solid var(--color-border);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--color-text-muted);
+    }
+    .help-note strong { color: var(--color-text); font-weight: 500; }
+
+    .page-footer { text-align: center; padding: 24px 0 8px; }
+  </style>
+</head>
+<body>
+  <div class="help-container">
+
+    <div class="page-header">
+      <h1 class="page-title">Руководство пользователя</h1>
+      <a href="/admin/" class="btn btn--ghost">← Панель управления</a>
+    </div>
+
+    <!-- ─── Интерфейс и навигация ─── -->
+    <div class="help-group">
+      <div class="help-group__label">Интерфейс и навигация</div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">—</span>
+          <h2 class="help-card__title">Общие элементы управления</h2>
+        </div>
+        <div class="help-text">
+          <ul class="help-list">
+            <li>
+              <strong>Быстрая справка:</strong> В правом верхнем углу каждого раздела панели управления есть иконка
+              <span class="help-kbd">?</span>. Нажмите на неё, чтобы прочитать краткую инструкцию по работе
+              с текущей страницей.
+            </li>
+            <li>
+              <strong>Масштабирование:</strong> Если таблица или форма не помещается на экране — зажмите
+              <span class="help-kbd">Ctrl</span> и покрутите колёсико мыши, чтобы уменьшить или увеличить
+              масштаб интерфейса.
+            </li>
+            <li>
+              <strong>Закрытие окон:</strong> Любое всплывающее окно (подтверждение удаления, просмотр фото
+              и т.п.) можно закрыть, нажав <span class="help-kbd">Esc</span> на клавиатуре или кликнув
+              мышью в любую пустую область за пределами окна.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Вход и безопасность ─── -->
+    <div class="help-group">
+      <div class="help-group__label">Вход и безопасность</div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">1</span>
+          <h2 class="help-card__title">Вход в панель управления</h2>
+        </div>
+        <div class="help-text">
+          Для входа перейдите по адресу <code>/admin/login</code> и введите логин и пароль.
+          <br><br>
+          <strong>Первый вход:</strong> Логин и пароль для первоначального доступа предоставляет разработчик.
+          После первого входа рекомендуется сразу сменить пароль в разделе
+          Настройки&nbsp;→&nbsp;Безопасность.
+        </div>
+      </div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">2</span>
+          <h2 class="help-card__title">Смена пароля</h2>
+        </div>
+        <div class="help-text">
+          <strong>Где найти:</strong> Настройки&nbsp;→&nbsp;Безопасность.
+          <br><br>
+          Для смены пароля необходимо ввести текущий пароль и дважды — новый.
+          Новый пароль должен содержать не менее 5 символов.
+        </div>
+      </div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">3</span>
+          <h2 class="help-card__title">Восстановление пароля</h2>
+        </div>
+        <div class="help-text">
+          Функция работает только если в настройках магазина подключён Telegram-бот
+          (см. раздел&nbsp;7).
+          <br><br>
+          <strong>Как восстановить:</strong>
+          <ol class="help-steps">
+            <li>На странице входа нажмите кнопку <strong>«Забыли пароль?»</strong>.</li>
+            <li>Появится диалог с описанием. Нажмите <strong>«Получить код»</strong>.</li>
+            <li>В Telegram-боте придёт одноразовый 6-значный код.</li>
+            <li>Введите код в поле на странице входа и нажмите <strong>«Войти»</strong>.</li>
+            <li>После успешного входа сразу установите новый постоянный пароль в разделе
+                Настройки&nbsp;→&nbsp;Безопасность.</li>
+          </ol>
+        </div>
+        <div class="help-note">
+          <strong>Важно:</strong> Код действителен в течение 5 минут. Если код не пришёл —
+          убедитесь, что вы запустили бота в Telegram (отправили ему <code>/start</code>)
+          и что бот-токен и Chat ID сохранены корректно.
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Настройки магазина ─── -->
+    <div class="help-group">
+      <div class="help-group__label">Настройки магазина</div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">4</span>
+          <h2 class="help-card__title">Основная информация</h2>
+        </div>
+        <div class="help-text">
+          Раздел: Настройки&nbsp;→&nbsp;Магазин. Здесь управляется публичная информация,
+          которая отображается в шапке, футере и на странице контактов сайта.
+          <ul class="help-list" style="margin-top:12px;">
+            <li><strong>Телефон:</strong> контактный номер (например, <code>+375 29 000-00-00</code>).</li>
+            <li><strong>Email:</strong> адрес электронной почты для связи.</li>
+            <li><strong>Физический адрес:</strong> адрес офлайн-магазина или офиса.</li>
+            <li><strong>Режим работы:</strong> текстовое описание графика работы
+                (например, «Пн–Пт: 9:00–18:00»).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">5</span>
+          <h2 class="help-card__title">Карта и геолокация</h2>
+        </div>
+        <div class="help-text">
+          Укажите географические координаты, чтобы на странице контактов сайта отображалась
+          интерактивная карта с отметкой вашего местоположения.
+          <ul class="help-list" style="margin-top:12px;">
+            <li><strong>Широта (Latitude)</strong> и <strong>Долгота (Longitude):</strong>
+                вводятся в десятичном формате. Пример: <code>53.900000</code> и <code>27.566667</code>.</li>
+          </ul>
+        </div>
+        <div class="help-note">
+          Координаты любого адреса можно найти в Яндекс.Картах или Google Maps — нажмите
+          правой кнопкой мыши на нужную точку на карте и скопируйте значения.
+        </div>
+      </div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">6</span>
+          <h2 class="help-card__title">Социальные сети</h2>
+        </div>
+        <div class="help-text">
+          Укажите полный адрес страницы вашего профиля. Ссылка обязательно должна начинаться
+          с <code>https://</code> (например, <code>https://instagram.com/yourshop</code>).
+          <br><br>
+          <strong>Важно:</strong> Если поле оставить пустым, иконка этой социальной сети
+          автоматически скроется с сайта и не будет отображаться посетителям.
+        </div>
+      </div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">7</span>
+          <h2 class="help-card__title">Telegram-уведомления (настройка бота)</h2>
+        </div>
+        <div class="help-text">
+          Telegram-бот необходим для двух целей: мгновенного получения уведомлений о новых
+          заказах и работы функции восстановления пароля.
+          <br><br>
+          <strong>Пошаговая инструкция:</strong>
+          <ol class="help-steps">
+            <li>Перейдите в Настройки&nbsp;→&nbsp;Telegram.</li>
+            <li>Откройте Telegram, найдите официального бота <code>@BotFather</code>.
+                Следуйте его инструкциям для создания нового бота. Скопируйте полученный <strong>Token</strong>.</li>
+            <li>Вставьте скопированный токен в поле <strong>«Bot Token»</strong> в панели управления.</li>
+            <li>Перейдите в диалог с вашим новым ботом в Telegram и нажмите кнопку
+                <strong>«Запустить»</strong> (или отправьте команду <code>/start</code>).
+                Это необходимо, чтобы бот получил разрешение писать вам сообщения.</li>
+            <li>Вернитесь в панель управления и нажмите <strong>«Получить Chat ID»</strong> —
+                система автоматически найдёт ваш диалог и заполнит поле.</li>
+            <li>Нажмите <strong>«Сохранить»</strong>, после чего нажмите
+                <strong>«Отправить тестовое сообщение»</strong>. Если в Telegram пришло
+                тестовое уведомление — настройка завершена успешно.</li>
+          </ol>
+        </div>
+        <div class="help-note">
+          Если тестовое сообщение не пришло — проверьте, что вы отправили <code>/start</code>
+          боту <em>до</em> нажатия «Получить Chat ID», и что токен скопирован полностью,
+          без лишних пробелов.
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Управление данными ─── -->
+    <div class="help-group">
+      <div class="help-group__label">Управление данными: Товары и Заказы</div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">8</span>
+          <h2 class="help-card__title">Работа с таблицей</h2>
+        </div>
+        <div class="help-text">
+          Разделы «Товары» и «Заказы» используют единый инструмент — умную таблицу.
+          С её помощью можно быстро искать нужные записи, настраивать отображение и управлять данными.
+          <ul class="help-list" style="margin-top:12px;">
+            <li>
+              <strong>Сортировка:</strong> Нажмите на заголовок любой колонки, чтобы отсортировать
+              список по этому полю. Повторное нажатие изменит направление сортировки
+              (по возрастанию или убыванию).
+            </li>
+            <li>
+              <strong>Фильтрация (Поиск):</strong> Нажмите на символ <strong>+</strong> в заголовке
+              нужной колонки. В появившейся панели выберите условие (содержит, равно, больше и т.д.),
+              введите значение и нажмите <strong>«Применить»</strong>.
+            </li>
+            <li>
+              <strong>Управление фильтрами:</strong> Все активные фильтры отображаются над таблицей
+              в виде ярлыков. Чтобы отменить конкретный фильтр, нажмите <strong>×</strong>
+              на соответствующем ярлыке.
+            </li>
+            <li>
+              <strong>Настройка колонок:</strong> Кнопка <strong>«Настроить колонки»</strong>
+              позволяет скрыть лишние поля и оставить только нужные. Как минимум одна колонка
+              должна оставаться видимой.
+            </li>
+            <li>
+              <strong>Количество строк на странице:</strong> В верхней части таблицы выберите,
+              сколько записей отображать одновременно (10, 25, 50…).
+            </li>
+            <li>
+              <strong>Навигация по страницам:</strong> Используйте стрелки в нижней части таблицы
+              для перехода между страницами.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">9</span>
+          <h2 class="help-card__title">Действия с записями</h2>
+        </div>
+        <div class="help-text">
+          Для каждой записи в таблице предусмотрены кнопки управления в последней колонке.
+
+          <div class="help-section" style="margin-top:16px;">
+            <div class="help-h3">В разделе «Товары»:</div>
+            <ul class="help-list">
+              <li>
+                <strong>Изменить:</strong> Открывает форму редактирования товара.
+              </li>
+              <li>
+                <strong>Удалить:</strong> Полностью и безвозвратно удаляет товар из базы данных.
+                Все прикреплённые к товару фотографии также физически удаляются с сервера.
+              </li>
+            </ul>
+          </div>
+
+          <div class="help-section">
+            <div class="help-h3">В разделе «Заказы»:</div>
+            <ul class="help-list">
+              <li>
+                <strong>Изменение статуса:</strong> В каждой строке есть выпадающий список со
+                статусами: <em>Новый, В обработке, Выполнен, Отменён</em>. Выбранный статус
+                сохраняется автоматически — кнопка «Сохранить» не нужна.
+              </li>
+              <li>
+                <strong>«+ Тестовый заказ»:</strong> Кнопка создаёт фиктивную заявку, чтобы
+                проверить, что Telegram-уведомления работают корректно. Если бот не настроен,
+                заказ будет создан без отправки уведомления.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-card">
+        <div class="help-card__header">
+          <span class="help-card__num">10</span>
+          <h2 class="help-card__title">Редактирование товара (форма)</h2>
+        </div>
+        <div class="help-text">
+          При нажатии «Изменить» или «Добавить товар» открывается форма редактирования.
+          Обратите внимание на следующие особенности её работы:
+          <ul class="help-list" style="margin-top:12px;">
+            <li>
+              <strong>Обязательные поля:</strong> Поля <strong>«Название»</strong> и
+              <strong>«Цена»</strong> отмечены звёздочкой&nbsp;(*). Сохранить карточку товара
+              без их заполнения невозможно.
+            </li>
+            <li>
+              <strong>Просмотр фотографий:</strong> Нажмите на миниатюру любой уже загруженной
+              фотографии, чтобы рассмотреть её в увеличенном виде во весь экран.
+            </li>
+            <li>
+              <strong>Удаление фотографий:</strong> При наведении курсора на загруженное
+              изображение появляется кнопка с крестиком. Нажатие удаляет фотографию
+              <em>немедленно и без возможности отмены</em>. Фото физически удаляется с сервера.
+            </li>
+            <li>
+              <strong>Добавление новых фото:</strong> Можно выбрать и загрузить сразу несколько
+              файлов. Предварительный просмотр новых изображений отобразится внизу формы,
+              но на сервер они будут сохранены только после нажатия кнопки
+              <strong>«Сохранить»</strong>.
+            </li>
+          </ul>
+        </div>
+        <div class="help-note">
+          <strong>Внимание:</strong> Удаление товара или фотографий — необратимая операция.
+          Перед удалением убедитесь, что выбрали нужную запись.
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <a href="/admin/" class="btn btn--ghost">← Вернуться в панель управления</a>
+    </div>
+
+  </div>
+</body>
+</html>

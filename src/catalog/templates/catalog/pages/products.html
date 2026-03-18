@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% set active = "products" %}
+
+{% block title %}Товары — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h2 class="page-title">Товары</h2>
+    <button class="help-badge" onclick="document.getElementById('products-help-modal').classList.add('modal-overlay--active')" title="Help">?</button>
+  </div>
+  <a href="/admin/products/new" class="btn btn--primary btn--sm">+ Новый товар</a>
+</div>
+
+<div id="products-container"></div>
+
+<div class="modal-overlay" id="products-help-modal" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Товары — Справка
+      <button class="modal__close" onclick="document.getElementById('products-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <ul style="padding-left:18px; margin:0;">
+        <li><strong>Добавление:</strong> Кнопка «+ Новый товар» открывает страницу создания.</li>
+        <li><strong>Редактирование:</strong> Кнопка «Изм.» в строке открывает страницу редактирования с текущими данными и фотографиями.</li>
+        <li><strong>Удаление:</strong> Кнопка «Удалить» запрашивает подтверждение и удаляет товар вместе с фотографиями <strong>безвозвратно</strong>.</li>
+        <li><strong>Фильтрация:</strong> «+» в заголовке колонки открывает параметры фильтра. Активные фильтры показываются над таблицей.</li>
+        <li><strong>Сортировка:</strong> Клик по заголовку колонки меняет порядок. Повторный клик меняет направление.</li>
+        <li><strong>Колонки:</strong> Кнопка «Колонки» позволяет скрыть ненужные поля.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/smart-table.js"></script>
+<script>
+async function deleteProduct(id, title) {
+  window.showConfirmModal({
+    title: 'Удалить товар?',
+    text: `«${title}» и все его фотографии будут удалены безвозвратно.`,
+    confirmText: 'Удалить',
+    isDanger: true,
+    onConfirm: async () => {
+      const res = await api.del('/catalog/' + id);
+      if (res.success) {
+        window.productsTable.load();
+        document.body.dispatchEvent(new CustomEvent('showToast', {
+          detail: { message: 'Товар удалён', type: 'success' }
+        }));
+      } else {
+        document.body.dispatchEvent(new CustomEvent('showToast', {
+          detail: { message: res.error || 'Ошибка удаления', type: 'error' }
+        }));
+      }
+    }
+  });
+}
+
+window.productsTable = new SmartTable({
+  instanceName: 'productsTable',
+  endpoint: '/catalog/admin/search',
+  schemaEndpoint: '/catalog/admin/search/schema',
+  containerId: 'products-container',
+  defaultSortBy: 'created_at',
+  defaultSortDir: 'desc',
+  columns: [
+    { key: 'id',    label: '#',        sortable: true  },
+    {
+      key: 'image', label: 'Фото',     sortable: false,
+      render: p => p.images && p.images[0]
+        ? `<img src="${esc(p.images[0])}" style="width:40px;height:40px;object-fit:cover;border-radius:var(--radius);cursor:pointer;" onclick="openLightbox('${esc(p.images[0])}')">`
+        : '<span style="color:var(--color-text-muted);font-size:11px;">—</span>'
+    },
+    { key: 'title',      label: 'Название',    sortable: true  },
+    { key: 'price',      label: 'Цена',        sortable: true,  render: p => parseFloat(p.price).toFixed(2) + ' BYN' },
+    { key: 'created_at', label: 'Дата',        sortable: true,  render: p => p.created_at ? String(p.created_at).slice(0, 10) : '—' },
+    {
+      key: 'actions', label: 'Действия', sortable: false,
+      render: p => `
+        <div style="display:flex;gap:6px;">
+          <a href="/admin/products/${p.id}/edit" class="btn btn--ghost btn--sm">Изм.</a>
+          <button class="btn btn--sm" style="border:1px solid var(--color-danger);color:var(--color-danger);background:none;" onclick="deleteProduct(${p.id}, '${esc(p.title)}')">Удалить</button>
+        </div>`
+    },
+  ]
+});
+
+window.productsTable.load();
+
+// Lightbox
+function openLightbox(src) {
+  let lb = document.getElementById('_lightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = '_lightbox';
+    lb.className = 'lightbox';
+    lb.innerHTML = '<button class="lightbox__close" onclick="document.getElementById(\'_lightbox\').classList.remove(\'lightbox--active\')">&times;</button><img id="_lightbox_img" src="" alt="">';
+    lb.onclick = (e) => { if (e.target === lb) lb.classList.remove('lightbox--active'); };
+    document.body.appendChild(lb);
+  }
+  document.getElementById('_lightbox_img').src = src;
+  lb.classList.add('lightbox--active');
+}
+</script>
+{% endblock %}
