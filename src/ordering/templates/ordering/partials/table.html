@@ -7,20 +7,20 @@
              hx-target="#order-table-wrap" hx-swap="outerHTML"
              class="sort-link">ID</a>
         </th>
-        <th>Name</th>
-        <th>Phone</th>
-        <th>Comment</th>
+        <th>Имя</th>
+        <th>Телефон</th>
+        <th>Комментарий</th>
         <th>
           <a hx-get="/admin/orders/table?sort_by=created_at&sort_dir=desc"
              hx-target="#order-table-wrap" hx-swap="outerHTML"
-             class="sort-link">Date</a>
+             class="sort-link">Дата</a>
         </th>
         <th>
           <a hx-get="/admin/orders/table?sort_by=status&sort_dir=asc"
              hx-target="#order-table-wrap" hx-swap="outerHTML"
-             class="sort-link">Status</a>
+             class="sort-link">Статус</a>
         </th>
-        <th>Change Status</th>
+        <th>Изменить статус</th>
       </tr>
     </thead>
     <tbody>
@@ -35,13 +35,13 @@
     {% if current_page > 1 %}
     <a class="btn btn--ghost btn--sm"
        hx-get="/admin/orders/table?page={{ current_page - 1 }}"
-       hx-target="#order-table-wrap" hx-swap="outerHTML">Prev</a>
+       hx-target="#order-table-wrap" hx-swap="outerHTML">Назад</a>
     {% endif %}
-    <span class="pagination__info">{{ orders.total }} total</span>
+    <span class="pagination__info">{{ orders.total }} всего</span>
     {% if current_page < total_pages %}
     <a class="btn btn--ghost btn--sm"
        hx-get="/admin/orders/table?page={{ current_page + 1 }}"
-       hx-target="#order-table-wrap" hx-swap="outerHTML">Next</a>
+       hx-target="#order-table-wrap" hx-swap="outerHTML">Далее</a>
     {% endif %}
   </div>
   {% endif %}

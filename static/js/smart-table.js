@@ -123,7 +123,9 @@ class SmartTable {
     if (!col) return;
     const visibleCount = this.columns.filter(c => c.visible).length;
     if (col.visible && visibleCount === 1) {
-      alert('Минимум одна колонка должна оставаться видимой.');
+      document.body.dispatchEvent(new CustomEvent('showToast', {
+        detail: { message: 'Минимум одна колонка должна оставаться видимой', type: 'error' }
+      }));
       this.render();
       return;
     }
@@ -221,8 +223,8 @@ class SmartTable {
       return `<th style="position:relative;">${thContent}${filterBtnHTML}${popoverHTML}</th>`;
     }).join('');
 
-    const rowsHTML = data.items.map(item => {
-      const cells = visibleCols.map(c => `<td>${c.render ? c.render(item) : esc(item[c.key])}</td>`).join('');
+    const rowsHTML = data.items.map((item, idx) => {
+      const cells = visibleCols.map(c => `<td>${c.render ? c.render(item, idx, data.items) : esc(item[c.key])}</td>`).join('');
       return `<tr>${cells}</tr>`;
     }).join('') || `<tr><td colspan="${visibleCols.length}" style="text-align:center; color:var(--color-text-muted); padding:24px;">${this.emptyText}</td></tr>`;
 

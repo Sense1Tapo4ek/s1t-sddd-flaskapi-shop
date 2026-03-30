@@ -9,7 +9,7 @@ from access.ports.driving.facade import AccessFacade
 from access.ports.driving.schemas import ChangePasswordIn
 from shared.adapters.driving.middleware import jwt_required
 
-system_admin_bp = APIBlueprint("system_admin", __name__, url_prefix="/admin/settings")
+system_admin_bp = APIBlueprint("system_admin", __name__, url_prefix="/admin/settings", enable_openapi=False)
 
 
 TAB_TITLES = {"store": "Магазин", "telegram": "Оповещения", "security": "Безопасность"}
@@ -91,7 +91,7 @@ def fetch_chat_id(facade: FromDishka[SystemFacade]):
         schema = FetchChatIdIn(bot_token=bot_token)
         chat_id = facade.fetch_telegram_chat_id(schema)
     except Exception as e:
-        msg = getattr(e, "user_message", None) or getattr(e, "message", str(e))
+        msg = getattr(e, "user_message", None) or getattr(e, "message", None) or "Ошибка получения Chat ID"
         response = make_response(
             f'<input class="form-input" type="text" id="chat_id" name="chat_id" placeholder="Not connected" value="">'
         )

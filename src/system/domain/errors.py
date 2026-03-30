@@ -1,6 +1,6 @@
 from shared.generics.errors import DomainError, ApplicationError
 
-class SettingsNotFoundError(DomainError):
+class SettingsNotFoundError(ApplicationError):
     def __init__(self) -> None:
         super().__init__(message="Site settings not found", code="SETTINGS_NOT_FOUND")
 

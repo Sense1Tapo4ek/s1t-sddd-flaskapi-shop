@@ -25,7 +25,7 @@ class TelegramClient:
             resp.raise_for_status()
             return True
         except httpx.HTTPError as e:
-            logger.exception(f"Telegram API error: {e}")
+            logger.exception("Telegram API error: %s", e)
             return False
 
     def get_updates(self, token: str, limit: int = 20) -> list[dict]:
@@ -36,5 +36,5 @@ class TelegramClient:
             data = resp.json()
             return data.get("result", [])
         except httpx.HTTPError as e:
-            logger.exception(f"Telegram API error: {e}")
+            logger.exception("Telegram API error: %s", e)
             return []

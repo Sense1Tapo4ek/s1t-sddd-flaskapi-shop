@@ -17,9 +17,9 @@ class OrderSearchQuery(BaseModel):
 
 class OrderIn(BaseModel):
     model_config = ConfigDict(frozen=True)
-    name: str
-    phone: str
-    comment: str = ""
+    name: str = Field(..., min_length=1, max_length=200)
+    phone: str = Field(..., min_length=5, max_length=30, pattern=r"^[\d\s\+\-\(\)]+$")
+    comment: str = Field("", max_length=2000)
 
     def to_command(self) -> PlaceOrderCommand:
         return PlaceOrderCommand(name=self.name, phone=self.phone, comment=self.comment)

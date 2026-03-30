@@ -3,6 +3,7 @@ from dishka.integrations.flask import inject, FromDishka
 from flask import request
 
 from shared.adapters.driving.middleware import jwt_required
+from shared.helpers.parsing import safe_float
 from shared.ports.driving.schemas import SuccessResponse
 from catalog.ports.driving import (
     CatalogFacade,
@@ -13,8 +14,8 @@ from catalog.ports.driving import (
     CatalogQuery,
     RandomQuery,
     DeleteImageIn,
+    SwapSortOrderIn,
 )
-from catalog.domain import ProductNotFoundError
 
 catalog_bp = APIBlueprint("catalog", __name__, url_prefix="/catalog")
 
@@ -55,11 +56,8 @@ def get_random(query_data: RandomQuery, facade: FromDishka[CatalogFacade]):
 )
 @inject
 def get_detail(product_id: int, facade: FromDishka[CatalogFacade]):
-    try:
-        res = facade.get_detail(product_id)
-        return res.model_dump()
-    except ProductNotFoundError:
-        return {"error": "Product not found"}, 404
+    res = facade.get_detail(product_id)
+    return res.model_dump()
 
 
 # --- ADMIN (Protected) ---
@@ -124,7 +122,7 @@ def admin_search_schema(facade: FromDishka[CatalogFacade]):
 @inject
 def admin_create(facade: FromDishka[CatalogFacade]):
     title = request.form.get("title", "")
-    price = float(request.form.get("price", 0))
+    price = safe_float(request.form.get("price", "0"), "price", min_val=0)
     description = request.form.get("description", "")
     images = [
         (file.filename or "img.jpg", file.read())
@@ -151,7 +149,7 @@ def admin_update(product_id: int, facade: FromDishka[CatalogFacade]):
     if "title" in request.form:
         kwargs["title"] = request.form["title"]
     if "price" in request.form:
-        kwargs["price"] = float(request.form["price"])
+        kwargs["price"] = safe_float(request.form["price"], "price", min_val=0)
     if "description" in request.form:
         kwargs["description"] = request.form["description"]
 
@@ -166,11 +164,8 @@ def admin_update(product_id: int, facade: FromDishka[CatalogFacade]):
     if deleted:
         kwargs["deleted_images"] = deleted
 
-    try:
-        res = facade.update_product(product_id, **kwargs)
-        return res.model_dump()
-    except ProductNotFoundError:
-        return {"error": "Product not found"}, 404
+    res = facade.update_product(product_id, **kwargs)
+    return res.model_dump()
 
 
 @catalog_bp.delete("/<int:product_id>")
@@ -183,11 +178,8 @@ def admin_update(product_id: int, facade: FromDishka[CatalogFacade]):
 )
 @inject
 def admin_delete(product_id: int, facade: FromDishka[CatalogFacade]):
-    try:
-        facade.delete_product(product_id)
-        return {"success": True}
-    except ProductNotFoundError:
-        return {"error": "Product not found"}, 404
+    facade.delete_product(product_id)
+    return {"success": True}
 
 
 @catalog_bp.delete("/<int:product_id>/images")
@@ -201,8 +193,16 @@ def admin_delete(product_id: int, facade: FromDishka[CatalogFacade]):
 )
 @inject
 def admin_delete_image(product_id: int, json_data: DeleteImageIn, facade: FromDishka[CatalogFacade]):
-    try:
-        res = facade.delete_image(product_id, json_data.image_path)
-        return res.model_dump()
-    except ProductNotFoundError:
-        return {"error": "Product not found"}, 404
+    res = facade.delete_image(product_id, json_data.image_path)
+    return res.model_dump()
+
+
+@catalog_bp.post("/admin/swap")
+@jwt_required
+@catalog_bp.input(SwapSortOrderIn)
+@catalog_bp.output(SuccessResponse)
+@catalog_bp.doc(summary="Swap sort order of two products (ADMIN ONLY)", security="JWTAuth")
+@inject
+def admin_swap(json_data: SwapSortOrderIn, facade: FromDishka[CatalogFacade]):
+    facade.swap_ids(json_data.id_a, json_data.id_b)
+    return {"success": True}

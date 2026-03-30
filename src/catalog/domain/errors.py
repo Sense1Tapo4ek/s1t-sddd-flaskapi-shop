@@ -1,7 +1,7 @@
-from shared.generics.errors import DomainError
+from shared.generics.errors import ApplicationError, DomainError
 
 
-class ProductNotFoundError(DomainError):
+class ProductNotFoundError(ApplicationError):
     def __init__(self, product_id: int) -> None:
         super().__init__(
             message=f"Товар {product_id} не найден", code="PRODUCT_NOT_FOUND"

@@ -6,8 +6,9 @@ from ordering.ports.driving.facade import OrderingFacade
 from ordering.ports.driving.schemas import OrderStatusUpdateIn
 from shared.adapters.driving.middleware import jwt_required
 from shared.adapters.driving.htmx import render_partial_or_full
+from shared.helpers.parsing import parse_table_params
 
-ordering_admin_bp = APIBlueprint("ordering_admin", __name__, url_prefix="/admin/orders")
+ordering_admin_bp = APIBlueprint("ordering_admin", __name__, url_prefix="/admin/orders", enable_openapi=False)
 
 
 @ordering_admin_bp.route("/")
@@ -26,7 +27,7 @@ def orders_page(facade: FromDishka[OrderingFacade]):
 @jwt_required
 @inject
 def orders_table(facade: FromDishka[OrderingFacade]):
-    params = _parse_table_params(request.args)
+    params = parse_table_params(request.args)
     result = facade.list_orders(**params)
     return render_template("ordering/partials/table.html", orders=result)
 
@@ -51,7 +52,7 @@ def create_test_order(facade: FromDishka[OrderingFacade]):
 
     schema = OrderIn(name="Test Customer", phone="+375291234567", comment="Test order")
     facade.place_order(schema)
-    params = _parse_table_params(request.args)
+    params = parse_table_params(request.args)
     result = facade.list_orders(**params)
     return render_template(
         "ordering/partials/table.html",
@@ -70,12 +71,3 @@ def orders_badge(facade: FromDishka[OrderingFacade]):
     return '<span></span>'
 
 
-def _parse_table_params(args) -> dict:
-    return {
-        "page": int(args.get("page", 1)),
-        "limit": int(args.get("limit", 20)),
-        "sort_by": args.get("sort_by", "created_at"),
-        "sort_dir": args.get("sort_dir", "desc"),
-        "filters": {k: v for k, v in args.items()
-                     if "__" in k and k not in ("sort_by", "sort_dir")},
-    }

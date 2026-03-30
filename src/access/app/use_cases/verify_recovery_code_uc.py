@@ -9,9 +9,8 @@ from ..interfaces import IAdminRepo
 class InvalidRecoveryCodeError(DomainError):
     def __init__(self) -> None:
         super().__init__(
-            message="Invalid or expired recovery code",
+            message="Неверный или просроченный код",
             code="INVALID_RECOVERY_CODE",
-            user_message="Неверный или просроченный код",
         )
 
 

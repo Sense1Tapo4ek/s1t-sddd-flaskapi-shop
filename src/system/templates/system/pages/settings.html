@@ -9,7 +9,7 @@
     <h2 class="page-title">{{ tab_title }}</h2>
   </div>
   <div class="page-header__right">
-    <button class="help-badge" onclick="document.getElementById('settings-help-modal').classList.add('modal-overlay--active')" title="Help">?</button>
+    <button class="help-badge" onclick="document.getElementById('settings-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
 </div>
 
@@ -42,7 +42,7 @@
 {% endif %}
 
 <!-- Help Modal -->
-<div class="modal-overlay" id="settings-help-modal" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+<div class="modal-overlay" id="settings-help-modal" role="dialog" aria-modal="true" aria-label="Справка по настройкам" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
   <div class="modal">
     <div class="modal__header">
       {{ tab_title }} — Справка
@@ -57,7 +57,7 @@
           <li>Вставьте Token в поле «Bot Token» на этой странице.</li>
           <li>Откройте диалог с вашим новым ботом в Telegram и нажмите «Запустить» (или отправьте <code>/start</code>).</li>
           <li>Вернитесь сюда и нажмите «Get Chat ID» — система найдёт ваш диалог автоматически.</li>
-          <li>Нажмите «Save», затем «Send Test Message» для проверки связи.</li>
+          <li>Нажмите «Сохранить», затем «Тестовое сообщение» для проверки связи.</li>
         </ol>
         <p style="margin-top:12px;"><strong>Важно:</strong> Между отправкой <code>/start</code> и нажатием «Get Chat ID» должно пройти не более 15 минут.</p>
       {% elif tab == 'security' %}

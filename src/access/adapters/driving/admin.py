@@ -5,9 +5,10 @@ from dishka.integrations.flask import inject, FromDishka
 from access.ports.driving.facade import AccessFacade
 from access.ports.driving.schemas import LoginIn
 from system.ports.driving.facade import SystemFacade
+from shared.generics.errors import LayerError
 
 
-access_admin_bp = APIBlueprint("access_admin", __name__, url_prefix="/admin")
+access_admin_bp = APIBlueprint("access_admin", __name__, url_prefix="/admin", enable_openapi=False)
 
 
 @access_admin_bp.route("/login", methods=["GET"])
@@ -43,8 +44,8 @@ def logout():
 def request_recovery(system_facade: FromDishka[SystemFacade]):
     try:
         system_facade.recover_password()
-    except Exception as e:
-        msg = getattr(e, "user_message", None) or getattr(e, "message", str(e))
+    except LayerError as e:
+        msg = e.message or "Ошибка восстановления пароля"
         return f'<p class="recovery-desc" style="color:var(--color-danger);">{msg}</p>' \
                f'<div style="text-align:center;">' \
                f'<a href="/admin/login" class="btn btn--ghost btn--sm">Назад</a></div>'
@@ -57,8 +58,8 @@ def verify_recovery_code(facade: FromDishka[AccessFacade]):
     code = request.form.get("code", "").strip()
     try:
         token = facade.verify_recovery_code(code)
-    except Exception as e:
-        msg = getattr(e, "user_message", None) or getattr(e, "message", str(e))
+    except LayerError as e:
+        msg = e.message or "Неверный код"
         return f'<span style="color:var(--color-danger);">{msg}</span>'
     response = make_response("")
     response.set_cookie(

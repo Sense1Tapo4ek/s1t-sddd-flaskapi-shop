@@ -60,7 +60,8 @@ src/{context}/
 
 - `config.py` — `InfraConfig` (INFRA_ prefix, provides `database_url`)
 - `provider.py` — `InfraProvider` (DB session factory)
-- `domain/value_objects.py` — `Money`, `PhoneNumber`
+- `helpers/parsing.py` — `safe_float`, `safe_int`, `parse_table_params`
+- `helpers/db.py` — `@handle_db_errors` decorator for repos
 - `generics/errors.py` — Error hierarchy: `LayerError` → `DomainError`, `ApplicationError`, `DrivingPortError`, `DrivenPortError`, `DrivingAdapterError`, `DrivenAdapterError`
 - `generics/pagination.py` — Pagination helper
 - `helpers/security.py` — JWT create/verify
@@ -102,6 +103,7 @@ Domain and app layers must NEVER import from adapters, ports, or Flask.
 - All DI is APP-scoped via Dishka providers; use `@inject` + `FromDishka[T]` in blueprint route handlers
 - JWT is stored in an httpOnly cookie (`token`) for admin UI; API clients may use Authorization Bearer header
 - JWT secret is stored on `flask.current_app.config["JWT_SECRET"]` via `init_middleware(app, jwt_secret)` at startup; `@jwt_required` reads it from there
+- **Swagger/OpenAPI rule:** Only JSON API endpoints appear in `/api/docs`. Admin HTMX blueprints use `enable_openapi=False`. Utility routes (`/`, `/admin/`, `/media/`) use `@app.doc(hide=True)`. Never expose template-rendering or HTMX routes in the OpenAPI spec.
 
 ### DI pattern (Dishka Flask integration)
 
@@ -120,7 +122,7 @@ def list_products(facade: FromDishka[CatalogFacade]):
 - Public: `GET /catalog`, `GET /catalog/random`, `GET /catalog/<id>`, `GET /system/info`, `POST /orders`
 - Admin (JWT): `GET/POST/PUT/DELETE /catalog/...`, `GET/PATCH /orders/...`, `GET/PUT /system/settings`, `POST /auth/login`, `POST /auth/change-password`
 - Admin UI (HTMX): `/admin/` — Jinja2 templates with HTMX partial rendering; auth via httpOnly cookie
-- Swagger: `/api/docs`
+- Swagger: `/api/docs` (only JSON API; admin HTMX routes are hidden via `enable_openapi=False`)
 
 ## Docs
 

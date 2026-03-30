@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="/static/css/components/toasts.css">
   <link rel="stylesheet" href="/static/css/components/utils.css">
   <link rel="stylesheet" href="/static/css/components/smart-table.css">
+  <link rel="stylesheet" href="/static/vendor/cropper.min.css">
+  <link rel="stylesheet" href="/static/css/image-editor.css">
 </head>
 <body>
   <div class="layout">
@@ -62,7 +64,7 @@
   <div id="modal-container"></div>
 
   <!-- Global confirm modal (used by showConfirmModal) -->
-  <div class="modal-overlay" id="globalModalOverlay">
+  <div class="modal-overlay" id="globalModalOverlay" role="dialog" aria-modal="true" aria-labelledby="globalModalTitle">
     <div class="modal">
       <div class="modal__header"><span id="globalModalTitle"></span></div>
       <div class="modal__body"><p id="globalModalText" style="white-space:pre-line; color:var(--color-text-muted); font-size:13px;"></p></div>
@@ -76,6 +78,9 @@
   <div id="toast-container"></div>
 
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="/static/vendor/cropper.min.js"></script>
+  <script src="/static/js/image-editor.js"></script>
+  <script src="/static/js/lightbox.js"></script>
   <script src="/static/js/modal.js"></script>
   <script>
   document.body.addEventListener("showToast", function(e) {
@@ -84,6 +89,53 @@
       el.textContent = d.message;
       document.getElementById("toast-container").appendChild(el);
       setTimeout(function() { el.remove(); }, d.type === "error" ? 6000 : 4000);
+  });
+
+  // Global HTMX error handler — process HX-Trigger on non-2xx responses
+  document.body.addEventListener("htmx:beforeSwap", function(e) {
+      var xhr = e.detail.xhr;
+      if (xhr.status >= 400) {
+          // Let HTMX process response headers (HX-Trigger with showToast)
+          e.detail.shouldSwap = false;
+          e.detail.isError = false;
+          // Manually fire HX-Trigger events from error response
+          var trigger = xhr.getResponseHeader("HX-Trigger");
+          if (trigger) {
+              try {
+                  var parsed = JSON.parse(trigger);
+                  Object.keys(parsed).forEach(function(eventName) {
+                      document.body.dispatchEvent(
+                          new CustomEvent(eventName, { detail: parsed[eventName] })
+                      );
+                  });
+              } catch(_) {}
+          }
+      }
+  });
+
+  // Fallback for HTMX requests that fail without HX-Trigger
+  document.body.addEventListener("htmx:responseError", function(e) {
+      var xhr = e.detail.xhr;
+      var trigger = xhr && xhr.getResponseHeader("HX-Trigger");
+      if (trigger) return; // Already handled by beforeSwap
+      var msg = "Ошибка сервера";
+      try {
+          var data = JSON.parse(xhr.responseText);
+          if (data.message) msg = data.message;
+      } catch(_) {}
+      document.body.dispatchEvent(new CustomEvent("showToast", {
+          detail: { message: msg, type: "error" }
+      }));
+  });
+
+  // Loading state for HTMX form submissions
+  document.body.addEventListener("htmx:beforeRequest", function(e) {
+      var btn = e.detail.elt.querySelector('button[type="submit"]') || e.detail.elt;
+      if (btn && btn.classList) btn.classList.add("btn--loading");
+  });
+  document.body.addEventListener("htmx:afterRequest", function(e) {
+      var btn = e.detail.elt.querySelector('button[type="submit"]') || e.detail.elt;
+      if (btn && btn.classList) btn.classList.remove("btn--loading");
   });
 
   document.body.addEventListener("closeModal", function() {

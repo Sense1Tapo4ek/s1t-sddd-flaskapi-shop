@@ -1,7 +1,7 @@
-<div class="modal-overlay" id="product-modal" onclick="if(event.target===this)this.remove()">
+<div class="modal-overlay" id="product-modal" role="dialog" aria-modal="true" aria-label="Форма товара" onclick="if(event.target===this)this.remove()">
   <div class="modal">
     <div class="modal__header">
-      {% if product %}Edit Product #{{ product.id }}{% else %}New Product{% endif %}
+      {% if product %}Редактировать товар #{{ product.id }}{% else %}Новый товар{% endif %}
       <button class="btn btn--ghost btn--sm" onclick="document.getElementById('product-modal').remove()" style="float:right">&times;</button>
     </div>
     <div class="modal__body">
@@ -16,32 +16,32 @@
         hx-swap="outerHTML">
 
         <div class="form-group">
-          <label class="form-label" for="f-title">Title *</label>
+          <label class="form-label" for="f-title">Название *</label>
           <input class="form-input" type="text" id="f-title" name="title"
                  value="{{ product.title if product else '' }}" required>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="f-price">Price *</label>
+          <label class="form-label" for="f-price">Цена *</label>
           <input class="form-input" type="number" id="f-price" name="price"
                  step="0.01" min="0"
                  value="{{ product.price if product else '' }}" required>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="f-description">Description</label>
+          <label class="form-label" for="f-description">Описание</label>
           <textarea class="form-input form-textarea" id="f-description" name="description" rows="5">{{ product.description if product else '' }}</textarea>
         </div>
 
         {% if product and product.images %}
         <div class="form-group">
-          <label class="form-label">Current images</label>
+          <label class="form-label">Текущие фотографии</label>
           <div class="image-grid">
             {% for img in product.images %}
             <div class="image-thumb">
               <img src="{{ img }}" alt="" onclick="openLightbox(this.src)">
               <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <input type="checkbox" name="deleted_images" value="{{ img }}"> Remove
+                <input type="checkbox" name="deleted_images" value="{{ img }}"> Удалить
               </label>
             </div>
             {% endfor %}
@@ -51,7 +51,7 @@
 
         <div class="form-group">
           <label class="form-label" for="f-images">
-            {% if product %}Add images{% else %}Images{% endif %}
+            {% if product %}Добавить фотографии{% else %}Фотографии{% endif %}
           </label>
           <input class="form-input" type="file" id="f-images"
                  name="{% if product %}new_images{% else %}images{% endif %}"
@@ -62,9 +62,9 @@
 
         <div class="modal__footer" style="margin-top:1rem;">
           <button class="btn btn--ghost" type="button"
-                  onclick="document.getElementById('product-modal').remove()">Cancel</button>
+                  onclick="document.getElementById('product-modal').remove()">Отмена</button>
           <button class="btn btn--primary" type="submit">
-            {% if product %}Save{% else %}Create{% endif %}
+            {% if product %}Сохранить{% else %}Создать{% endif %}
           </button>
         </div>
       </form>
@@ -72,23 +72,7 @@
   </div>
 </div>
 
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button class="lightbox__close" onclick="closeLightbox()">&times;</button>
-  <img id="lightbox-img" src="" alt="">
-</div>
-
 <script>
-function openLightbox(src) {
-  var lb = document.getElementById('lightbox');
-  document.getElementById('lightbox-img').src = src;
-  lb.classList.add('lightbox--active');
-}
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('lightbox--active');
-}
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeLightbox();
-});
 function previewImages(input) {
   var container = document.getElementById('image-preview');
   container.innerHTML = '';

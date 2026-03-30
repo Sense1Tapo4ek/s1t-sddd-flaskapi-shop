@@ -9,8 +9,6 @@ from ordering.ports.driving import (
     OrderStatusUpdateIn,
     OrderSearchQuery,
 )
-from ordering.app.errors import OrderNotFoundError
-from ordering.domain.errors import InvalidOrderTransitionError
 
 ordering_bp = APIBlueprint("ordering", __name__, url_prefix="/orders")
 
@@ -99,13 +97,8 @@ def admin_search_schema(facade: FromDishka[OrderingFacade]):
 )
 @inject
 def update_status(order_id: int, json_data: OrderStatusUpdateIn, facade: FromDishka[OrderingFacade]):
-    try:
-        facade.process_order(order_id, json_data)
-        return {"success": True}
-    except OrderNotFoundError:
-        return {"error": "Order not found"}, 404
-    except InvalidOrderTransitionError as e:
-        return {"error": e.message}, 422
+    facade.process_order(order_id, json_data)
+    return {"success": True}
 
 
 @ordering_bp.delete("/<int:order_id>")
@@ -117,8 +110,5 @@ def update_status(order_id: int, json_data: OrderStatusUpdateIn, facade: FromDis
 )
 @inject
 def delete_order(order_id: int, facade: FromDishka[OrderingFacade]):
-    try:
-        facade.delete_order(order_id)
-        return {"success": True}
-    except OrderNotFoundError:
-        return {"error": "Order not found"}, 404
+    facade.delete_order(order_id)
+    return {"success": True}

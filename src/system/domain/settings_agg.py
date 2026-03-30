@@ -1,5 +1,15 @@
 from dataclasses import dataclass
 
+from shared.generics.errors import DomainError
+
+
+class InvalidCoordsError(DomainError):
+    def __init__(self, field: str, value: float) -> None:
+        super().__init__(
+            message=f"Некорректная координата {field}: {value}",
+            code="INVALID_COORDS",
+        )
+
 
 @dataclass(slots=True)
 class SiteSettings:
@@ -24,37 +34,15 @@ class SiteSettings:
         """Check if Telegram integration parameters are present."""
         return bool(self.telegram_bot_token and self.telegram_chat_id)
 
-    def update(
-        self,
-        phone: str | None = None,
-        email: str | None = None,
-        address: str | None = None,
-        working_hours: str | None = None,
-        coords_lat: float | None = None,
-        coords_lon: float | None = None,
-        instagram: str | None = None,
-        telegram_bot_token: str | None = None,
-        telegram_chat_id: str | None = None,
-    ) -> None:
-        """
-        Apply partial updates to the aggregate.
-        Only non-None values are updated.
-        """
-        if phone is not None:
-            self.phone = phone
-        if email is not None:
-            self.email = email
-        if address is not None:
-            self.address = address
-        if working_hours is not None:
-            self.working_hours = working_hours
-        if coords_lat is not None:
-            self.coords_lat = coords_lat
-        if coords_lon is not None:
-            self.coords_lon = coords_lon
-        if instagram is not None:
-            self.instagram = instagram
-        if telegram_bot_token is not None:
-            self.telegram_bot_token = telegram_bot_token
-        if telegram_chat_id is not None:
-            self.telegram_chat_id = telegram_chat_id
+    _COORD_BOUNDS = {"coords_lat": (-90.0, 90.0), "coords_lon": (-180.0, 180.0)}
+
+    def update(self, **kwargs) -> None:
+        """Apply partial updates. Only non-None values are set."""
+        for key, val in kwargs.items():
+            if val is None:
+                continue
+            if key in self._COORD_BOUNDS:
+                lo, hi = self._COORD_BOUNDS[key]
+                if not (lo <= val <= hi):
+                    raise InvalidCoordsError(key.split("_")[1], val)
+            setattr(self, key, val)

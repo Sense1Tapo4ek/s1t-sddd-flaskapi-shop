@@ -11,11 +11,11 @@ class TelegramNotificationChannel(INotificationChannel):
 
     def is_configured(self) -> bool:
         settings = self._repo.get()
-        return settings.is_telegram_configured
+        return settings is not None and settings.is_telegram_configured
 
     def send(self, subject: str, body: str) -> None:
         settings = self._repo.get()
-        if not settings.is_telegram_configured:
+        if settings is None or not settings.is_telegram_configured:
             return
         self._client.send_message(
             token=settings.telegram_bot_token,

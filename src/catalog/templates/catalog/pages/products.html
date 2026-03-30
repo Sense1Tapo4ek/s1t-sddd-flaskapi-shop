@@ -7,14 +7,14 @@
 <div class="page-header">
   <div class="page-header__left">
     <h2 class="page-title">Товары</h2>
-    <button class="help-badge" onclick="document.getElementById('products-help-modal').classList.add('modal-overlay--active')" title="Help">?</button>
+    <button class="help-badge" onclick="document.getElementById('products-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
   <a href="/admin/products/new" class="btn btn--primary btn--sm">+ Новый товар</a>
 </div>
 
 <div id="products-container"></div>
 
-<div class="modal-overlay" id="products-help-modal" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+<div class="modal-overlay" id="products-help-modal" role="dialog" aria-modal="true" aria-label="Справка по товарам" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
   <div class="modal">
     <div class="modal__header">
       Товары — Справка
@@ -66,19 +66,27 @@ window.productsTable = new SmartTable({
   endpoint: '/catalog/admin/search',
   schemaEndpoint: '/catalog/admin/search/schema',
   containerId: 'products-container',
-  defaultSortBy: 'created_at',
+  defaultSortBy: 'id',
   defaultSortDir: 'desc',
   columns: [
-    { key: 'id',    label: '#',        sortable: true  },
+    { key: 'id', label: '#', sortable: true },
     {
-      key: 'image', label: 'Фото',     sortable: false,
+      key: 'image', label: 'Фото', sortable: false,
       render: p => p.images && p.images[0]
         ? `<img src="${esc(p.images[0])}" style="width:40px;height:40px;object-fit:cover;border-radius:var(--radius);cursor:pointer;" onclick="openLightbox('${esc(p.images[0])}')">`
         : '<span style="color:var(--color-text-muted);font-size:11px;">—</span>'
     },
-    { key: 'title',      label: 'Название',    sortable: true  },
-    { key: 'price',      label: 'Цена',        sortable: true,  render: p => parseFloat(p.price).toFixed(2) + ' BYN' },
-    { key: 'created_at', label: 'Дата',        sortable: true,  render: p => p.created_at ? String(p.created_at).slice(0, 10) : '—' },
+    { key: 'title',      label: 'Название', sortable: true },
+    { key: 'price',      label: 'Цена',     sortable: true, render: p => parseFloat(p.price).toFixed(2) + ' BYN' },
+    { key: 'created_at', label: 'Дата',     sortable: true, render: p => p.created_at ? String(p.created_at).slice(0, 10) : '—' },
+    {
+      key: 'order', label: 'Порядок', sortable: false,
+      render: (p, idx, items) => `
+        <div style="display:flex;align-items:center;gap:2px;">
+          <button class="btn btn--ghost btn--sm" style="padding:2px 5px;font-size:14px;" onclick="swapProducts(${p.id}, ${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Выше">&#9650;</button>
+          <button class="btn btn--ghost btn--sm" style="padding:2px 5px;font-size:14px;" onclick="swapProducts(${p.id}, ${idx}, 1)" ${idx === items.length - 1 ? 'disabled' : ''} title="Ниже">&#9660;</button>
+        </div>`
+    },
     {
       key: 'actions', label: 'Действия', sortable: false,
       render: p => `
@@ -90,21 +98,15 @@ window.productsTable = new SmartTable({
   ]
 });
 
-window.productsTable.load();
-
-// Lightbox
-function openLightbox(src) {
-  let lb = document.getElementById('_lightbox');
-  if (!lb) {
-    lb = document.createElement('div');
-    lb.id = '_lightbox';
-    lb.className = 'lightbox';
-    lb.innerHTML = '<button class="lightbox__close" onclick="document.getElementById(\'_lightbox\').classList.remove(\'lightbox--active\')">&times;</button><img id="_lightbox_img" src="" alt="">';
-    lb.onclick = (e) => { if (e.target === lb) lb.classList.remove('lightbox--active'); };
-    document.body.appendChild(lb);
-  }
-  document.getElementById('_lightbox_img').src = src;
-  lb.classList.add('lightbox--active');
+async function swapProducts(productId, currentIdx, direction) {
+  var items = window.productsTable.lastData ? window.productsTable.lastData.items : [];
+  var targetIdx = currentIdx + direction;
+  if (targetIdx < 0 || targetIdx >= items.length) return;
+  var targetId = items[targetIdx].id;
+  var r = await api.post('/catalog/admin/swap', { id_a: productId, id_b: targetId });
+  if (!r._failed) window.productsTable.load();
 }
+
+window.productsTable.load();
 </script>
 {% endblock %}

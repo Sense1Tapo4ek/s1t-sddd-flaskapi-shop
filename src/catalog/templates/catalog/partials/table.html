@@ -10,19 +10,19 @@
         <th>
           <a hx-get="/admin/products/table?sort_by=title&sort_dir=asc"
              hx-target="#product-table-wrap" hx-swap="outerHTML"
-             class="sort-link">Title</a>
+             class="sort-link">Название</a>
         </th>
         <th>
           <a hx-get="/admin/products/table?sort_by=price&sort_dir=asc"
              hx-target="#product-table-wrap" hx-swap="outerHTML"
-             class="sort-link">Price</a>
+             class="sort-link">Цена</a>
         </th>
         <th>
           <a hx-get="/admin/products/table?sort_by=created_at&sort_dir=desc"
              hx-target="#product-table-wrap" hx-swap="outerHTML"
-             class="sort-link">Created</a>
+             class="sort-link">Дата</a>
         </th>
-        <th>Actions</th>
+        <th>Действия</th>
       </tr>
     </thead>
     <tbody>
@@ -37,13 +37,13 @@
     {% if current_page > 1 %}
     <a class="btn btn--ghost btn--sm"
        hx-get="/admin/products/table?page={{ current_page - 1 }}"
-       hx-target="#product-table-wrap" hx-swap="outerHTML">Prev</a>
+       hx-target="#product-table-wrap" hx-swap="outerHTML">Назад</a>
     {% endif %}
-    <span class="pagination__info">{{ products.total }} total</span>
+    <span class="pagination__info">{{ products.total }} всего</span>
     {% if current_page < total_pages %}
     <a class="btn btn--ghost btn--sm"
        hx-get="/admin/products/table?page={{ current_page + 1 }}"
-       hx-target="#product-table-wrap" hx-swap="outerHTML">Next</a>
+       hx-target="#product-table-wrap" hx-swap="outerHTML">Далее</a>
     {% endif %}
   </div>
   {% endif %}

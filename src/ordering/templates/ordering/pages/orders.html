@@ -7,14 +7,14 @@
 <div class="page-header">
   <div class="page-header__left">
     <h2 class="page-title">Заказы</h2>
-    <button class="help-badge" onclick="document.getElementById('orders-help-modal').classList.add('modal-overlay--active')" title="Help">?</button>
+    <button class="help-badge" onclick="document.getElementById('orders-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
   <button class="btn btn--ghost btn--sm" onclick="createTestOrder()">+ Тестовый заказ</button>
 </div>
 
 <div id="orders-container"></div>
 
-<div class="modal-overlay" id="orders-help-modal" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+<div class="modal-overlay" id="orders-help-modal" role="dialog" aria-modal="true" aria-label="Справка по заказам" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
   <div class="modal">
     <div class="modal__header">
       Заказы — Справка
@@ -76,7 +76,8 @@ async function deleteOrder(id) {
 }
 
 async function createTestOrder() {
-  await api.post('/orders', { name: 'Тестовый клиент', phone: '+375291234567', comment: 'Тестовый заказ' });
+  const r = await api.post('/orders', { name: 'Тестовый клиент', phone: '+375291234567', comment: 'Тестовый заказ' });
+  if (r._failed) return;
   window.ordersTable.load();
   document.body.dispatchEvent(new CustomEvent('showToast', {
     detail: { message: 'Тестовый заказ создан', type: 'success' }

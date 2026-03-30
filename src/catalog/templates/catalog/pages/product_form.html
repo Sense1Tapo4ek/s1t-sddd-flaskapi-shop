@@ -7,6 +7,25 @@
 <div class="page-header">
   <div class="page-header__left">
     <h2 class="page-title">{% if product_id %}Редактировать товар{% else %}Новый товар{% endif %}</h2>
+    <button class="help-badge" onclick="document.getElementById('product-form-help').classList.add('modal-overlay--active')" title="Справка">?</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="product-form-help" role="dialog" aria-modal="true" aria-label="Справка по форме товара" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Справка
+      <button class="modal__close" onclick="document.getElementById('product-form-help').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <ul style="padding-left:18px; margin:0;">
+        <li><strong>Название и цена</strong> — обязательные поля (*).</li>
+        <li><strong>Фотографии:</strong> При добавлении открывается редактор — можно обрезать, выбрать соотношение сторон и настроить качество сжатия.</li>
+        <li><strong>Редактирование фото:</strong> Клик по текущему фото открывает редактор. После применения старое фото заменяется новым.</li>
+        <li><strong>Удаление фото:</strong> Крестик на фото удаляет его сразу.</li>
+        <li><strong>Сохранение:</strong> Нажмите «Сохранить» для применения всех изменений.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -50,10 +69,6 @@
   </div>
 </form>
 
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button class="lightbox__close" onclick="closeLightbox()">&times;</button>
-  <img id="lightbox-img" src="" alt="">
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -61,16 +76,6 @@
 <script src="/static/js/api.js"></script>
 <script>
 const productId = {{ product_id | tojson }};
-
-// --- Lightbox ---
-function openLightbox(src) {
-  document.getElementById('lightbox-img').src = src;
-  document.getElementById('lightbox').classList.add('lightbox--active');
-}
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('lightbox--active');
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 // --- Load product for edit ---
 async function loadProduct() {
@@ -90,48 +95,77 @@ function renderCurrentImages(images) {
   block.style.display = 'block';
   grid.innerHTML = images.map(src => `
     <div class="image-thumb" id="thumb_${btoa(src).replace(/=/g,'')}">
-      <img src="${esc(src)}" alt="" onclick="openLightbox('${esc(src)}')">
+      <img src="${esc(src)}" alt=""
+           onclick="editExistingImage('${esc(src)}')" style="cursor:pointer;"
+           title="Клик — редактировать">
       <button type="button" class="image-thumb__del" onclick="deleteImage(this, '${esc(src)}')">&#215;</button>
     </div>
   `).join('');
 }
 
-async function deleteImage(btn, src) {
-  if (!productId) return;
-  btn.disabled = true;
-  const res = await api.del(`/catalog/${productId}/images`);
-  // API requires JSON body — use raw fetch since api.del doesn't accept body
-  const r = await fetch(`/catalog/${productId}/images`, {
-    method: 'DELETE',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_path: src }),
-  }).then(r => r.json()).catch(() => ({}));
-
-  if (r && (r.id || r.images !== undefined)) {
-    renderCurrentImages(r.images || []);
-  } else {
-    btn.disabled = false;
+async function editExistingImage(src) {
+  if (!productId || !window.openImageEditor) return;
+  try {
+    const blob = await window.openImageEditor(src);
+    // 1. Delete old image
+    await fetch('/catalog/' + productId + '/images', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_path: src }),
+    });
+    // 2. Upload edited image
+    const fd = new FormData();
+    fd.append('new_images', blob, 'edited.jpg');
+    await fetch('/catalog/' + productId, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      body: fd,
+    });
+    // 3. Reload
+    loadProduct();
     document.body.dispatchEvent(new CustomEvent('showToast', {
-      detail: { message: r.error || 'Ошибка удаления фото', type: 'error' }
+      detail: { message: 'Фото обновлено', type: 'success' }
     }));
+  } catch (e) {
+    // User cancelled — do nothing
   }
 }
 
-// --- Image preview on file select ---
-document.getElementById('f-images').addEventListener('change', function() {
+async function deleteImage(btn, src) {
+  if (!productId) return;
+  btn.disabled = true;
+  const r = await api.del(`/catalog/${productId}/images`, { image_path: src });
+  if (r._failed) { btn.disabled = false; return; }
+  if (r.id || r.images !== undefined) {
+    renderCurrentImages(r.images || []);
+  } else {
+    btn.disabled = false;
+  }
+}
+
+// --- Image editor on file select ---
+let editedImages = [];
+
+document.getElementById('f-images').addEventListener('change', async function() {
   const preview = document.getElementById('previewImages');
-  preview.innerHTML = '';
-  for (const file of this.files) {
-    const reader = new FileReader();
-    reader.onload = e => {
+  const files = Array.from(this.files);
+  for (const file of files) {
+    try {
+      const blob = window.openImageEditor
+        ? await window.openImageEditor(file)
+        : file;
+      editedImages.push(blob);
+      const url = URL.createObjectURL(blob);
       const div = document.createElement('div');
       div.className = 'image-thumb';
-      div.innerHTML = `<img src="${e.target.result}" alt="" onclick="openLightbox(this.src)">`;
+      div.innerHTML = `<img src="${url}" alt="">`;
       preview.appendChild(div);
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {
+      // User cancelled editor for this file — skip
+    }
   }
+  this.value = '';
 });
 
 // --- Form submit ---
@@ -139,8 +173,19 @@ document.getElementById('productForm').addEventListener('submit', async function
   e.preventDefault();
   const alertEl = document.getElementById('formAlert');
   alertEl.style.display = 'none';
+  const submitBtn = this.querySelector('button[type="submit"]');
+  submitBtn.classList.add('btn--loading');
 
-  const fd = new FormData(this);
+  const fd = new FormData();
+  fd.append('title', document.getElementById('f-title').value);
+  fd.append('price', document.getElementById('f-price').value);
+  fd.append('description', document.getElementById('f-description').value);
+
+  const fieldName = productId ? 'new_images' : 'images';
+  for (const blob of editedImages) {
+    fd.append(fieldName, blob, 'edited.jpg');
+  }
+
   const url    = productId ? `/catalog/${productId}` : '/catalog';
   const method = productId ? 'PUT' : 'POST';
 
@@ -150,8 +195,19 @@ document.getElementById('productForm').addEventListener('submit', async function
     body: fd,
   }).then(r => r.json()).catch(err => ({ error: err.message }));
 
+  submitBtn.classList.remove('btn--loading');
+
   if (res.id || res.success) {
-    window.location = '/admin/products/';
+    if (productId) {
+      editedImages = [];
+      document.getElementById('previewImages').innerHTML = '';
+      loadProduct();
+      document.body.dispatchEvent(new CustomEvent('showToast', {
+        detail: { message: 'Сохранено', type: 'success' }
+      }));
+    } else {
+      window.location = '/admin/products/';
+    }
   } else {
     alertEl.textContent = res.message || res.error || 'Ошибка сохранения';
     alertEl.style.display = 'block';

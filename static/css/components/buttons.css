@@ -66,3 +66,24 @@
 .btn:empty {
   display: none;
 }
+
+.btn--loading {
+  pointer-events: none;
+  opacity: 0.6;
+  position: relative;
+}
+
+.btn--loading::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.5s linear infinite;
+  margin-left: 6px;
+}
+
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}

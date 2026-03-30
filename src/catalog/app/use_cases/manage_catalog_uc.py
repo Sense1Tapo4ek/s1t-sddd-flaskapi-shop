@@ -115,3 +115,6 @@ class ManageCatalogUseCase:
 
         # 3. Delete from DB
         return self._repo.delete(product_id)
+
+    def swap_ids(self, id_a: int, id_b: int) -> None:
+        self._repo.swap_ids(id_a, id_b)

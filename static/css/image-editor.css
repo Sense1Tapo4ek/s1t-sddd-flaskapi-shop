@@ -1,0 +1,171 @@
+.img-editor-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+}
+
+.img-editor-modal {
+  background: var(--surface, #fff);
+  border-radius: 4px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  width: 96vw;
+  max-width: 1200px;
+  height: 90vh;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.img-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border, #e0ddd6);
+  flex-shrink: 0;
+}
+
+.img-editor-title {
+  font-family: var(--font-serif, 'Noto Serif', serif);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.img-editor-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text-muted, #888);
+  padding: 0 4px;
+}
+
+/* Horizontal layout: canvas left, panel right */
+.img-editor-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.img-editor-canvas {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.img-editor-canvas img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Right sidebar panel */
+.img-editor-panel {
+  width: 260px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border, #e0ddd6);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  background: var(--bg, #f9f7f2);
+}
+
+.img-editor-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #888);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.img-editor-ratios {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.img-editor-ratios .img-ratio-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.img-editor-range {
+  width: 100%;
+  accent-color: var(--accent, #b44a3e);
+}
+
+.img-editor-info {
+  font-size: 12px;
+  color: var(--text-muted, #888);
+  line-height: 1.5;
+}
+
+.img-editor-info strong {
+  color: var(--text, #2c2c2c);
+  font-weight: 500;
+}
+
+.img-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border, #e0ddd6);
+  flex-shrink: 0;
+}
+
+/* Brighter crop box via Cropper.js overrides */
+.img-editor-canvas .cropper-view-box {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: -2px;
+}
+
+.img-editor-canvas .cropper-line {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.img-editor-canvas .cropper-point {
+  background-color: #fff;
+  width: 8px;
+  height: 8px;
+  opacity: 1;
+}
+
+.img-editor-canvas .cropper-modal {
+  background-color: #000;
+  opacity: 0.6;
+}
+
+.img-editor-canvas .cropper-dashed {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive: stack vertically on narrow screens */
+@media (max-width: 700px) {
+  .img-editor-body {
+    flex-direction: column;
+  }
+  .img-editor-canvas {
+    max-height: 50vh;
+  }
+  .img-editor-panel {
+    width: auto;
+    border-left: none;
+    border-top: 1px solid var(--border, #e0ddd6);
+    max-height: 40vh;
+  }
+}

@@ -73,6 +73,14 @@
   margin-top: 4px;
 }
 
+.form-input--error {
+  border-color: var(--color-danger);
+}
+
+.form-input--error:focus {
+  border-color: var(--color-danger);
+}
+
 .form-error {
   font-size: 12px;
   color: var(--color-danger);

@@ -16,10 +16,10 @@
             hx-target="closest tr"
             hx-swap="outerHTML"
             name="status">
-      <option value="new" {% if order.status == 'new' %}selected{% endif %}>New</option>
-      <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>Processing</option>
-      <option value="done" {% if order.status == 'done' %}selected{% endif %}>Done</option>
-      <option value="canceled" {% if order.status == 'canceled' %}selected{% endif %}>Canceled</option>
+      <option value="new" {% if order.status == 'new' %}selected{% endif %}>Новый</option>
+      <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>В обработке</option>
+      <option value="done" {% if order.status == 'done' %}selected{% endif %}>Выполнен</option>
+      <option value="canceled" {% if order.status == 'canceled' %}selected{% endif %}>Отменён</option>
     </select>
   </td>
 </tr>

@@ -189,19 +189,23 @@ def create_app() -> APIFlask:
         )
 
     @app.route("/media/products/<path:filename>")
+    @app.doc(hide=True)
     def serve_upload(filename: str):
         upload_dir = str(base_dir / catalog_config.upload_dir)
         return send_from_directory(upload_dir, filename)
 
     @app.route("/")
+    @app.doc(hide=True)
     def index():
         return redirect("/admin/products")
 
     @app.route("/admin/")
+    @app.doc(hide=True)
     def admin_index():
         return redirect("/admin/products")
 
     @app.route("/admin/help")
+    @app.doc(hide=True)
     def admin_help():
         return render_template("help.html")
 

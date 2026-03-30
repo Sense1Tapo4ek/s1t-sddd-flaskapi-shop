@@ -51,7 +51,7 @@ class CatalogFacade:
         return AdminProductListOut.from_domain(res)
 
     def create_product(
-        self, title: str, price: float, description: str, images: list
+        self, title: str, price: float, description: str, images: list[tuple[str, bytes]]
     ) -> ProductDetailOut:
         res = self._manage_uc.create(
             title=title, price=price, description=description, images=images
@@ -68,3 +68,6 @@ class CatalogFacade:
 
     def delete_product(self, product_id: int) -> bool:
         return self._manage_uc.delete(product_id)
+
+    def swap_ids(self, id_a: int, id_b: int) -> None:
+        self._manage_uc.swap_ids(id_a, id_b)

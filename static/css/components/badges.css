@@ -13,9 +13,19 @@
   color: var(--color-success);
 }
 
+.badge--processing {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
 .badge--done {
   border-color: var(--color-text-muted);
   color: var(--color-text-muted);
+}
+
+.badge--canceled {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .badge--trash {

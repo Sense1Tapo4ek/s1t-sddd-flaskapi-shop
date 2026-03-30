@@ -8,6 +8,7 @@ from .schemas import (
     CatalogQuery,
     RandomQuery,
     DeleteImageIn,
+    SwapSortOrderIn,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "CatalogQuery",
     "RandomQuery",
     "DeleteImageIn",
+    "SwapSortOrderIn",
 ]

@@ -33,7 +33,7 @@ def init_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(DomainError)
     def handle_domain_error(e: DomainError):
-        logger.warning(f"Domain Rule Violation: {e.code} - {e.message}")
+        logger.warning("Domain Rule Violation: %s - %s", e.code, e.message)
         if is_htmx():
             return _htmx_toast(e.message, 422)
         return _json_response(e, 422)
@@ -41,28 +41,28 @@ def init_error_handlers(app: Flask) -> None:
     @app.errorhandler(ApplicationError)
     def handle_app_error(e: ApplicationError):
         status = 404 if "NOT_FOUND" in e.code else 400
-        logger.info(f"App Error: {e.code} - {e.message}")
+        logger.info("App Error: %s - %s", e.code, e.message)
         if is_htmx():
             return _htmx_toast(e.message, status)
         return _json_response(e, status)
 
     @app.errorhandler(DrivingPortError)
     def handle_driving_port_error(e: DrivingPortError):
-        logger.info(f"Validation Error: {e.message}")
+        logger.info("Validation Error: %s", e.message)
         if is_htmx():
             return _htmx_toast(e.message, 400)
         return _json_response(e, 400)
 
     @app.errorhandler(DrivenPortError)
     def handle_driven_port_error(e: DrivenPortError):
-        logger.error(f"Port Failure: {e.message}", exc_info=True)
+        logger.error("Port Failure: %s", e.message, exc_info=True)
         if is_htmx():
             return _htmx_toast(e.message, 500)
         return _json_response(e, 500)
 
     @app.errorhandler(DrivingAdapterError)
     def handle_driving_adapter_error(e: DrivingAdapterError):
-        logger.info(f"Auth Failure: {e.message}")
+        logger.info("Auth Failure: %s", e.message)
         if is_htmx():
             response = make_response("")
             response.headers["HX-Redirect"] = "/admin/login"
@@ -73,7 +73,7 @@ def init_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(DrivenAdapterError)
     def handle_driven_adapter_error(e: DrivenAdapterError):
-        logger.critical(f"Infra Failure: {e.message}", exc_info=True)
+        logger.critical("Infra Failure: %s", e.message, exc_info=True)
         if is_htmx():
             return _htmx_toast(e.message, 503)
         return _json_response(e, 503)

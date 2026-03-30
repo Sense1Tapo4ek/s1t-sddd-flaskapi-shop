@@ -13,7 +13,7 @@ class ViewCatalogUseCase:
     _repo: IProductRepo
 
     def get_paginated(self, page: int = 1, limit: int = 20) -> PaginatedResult[Product]:
-        params = PaginationParams(page=page, limit=limit)
+        params = PaginationParams(page=page, limit=limit, sort_by="id", sort_dir="desc")
         return self._repo.get_paginated(params)
 
     def get_detail(self, product_id: int) -> Product:

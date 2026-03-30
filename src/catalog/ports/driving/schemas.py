@@ -91,3 +91,11 @@ class AdminProductListOut(BaseModel):
             items=[ProductDetailOut.from_domain(p) for p in result.items],
             total=result.total,
         )
+
+
+class SwapSortOrderIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id_a: int
+    id_b: int
+
+

@@ -6,8 +6,11 @@ from dishka.integrations.flask import inject, FromDishka
 from catalog.ports.driving.facade import CatalogFacade
 from shared.adapters.driving.middleware import jwt_required
 from shared.adapters.driving.htmx import render_partial_or_full
+from shared.helpers.parsing import safe_float, parse_table_params
 
-catalog_admin_bp = APIBlueprint("catalog_admin", __name__, url_prefix="/admin/products")
+catalog_admin_bp = APIBlueprint("catalog_admin", __name__, url_prefix="/admin/products", enable_openapi=False)
+
+
 
 
 @catalog_admin_bp.route("/")
@@ -26,7 +29,7 @@ def products_page(facade: FromDishka[CatalogFacade]):
 @jwt_required
 @inject
 def products_table(facade: FromDishka[CatalogFacade]):
-    params = _parse_table_params(request.args)
+    params = parse_table_params(request.args)
     result = facade.search_products(**params)
     return render_template("catalog/partials/table.html", products=result)
 
@@ -62,14 +65,14 @@ def product_form_edit(product_id: int, facade: FromDishka[CatalogFacade]):
 @inject
 def create_product(facade: FromDishka[CatalogFacade]):
     title = request.form.get("title", "")
-    price = float(request.form.get("price", 0))
+    price = safe_float(request.form.get("price", "0"), "price", min_val=0)
     description = request.form.get("description", "")
     images = [
         (file.filename or "img.jpg", file.read())
         for file in request.files.getlist("images")
     ]
     facade.create_product(title=title, price=price, description=description, images=images)
-    params = _parse_table_params(request.args)
+    params = parse_table_params(request.args)
     table_result = facade.search_products(**params)
     response = make_response(
         render_template("catalog/partials/table.html", products=table_result)
@@ -89,7 +92,7 @@ def update_product(product_id: int, facade: FromDishka[CatalogFacade]):
     if "title" in request.form:
         kwargs["title"] = request.form["title"]
     if "price" in request.form:
-        kwargs["price"] = float(request.form["price"])
+        kwargs["price"] = safe_float(request.form["price"], "price", min_val=0)
     if "description" in request.form:
         kwargs["description"] = request.form["description"]
     new_images = [
@@ -119,12 +122,3 @@ def delete_product(product_id: int, facade: FromDishka[CatalogFacade]):
     return "", 200
 
 
-def _parse_table_params(args) -> dict:
-    return {
-        "page": int(args.get("page", 1)),
-        "limit": int(args.get("limit", 20)),
-        "sort_by": args.get("sort_by", "created_at"),
-        "sort_dir": args.get("sort_dir", "desc"),
-        "filters": {k: v for k, v in args.items()
-                     if "__" in k and k not in ("sort_by", "sort_dir")},
-    }
