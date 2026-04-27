@@ -1,8 +1,12 @@
 from typing import Callable
 from dishka import Provider, Scope, provide
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from shared.adapters.driven import create_session_factory
+from shared.adapters.driven.db.connection import (
+    create_db_engine,
+    create_session_factory_for_engine,
+)
 from shared.config import InfraConfig
 
 
@@ -14,5 +18,9 @@ class InfraProvider(Provider):
         return InfraConfig()
 
     @provide
-    def session_factory(self, config: InfraConfig) -> Callable[[], Session]:
-        return create_session_factory(config.database_url)
+    def engine(self, config: InfraConfig) -> Engine:
+        return create_db_engine(config.database_url)
+
+    @provide
+    def session_factory(self, engine: Engine) -> Callable[[], Session]:
+        return create_session_factory_for_engine(engine)

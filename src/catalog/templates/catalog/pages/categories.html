@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% set active = "categories" %}
+
+{% block title %}Категории — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h2 class="page-title">Категории</h2>
+  </div>
+  {% if has_perm('edit_taxonomy') %}
+  <button class="btn btn--primary btn--sm" onclick="createRootCategory()">+ Корневая категория</button>
+  {% endif %}
+  {% if has_perm('create_demo_data') %}
+  <button class="btn btn--ghost btn--sm" onclick="createDemoData()">Создать демо-данные</button>
+  {% endif %}
+</div>
+
+<div class="taxonomy-layout">
+  <section class="taxonomy-panel">
+    <div class="taxonomy-panel__header">
+      <div class="taxonomy-panel__title">Дерево</div>
+      <button class="btn btn--ghost btn--sm" onclick="categoryTree.load(selectedCategoryId)">Обновить</button>
+    </div>
+    <div class="taxonomy-panel__body" id="categoryTree"></div>
+  </section>
+
+  <section class="taxonomy-panel taxonomy-editor">
+    <div class="taxonomy-panel__body" id="categoryEditor">
+      <div class="taxonomy-empty">Выберите категорию слева или создайте новую.</div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/smart-table.js"></script>
+<script>
+let selectedCategoryId = null;
+let selectedCategory = null;
+let categoryProductsTable = null;
+const CAN_EDIT_TAXONOMY = {{ 'true' if has_perm('edit_taxonomy') else 'false' }};
+const CAN_VIEW_PRODUCTS = {{ 'true' if has_perm('view_products') else 'false' }};
+const CAN_EDIT_PRODUCTS = {{ 'true' if has_perm('edit_products') else 'false' }};
+const CAN_CREATE_DEMO_DATA = {{ 'true' if has_perm('create_demo_data') else 'false' }};
+
+function booleanOption(value) {
+  return value ? 'checked' : '';
+}
+
+function renderCategoryEditor(category) {
+  selectedCategory = category;
+  selectedCategoryId = category.id;
+  const isLeaf = !(category.children && category.children.length);
+  document.getElementById('categoryEditor').innerHTML = `
+    <div class="taxonomy-editor__headline">
+      <div>
+        <div class="taxonomy-editor__title">${esc(category.title)}</div>
+        <div class="taxonomy-editor__meta">/${esc(category.slug)} · ${isLeaf ? 'конечная категория' : 'группа'}</div>
+      </div>
+      <span class="taxonomy-status ${category.is_active ? '' : 'taxonomy-status--inactive'}">${category.is_active ? 'Активна' : 'Скрыта'}</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn tab-btn--active" onclick="openCategoryTab('settings', this)">Настройки</button>
+      <button class="tab-btn" onclick="openCategoryTab('attributes', this); loadAttributes()">Атрибуты</button>
+      ${CAN_VIEW_PRODUCTS ? "<button class=\"tab-btn\" onclick=\"openCategoryTab('products', this); loadCategoryProducts()\">Товары</button>" : ''}
+    </div>
+
+    <div id="tab-settings" class="tab-panel tab-panel--active">
+      <form id="categoryForm" class="form form--wide" onsubmit="saveCategory(event)">
+        <div class="form-group">
+          <label class="form-label">Название</label>
+          <input class="form-input" name="title" value="${esc(category.title)}" required ${CAN_EDIT_TAXONOMY ? '' : 'disabled'}>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug</label>
+          <input class="form-input" name="slug" value="${esc(category.slug)}" ${CAN_EDIT_TAXONOMY ? '' : 'disabled'}>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Описание</label>
+          <textarea class="form-input form-textarea" name="description" ${CAN_EDIT_TAXONOMY ? '' : 'disabled'}>${esc(category.description || '')}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Порядок</label>
+            <input class="form-input" type="number" name="sort_order" value="${category.sort_order || 0}" ${CAN_EDIT_TAXONOMY ? '' : 'disabled'}>
+          </div>
+          <label class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:23px;">
+            <input type="checkbox" name="is_active" ${booleanOption(category.is_active)} ${CAN_EDIT_TAXONOMY ? '' : 'disabled'}>
+            <span>Активна</span>
+          </label>
+        </div>
+        ${CAN_EDIT_TAXONOMY ? `<div class="form-actions">
+          <button class="btn btn--primary" type="submit">Сохранить</button>
+          <button class="btn btn--danger" type="button" onclick="deleteSelectedCategory()">Удалить</button>
+        </div>` : '<p class="taxonomy-muted">Режим только для чтения.</p>'}
+      </form>
+    </div>
+
+    <div id="tab-attributes" class="tab-panel">
+      <div id="attributesContainer" class="taxonomy-empty">Загрузка атрибутов…</div>
+    </div>
+
+    ${CAN_VIEW_PRODUCTS ? `<div id="tab-products" class="tab-panel">
+      <div class="taxonomy-toolbar">
+        <div class="taxonomy-toggle">
+          <button class="taxonomy-toggle__btn taxonomy-toggle__btn--active" id="catProductsDirect" onclick="setProductsMode(false)">Только эта</button>
+          <button class="taxonomy-toggle__btn" id="catProductsDesc" onclick="setProductsMode(true)">С подкатегориями</button>
+        </div>
+        ${CAN_EDIT_PRODUCTS ? `<a class="btn btn--primary btn--sm" href="/admin/products/new?category_id=${category.id}">+ Товар в категории</a>` : ''}
+      </div>
+      <div id="categoryProducts"></div>
+    </div>` : ''}
+  `;
+}
+
+function openCategoryTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('tab-btn--active'));
+  btn.classList.add('tab-btn--active');
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('tab-panel--active'));
+  document.getElementById('tab-' + name).classList.add('tab-panel--active');
+}
+
+async function createCategory(parentId) {
+  if (!CAN_EDIT_TAXONOMY) return;
+  const title = prompt('Название категории');
+  if (!title) return;
+  const res = await api.post('/catalog/admin/categories', { title, parent_id: parentId || null });
+  if (res._failed) return;
+  selectedCategoryId = res.id;
+  categoryTree.load(res.id);
+}
+
+function createRootCategory() {
+  createCategory(null);
+}
+
+async function createDemoData() {
+  if (!CAN_CREATE_DEMO_DATA) return;
+  if (!confirm('Создать недостающие демо-данные для leaf-категорий?')) return;
+  const res = await api.post('/catalog/admin/demo-data', {});
+  if (res._failed) return;
+  document.body.dispatchEvent(new CustomEvent('showToast', {
+    detail: {
+      message: `Создано товаров: ${res.products_created || 0}, категорий: ${res.categories_created || 0}`,
+      type: 'success'
+    }
+  }));
+  categoryTree.load(selectedCategoryId);
+}
+
+async function saveCategory(event) {
+  event.preventDefault();
+  if (!CAN_EDIT_TAXONOMY) return;
+  const form = new FormData(event.target);
+  const payload = {
+    title: form.get('title'),
+    slug: form.get('slug'),
+    description: form.get('description'),
+    sort_order: parseInt(form.get('sort_order') || '0', 10),
+    is_active: Boolean(form.get('is_active')),
+  };
+  const res = await api.put('/catalog/admin/categories/' + selectedCategoryId, payload);
+  if (res._failed) return;
+  document.body.dispatchEvent(new CustomEvent('showToast', { detail: { message: 'Категория сохранена', type: 'success' } }));
+  categoryTree.load(res.id);
+}
+
+async function deleteSelectedCategory() {
+  if (!CAN_EDIT_TAXONOMY) return;
+  if (!selectedCategoryId) return;
+  if (!confirm('Удалить категорию?')) return;
+  const res = await api.del('/catalog/admin/categories/' + selectedCategoryId);
+  if (res._failed) return;
+  selectedCategoryId = null;
+  document.getElementById('categoryEditor').innerHTML = '<div class="taxonomy-empty">Выберите категорию слева или создайте новую.</div>';
+  categoryTree.load();
+}
+
+async function loadAttributes() {
+  if (!selectedCategoryId) return;
+  const data = await api.get(`/catalog/admin/categories/${selectedCategoryId}/attributes`);
+  if (data._failed) return;
+  renderAttributes(data);
+}
+
+function renderAttributes(data) {
+  const inherited = (data.inherited || []).map(attr => `
+    <div class="taxonomy-card">
+      <div class="taxonomy-card__title">${esc(attr.title)} · ${esc(attr.type)}</div>
+      <div class="taxonomy-editor__meta">Наследуется от ${esc(attr.inherited_from_title || '')} · ${esc(attr.code)}</div>
+    </div>
+  `).join('');
+  const own = (data.own || []).map(attr => `
+    <div class="taxonomy-card">
+      <div class="taxonomy-card__title">${esc(attr.title)} · ${esc(attr.type)}</div>
+      <div class="taxonomy-editor__meta">${esc(attr.code)}${attr.is_required ? ' · обязательно' : ''}</div>
+      ${CAN_EDIT_TAXONOMY ? `<button class="btn btn--ghost btn--sm" style="margin-top:8px;" onclick="deleteAttribute(${attr.id})">Удалить</button>` : ''}
+    </div>
+  `).join('');
+  document.getElementById('attributesContainer').innerHTML = `
+    <div class="taxonomy-toolbar">
+      <div class="taxonomy-panel__title">Атрибуты</div>
+      ${CAN_EDIT_TAXONOMY ? '<button class="btn btn--primary btn--sm" onclick="createAttribute()">+ Атрибут</button>' : ''}
+    </div>
+    <div class="taxonomy-card__title">Наследуемые</div>
+    <div class="taxonomy-grid">${inherited || '<p class="empty-text">Нет наследуемых атрибутов</p>'}</div>
+    <div class="taxonomy-card__title" style="margin-top:18px;">Свои</div>
+    <div class="taxonomy-grid">${own || '<p class="empty-text">Нет собственных атрибутов</p>'}</div>
+  `;
+}
+
+async function createAttribute() {
+  if (!CAN_EDIT_TAXONOMY) return;
+  const title = prompt('Название атрибута');
+  if (!title) return;
+  const code = prompt('Код атрибута', title.toLowerCase().replace(/\s+/g, '_'));
+  if (!code) return;
+  const type = prompt('Тип: text, number, boolean, select, multiselect, date, url, file, image', 'text') || 'text';
+  const res = await api.post(`/catalog/admin/categories/${selectedCategoryId}/attributes`, {
+    title, code, type, is_required: false,
+  });
+  if (res._failed) return;
+  loadAttributes();
+}
+
+async function deleteAttribute(id) {
+  if (!CAN_EDIT_TAXONOMY) return;
+  if (!confirm('Удалить атрибут?')) return;
+  const res = await api.del(`/catalog/admin/categories/${selectedCategoryId}/attributes/${id}`);
+  if (res._failed) return;
+  loadAttributes();
+}
+
+function ensureProductsTable() {
+  if (!CAN_VIEW_PRODUCTS) return null;
+  if (categoryProductsTable) return categoryProductsTable;
+  categoryProductsTable = new SmartTable({
+    instanceName: 'categoryProductsTable',
+    endpoint: '/catalog/admin/search',
+    schemaEndpoint: '/catalog/admin/search/schema',
+    containerId: 'categoryProducts',
+    defaultSortBy: 'id',
+    defaultSortDir: 'desc',
+    columns: [
+      { key: 'id', label: '#', sortable: true },
+      { key: 'title', label: 'Название', sortable: true },
+      { key: 'price', label: 'Цена', sortable: true, render: p => parseFloat(p.price).toFixed(2) + ' BYN' },
+      { key: 'category', label: 'Категория', sortable: false, render: p => p.category ? esc(p.category.title) : '—' },
+      { key: 'tags', label: 'Теги', sortable: false, render: p => (p.tags || []).map(t => `<span class="badge">${esc(t.title)}</span>`).join(' ') || '—' },
+      { key: 'actions', label: 'Действия', sortable: false, render: p => CAN_EDIT_PRODUCTS ? `<a href="/admin/products/${p.id}/edit" class="btn btn--ghost btn--sm">Изм.</a>` : '—' },
+    ],
+  });
+  return categoryProductsTable;
+}
+
+function setProductsMode(includeDescendants) {
+  document.getElementById('catProductsDirect').classList.toggle('taxonomy-toggle__btn--active', !includeDescendants);
+  document.getElementById('catProductsDesc').classList.toggle('taxonomy-toggle__btn--active', includeDescendants);
+  const table = ensureProductsTable();
+  if (!table) return;
+  table.state.activeFilters = [
+    { key: 'category_id', op: 'eq', val: String(selectedCategoryId), label: 'Категория' },
+  ];
+  if (includeDescendants) {
+    table.state.activeFilters.push({ key: 'include_descendants', op: 'eq', val: 'true', label: 'Подкатегории' });
+  }
+  table.load();
+}
+
+function loadCategoryProducts() {
+  if (!CAN_VIEW_PRODUCTS) return;
+  setProductsMode(selectedCategory && selectedCategory.children && selectedCategory.children.length);
+}
+
+const categoryTree = new TaxonomyTree({
+  containerId: 'categoryTree',
+  onSelect: renderCategoryEditor,
+  showActions: CAN_EDIT_TAXONOMY,
+  onAddChild: CAN_EDIT_TAXONOMY ? (category => createCategory(category.id)) : null,
+});
+
+categoryTree.load();
+</script>
+{% endblock %}

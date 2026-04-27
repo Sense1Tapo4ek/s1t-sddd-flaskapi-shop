@@ -17,3 +17,9 @@ class AccessAcl(IAccessAcl):
 
     def generate_recovery_code(self) -> str:
         return self._facade.generate_recovery_code()
+
+    def request_recovery_code(self) -> tuple[str, str, str]:
+        return self._facade.request_user_confirmation_code(admin_id=1)
+
+    def clear_recovery_code(self) -> None:
+        self._facade.clear_recovery_code()

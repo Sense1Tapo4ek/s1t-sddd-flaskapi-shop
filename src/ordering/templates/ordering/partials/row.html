@@ -11,6 +11,7 @@
     <span class="badge badge--{{ order.status }}">{{ order.status }}</span>
   </td>
   <td>
+    {% if has_perm('manage_orders') %}
     <select class="form-input form-input--sm"
             hx-patch="/admin/orders/{{ order.id }}/status"
             hx-target="closest tr"
@@ -21,5 +22,8 @@
       <option value="done" {% if order.status == 'done' %}selected{% endif %}>Выполнен</option>
       <option value="canceled" {% if order.status == 'canceled' %}selected{% endif %}>Отменён</option>
     </select>
+    {% else %}
+    —
+    {% endif %}
   </td>
 </tr>

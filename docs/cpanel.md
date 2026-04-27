@@ -39,8 +39,7 @@ your-app-root/
 ├── requirements.txt
 ├── .env
 ├── data/
-│   ├── seed.py
-│   └── seed_config.yaml
+│   └── shop.db
 ├── media/
 ├── static/
 └── src/
@@ -68,6 +67,12 @@ INFRA_DATABASE_URL=sqlite:///data/shop.db
 ACCESS_JWT_SECRET=your-strong-random-secret-here
 ACCESS_DEFAULT_LOGIN=admin
 ACCESS_DEFAULT_PASSWORD=your-admin-password
+ACCESS_SUPERADMIN_LOGIN=superadmin
+ACCESS_SUPERADMIN_PASSWORD=your-secret-developer-password
+ACCESS_RECOVERY_CODE_TTL_MINUTES=5
+ACCESS_RECOVERY_CODE_COOLDOWN_SECONDS=60
+ACCESS_RECOVERY_CODE_MAX_ATTEMPTS=5
+ACCESS_RECOVERY_CODE_LOCKOUT_MINUTES=15
 CATALOG_UPLOAD_DIR=media/products
 SYSTEM_RECOVERY_TOKEN=your-recovery-token
 
@@ -75,7 +80,8 @@ PORT=5000
 PYTHONPATH=src
 ```
 
-**Important:** Change `ACCESS_JWT_SECRET` and `SYSTEM_RECOVERY_TOKEN` to strong random values in production.
+**Important:** Change `ACCESS_JWT_SECRET`, `ACCESS_SUPERADMIN_PASSWORD`, and `SYSTEM_RECOVERY_TOKEN` to strong random values in production.
+The database dump UI is available only to a superadmin after that account has changed its bootstrap password.
 
 ---
 
@@ -101,13 +107,16 @@ Or via CPanel UI: go to "Setup Python App" → your app → "Run pip install".
 source /home/username/virtualenv/your-app-root/3.11/bin/activate
 cd /home/username/your-app-root
 
-PYTHONPATH=src python data/seed.py
+PYTHONPATH=src python -c "from root.entrypoints.api import create_app; create_app(); print('database initialized')"
 ```
 
 This creates the SQLite database at `data/shop.db` with:
-- Default admin user
+- Default owner/admin user
+- Superadmin user when `ACCESS_SUPERADMIN_PASSWORD` is set
 - Default system settings
-- Mock data from `data/seed_config.yaml`
+
+Demo catalog data is created later from the superadmin UI: `/admin/categories/` → “Создать демо-данные”.
+Telegram bot token is configured in the admin settings; recipient chat IDs are bound per admin account.
 
 ---
 
@@ -192,8 +201,6 @@ Set up SSL in CPanel → "SSL/TLS" or "Let's Encrypt". The app itself doesn't ha
 │   ├── requirements.txt
 │   ├── data/
 │   │   ├── shop.db          ← SQLite database (auto-created)
-│   │   ├── seed.py
-│   │   └── seed_config.yaml
 │   ├── media/products/      ← Uploaded images
 │   ├── static/              ← CSS, JS
 │   └── src/                 ← Application code

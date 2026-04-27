@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% set active = "tags" %}
+
+{% block title %}Теги — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h2 class="page-title">Теги</h2>
+  </div>
+  <button class="btn btn--primary btn--sm" onclick="openTagForm()">+ Новый тег</button>
+</div>
+
+<div id="tags-container"></div>
+
+<div class="modal-overlay" id="tagModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeTagForm()">
+  <div class="modal">
+    <div class="modal__header">
+      <span id="tagModalTitle">Тег</span>
+      <button class="modal__close" onclick="closeTagForm()">&times;</button>
+    </div>
+    <form class="modal__body" id="tagForm" onsubmit="saveTag(event)">
+      <input type="hidden" id="tag-id">
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input class="form-input" id="tag-title" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Slug</label>
+        <input class="form-input" id="tag-slug">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Цвет</label>
+          <input class="form-input" type="color" id="tag-color" value="#7c8c6e">
+        </div>
+        <label class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:23px;">
+          <input type="checkbox" id="tag-active" checked>
+          <span>Активен</span>
+        </label>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" onclick="closeTagForm()">Отмена</button>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/smart-table.js"></script>
+<script>
+let editingTagId = null;
+
+function openTagForm(tag) {
+  editingTagId = tag ? tag.id : null;
+  document.getElementById('tagModalTitle').textContent = tag ? 'Редактировать тег' : 'Новый тег';
+  document.getElementById('tag-title').value = tag ? tag.title : '';
+  document.getElementById('tag-slug').value = tag ? tag.slug : '';
+  document.getElementById('tag-color').value = tag ? tag.color : '#7c8c6e';
+  document.getElementById('tag-active').checked = tag ? tag.is_active : true;
+  document.getElementById('tagModal').classList.add('modal-overlay--active');
+}
+
+function closeTagForm() {
+  document.getElementById('tagModal').classList.remove('modal-overlay--active');
+}
+
+async function saveTag(event) {
+  event.preventDefault();
+  const payload = {
+    title: document.getElementById('tag-title').value,
+    slug: document.getElementById('tag-slug').value || null,
+    color: document.getElementById('tag-color').value,
+    is_active: document.getElementById('tag-active').checked,
+  };
+  const res = editingTagId
+    ? await api.put('/catalog/admin/tags/' + editingTagId, payload)
+    : await api.post('/catalog/admin/tags', payload);
+  if (res._failed) return;
+  closeTagForm();
+  tagsTable.load();
+}
+
+async function deleteTag(id) {
+  if (!confirm('Удалить тег?')) return;
+  const res = await api.del('/catalog/admin/tags/' + id);
+  if (res._failed) return;
+  tagsTable.load();
+}
+
+window.tagsTable = new SmartTable({
+  instanceName: 'tagsTable',
+  endpoint: '/catalog/admin/tags',
+  schemaEndpoint: '/catalog/admin/tags/search/schema',
+  containerId: 'tags-container',
+  defaultSortBy: 'sort_order',
+  defaultSortDir: 'asc',
+  columns: [
+    { key: 'id', label: '#', sortable: true },
+    { key: 'title', label: 'Название', sortable: true },
+    { key: 'slug', label: 'Slug', sortable: true },
+    { key: 'color', label: 'Цвет', sortable: false, render: t => `<span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:16px;height:16px;border-radius:3px;background:${esc(t.color)};border:1px solid var(--color-border);"></span>${esc(t.color)}</span>` },
+    { key: 'product_count', label: 'Товаров', sortable: false },
+    { key: 'is_active', label: 'Активен', sortable: true, render: t => t.is_active ? 'Да' : 'Нет' },
+    { key: 'actions', label: 'Действия', sortable: false, render: t => `<div class="actions"><button class="btn btn--ghost btn--sm" onclick='openTagForm(${JSON.stringify(t)})'>Изм.</button><button class="btn btn--danger btn--sm" onclick="deleteTag(${t.id})">Удалить</button></div>` },
+  ],
+});
+
+tagsTable.load();
+</script>
+{% endblock %}

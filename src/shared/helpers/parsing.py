@@ -19,6 +19,23 @@ def safe_int(raw: str | int, default: int, *, min_val: int = 1) -> int:
     return max(val, min_val)
 
 
+def parse_optional_int(
+    raw: str | int | None,
+    field_name: str = "value",
+    *,
+    min_val: int = 1,
+) -> int | None:
+    if raw in (None, ""):
+        return None
+    try:
+        val = int(raw)
+    except (ValueError, TypeError):
+        raise DrivingPortError(f"Invalid {field_name}")
+    if val < min_val:
+        raise DrivingPortError(f"{field_name} must be >= {min_val}")
+    return val
+
+
 def parse_table_params(args: dict, default_sort: str = "created_at", default_dir: str = "desc") -> dict:
     return {
         "page": safe_int(args.get("page", 1), default=1),

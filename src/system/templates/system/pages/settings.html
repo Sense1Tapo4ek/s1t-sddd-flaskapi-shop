@@ -15,30 +15,15 @@
 
 {% if tab == 'telegram' %}
   {% include "system/partials/telegram_form.html" %}
-{% elif tab == 'security' %}
-  <form hx-put="/admin/settings/password"
-        hx-target="this"
-        hx-swap="none"
-        class="form form--wide">
-    <section class="form-section">
-      <h3 class="form-section__title">Смена пароля</h3>
-      <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
-        Используйте надёжный пароль — не менее 5 символов, буквы и цифры.
-      </p>
-
-      <div class="form-group" style="max-width:320px;">
-        <label class="form-label" for="new_password">Новый пароль</label>
-        <input class="form-input" type="password" id="new_password" name="new_password"
-               placeholder="Минимум 5 символов" required minlength="5">
-      </div>
-    </section>
-
-    <div class="form-actions" style="margin-bottom:48px;">
-      <button class="btn btn--primary" type="submit">Сохранить пароль</button>
-    </div>
-  </form>
 {% else %}
   {% include "system/partials/store_form.html" %}
+  <section class="settings-inline-section">
+    <div class="settings-inline-section__head">
+      <h3 class="form-section__title">Уведомления Telegram</h3>
+      <p>Настройка бота живет внутри магазина, чтобы не плодить отдельную вкладку в меню.</p>
+    </div>
+    {% include "system/partials/telegram_form.html" %}
+  </section>
 {% endif %}
 
 <!-- Help Modal -->
@@ -60,13 +45,6 @@
           <li>Нажмите «Сохранить», затем «Тестовое сообщение» для проверки связи.</li>
         </ol>
         <p style="margin-top:12px;"><strong>Важно:</strong> Между отправкой <code>/start</code> и нажатием «Get Chat ID» должно пройти не более 15 минут.</p>
-      {% elif tab == 'security' %}
-        <ul style="padding-left:18px; margin:0;">
-          <li><strong>Смена пароля:</strong> Введите новый пароль (минимум 5 символов) и подтвердите его. Текущий пароль не требуется — доступ уже подтверждён сессией.</li>
-          <li><strong>Хранение:</strong> Пароли хранятся в зашифрованном виде. Исходный пароль восстановить из базы невозможно.</li>
-          <li><strong>Восстановление через Telegram:</strong> Если вы забыли пароль, на странице входа можно получить одноразовый код в Telegram и войти без пароля. После входа смените пароль здесь.</li>
-          <li style="color:var(--color-danger);"><strong>⚠ Важно:</strong> Тот, у кого есть доступ к вашему Telegram-аккаунту, может войти в панель без пароля. Защитите Telegram двухфакторной аутентификацией.</li>
-        </ul>
       {% else %}
         <ul style="padding-left:18px; margin:0;">
           <li><strong>Контакты:</strong> Телефон, email, адрес и режим работы — отображаются на публичных страницах (шапка, подвал, страница контактов).</li>

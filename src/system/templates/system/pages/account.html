@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% set active = "account" %}
+
+{% block title %}Аккаунт — {{ app_name }}{% endblock %}
+
+{% block content %}
+<style>
+  .account-password-wrap {
+    position: relative;
+  }
+
+  .account-password-wrap .form-input {
+    padding-right: 78px;
+  }
+
+  .account-password-toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .password-feedback {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
+  .password-feedback--ok {
+    color: var(--color-success);
+  }
+
+  .password-feedback--warn {
+    color: var(--color-danger);
+  }
+
+  .password-meter {
+    background: var(--color-border);
+    border-radius: 999px;
+    height: 4px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .password-meter__bar {
+    background: var(--color-danger);
+    height: 100%;
+    transition: width .18s ease, background-color .18s ease;
+    width: 0;
+  }
+
+  .password-meter__bar[data-level="medium"] {
+    background: var(--color-warning, #b7791f);
+  }
+
+  .password-meter__bar[data-level="strong"] {
+    background: var(--color-success);
+  }
+</style>
+
+<div class="page-header">
+  <div class="page-header__left">
+    <h2 class="page-title">Аккаунт</h2>
+  </div>
+</div>
+
+<section class="account-shell">
+  <div class="account-card account-card--profile">
+    <div class="account-card__eyebrow">Текущий пользователь</div>
+    <div class="account-card__title">{{ current_user.login }}</div>
+    <div class="account-card__meta">{{ current_user.role }}</div>
+  </div>
+
+  <div class="account-card">
+    <h3 class="form-section__title">Telegram для входа</h3>
+    <p class="account-card__text">
+      {% if current_user.role == 'owner' %}
+        Для владельца этот Telegram используется для входа по коду и для уведомлений магазина.
+      {% else %}
+        Для superadmin этот Telegram используется только для входа по коду.
+      {% endif %}
+      Откройте бота, отправьте <code>/start</code>, затем нажмите «Получить Chat ID».
+    </p>
+    <form hx-put="/admin/settings/security/telegram-chat"
+          hx-target="this"
+          hx-swap="none"
+          class="form form--wide">
+      <div class="form-group account-card__field">
+        <label class="form-label" for="user_telegram_chat_id">Ваш Telegram Chat ID</label>
+        <div class="form-inline">
+          <input class="form-input" type="text" id="user_telegram_chat_id"
+                 name="telegram_chat_id" placeholder="Не подключён"
+                 value="{{ current_user.telegram_chat_id or '' }}">
+          <button type="button" class="btn btn--ghost"
+                  hx-post="/admin/settings/security/fetch-chat-id"
+                  hx-target="#user_telegram_chat_id"
+                  hx-swap="outerHTML">Получить Chat ID</button>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Сохранить Telegram</button>
+      </div>
+    </form>
+  </div>
+
+  <form id="password-change-form"
+        hx-put="/admin/settings/password"
+        hx-target="this"
+        hx-swap="none"
+        class="account-card form form--wide">
+    <h3 class="form-section__title">Смена пароля</h3>
+    <p class="account-card__text">
+      Для смены пароля введите текущий пароль или подтвердите действие кодом из Telegram.
+    </p>
+
+    <div class="form-group account-card__field">
+      <label class="form-label" for="old_password">Текущий пароль</label>
+      <div class="account-password-wrap">
+        <input class="form-input" type="password" id="old_password" name="old_password"
+               placeholder="Можно заменить кодом Telegram"
+               autocomplete="current-password">
+        <button class="btn btn--ghost btn--sm account-password-toggle"
+                type="button"
+                data-password-toggle="old_password"
+                aria-label="Показать текущий пароль">Показать</button>
+      </div>
+    </div>
+
+    <div class="form-group account-card__field account-card__field--wide">
+      <label class="form-label" for="confirmation_code">Код Telegram</label>
+      <div class="form-inline">
+        <input class="form-input" type="text" id="confirmation_code" name="confirmation_code"
+               placeholder="000000" maxlength="6" pattern="\d{6}" inputmode="numeric"
+               autocomplete="one-time-code">
+        <button type="button" class="btn btn--ghost"
+                hx-post="/admin/settings/security/password-code"
+                hx-swap="none">Получить код</button>
+      </div>
+    </div>
+
+    <div class="form-group account-card__field">
+      <label class="form-label" for="new_password">Новый пароль</label>
+      <div class="account-password-wrap">
+        <input class="form-input" type="password" id="new_password" name="new_password"
+               placeholder="Минимум 5 символов" required minlength="5"
+               autocomplete="new-password">
+        <button class="btn btn--ghost btn--sm account-password-toggle"
+                type="button"
+                data-password-toggle="new_password"
+                aria-label="Показать новый пароль">Показать</button>
+      </div>
+      <div class="password-meter" aria-hidden="true">
+        <div class="password-meter__bar" id="password-strength-bar"></div>
+      </div>
+      <div class="password-feedback" id="password-strength" aria-live="polite">
+        Введите минимум 5 символов.
+      </div>
+    </div>
+
+    <div class="form-group account-card__field">
+      <label class="form-label" for="new_password_confirm">Повтор нового пароля</label>
+      <div class="account-password-wrap">
+        <input class="form-input" type="password" id="new_password_confirm"
+               placeholder="Повторите новый пароль" required minlength="5"
+               autocomplete="new-password">
+        <button class="btn btn--ghost btn--sm account-password-toggle"
+                type="button"
+                data-password-toggle="new_password_confirm"
+                aria-label="Показать повтор нового пароля">Показать</button>
+      </div>
+      <div class="password-feedback" id="password-match-status" aria-live="polite">
+        Повторите новый пароль.
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn--primary" id="password-submit" type="submit">Сохранить пароль</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var form = document.getElementById("password-change-form");
+  if (!form) return;
+
+  var newPassword = document.getElementById("new_password");
+  var confirmPassword = document.getElementById("new_password_confirm");
+  var strengthText = document.getElementById("password-strength");
+  var strengthBar = document.getElementById("password-strength-bar");
+  var matchStatus = document.getElementById("password-match-status");
+  var submitButton = document.getElementById("password-submit");
+
+  function passwordScore(value) {
+    var score = 0;
+    if (value.length >= 5) score += 1;
+    if (value.length >= 8) score += 1;
+    if (/[A-ZА-Я]/.test(value) && /[a-zа-я]/.test(value)) score += 1;
+    if (/\d/.test(value)) score += 1;
+    if (/[^A-Za-zА-Яа-я0-9]/.test(value)) score += 1;
+    return score;
+  }
+
+  function renderStrength() {
+    var value = newPassword.value;
+    var score = passwordScore(value);
+    var level = "weak";
+    var width = "20%";
+    var text = "Слабый пароль.";
+
+    if (!value) {
+      width = "0";
+      text = "Введите минимум 5 символов.";
+    } else if (score >= 4) {
+      level = "strong";
+      width = "100%";
+      text = "Сильный пароль.";
+    } else if (score >= 2) {
+      level = "medium";
+      width = "60%";
+      text = "Нормальный пароль. Лучше добавить цифры, регистр или символы.";
+    }
+
+    strengthBar.dataset.level = level;
+    strengthBar.style.width = width;
+    strengthText.textContent = text;
+  }
+
+  function renderMatch() {
+    var hasRepeat = Boolean(confirmPassword.value);
+    var matches = newPassword.value === confirmPassword.value;
+
+    confirmPassword.setCustomValidity(hasRepeat && !matches ? "Пароли не совпадают" : "");
+    matchStatus.classList.toggle("password-feedback--ok", hasRepeat && matches);
+    matchStatus.classList.toggle("password-feedback--warn", hasRepeat && !matches);
+
+    if (!hasRepeat) {
+      matchStatus.textContent = "Повторите новый пароль.";
+    } else if (matches) {
+      matchStatus.textContent = "Пароли совпадают.";
+    } else {
+      matchStatus.textContent = "Пароли не совпадают.";
+    }
+
+    submitButton.disabled = hasRepeat && !matches;
+  }
+
+  window.validatePasswordForm = function(event) {
+    renderStrength();
+    renderMatch();
+
+    if (newPassword.value !== confirmPassword.value) {
+      event.preventDefault();
+      event.stopPropagation();
+      confirmPassword.focus();
+      document.body.dispatchEvent(new CustomEvent("showToast", {
+        detail: { message: "Новый пароль и повтор не совпадают", type: "error" }
+      }));
+      return false;
+    }
+    return true;
+  };
+
+  document.querySelectorAll("[data-password-toggle]").forEach(function(button) {
+    button.addEventListener("click", function() {
+      var input = document.getElementById(button.dataset.passwordToggle);
+      if (!input) return;
+      var show = input.type === "password";
+      input.type = show ? "text" : "password";
+      button.textContent = show ? "Скрыть" : "Показать";
+      button.setAttribute("aria-label", button.textContent + " пароль");
+    });
+  });
+
+  newPassword.addEventListener("input", function() {
+    renderStrength();
+    renderMatch();
+  });
+  confirmPassword.addEventListener("input", renderMatch);
+  form.addEventListener("submit", window.validatePasswordForm);
+
+  document.body.addEventListener("htmx:beforeRequest", function(event) {
+    if (event.detail.elt === form) {
+      window.validatePasswordForm(event);
+    }
+  });
+
+  document.body.addEventListener("passwordChanged", function() {
+    form.reset();
+    renderStrength();
+    renderMatch();
+  });
+
+  renderStrength();
+  renderMatch();
+})();
+</script>
+{% endblock %}

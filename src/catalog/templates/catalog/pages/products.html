@@ -9,7 +9,9 @@
     <h2 class="page-title">Товары</h2>
     <button class="help-badge" onclick="document.getElementById('products-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
+  {% if has_perm('edit_products') %}
   <a href="/admin/products/new" class="btn btn--primary btn--sm">+ Новый товар</a>
+  {% endif %}
 </div>
 
 <div id="products-container"></div>
@@ -39,7 +41,10 @@
 <script src="/static/js/api.js"></script>
 <script src="/static/js/smart-table.js"></script>
 <script>
+const CAN_EDIT_PRODUCTS = {{ 'true' if has_perm('edit_products') else 'false' }};
+
 async function deleteProduct(id, title) {
+  if (!CAN_EDIT_PRODUCTS) return;
   window.showConfirmModal({
     title: 'Удалить товар?',
     text: `«${title}» и все его фотографии будут удалены безвозвратно.`,
@@ -80,32 +85,15 @@ window.productsTable = new SmartTable({
     { key: 'price',      label: 'Цена',     sortable: true, render: p => parseFloat(p.price).toFixed(2) + ' BYN' },
     { key: 'created_at', label: 'Дата',     sortable: true, render: p => p.created_at ? String(p.created_at).slice(0, 10) : '—' },
     {
-      key: 'order', label: 'Порядок', sortable: false,
-      render: (p, idx, items) => `
-        <div style="display:flex;align-items:center;gap:2px;">
-          <button class="btn btn--ghost btn--sm" style="padding:2px 5px;font-size:14px;" onclick="swapProducts(${p.id}, ${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Выше">&#9650;</button>
-          <button class="btn btn--ghost btn--sm" style="padding:2px 5px;font-size:14px;" onclick="swapProducts(${p.id}, ${idx}, 1)" ${idx === items.length - 1 ? 'disabled' : ''} title="Ниже">&#9660;</button>
-        </div>`
-    },
-    {
       key: 'actions', label: 'Действия', sortable: false,
-      render: p => `
+      render: p => CAN_EDIT_PRODUCTS ? `
         <div style="display:flex;gap:6px;">
           <a href="/admin/products/${p.id}/edit" class="btn btn--ghost btn--sm">Изм.</a>
           <button class="btn btn--sm" style="border:1px solid var(--color-danger);color:var(--color-danger);background:none;" onclick="deleteProduct(${p.id}, '${esc(p.title)}')">Удалить</button>
-        </div>`
+        </div>` : '—'
     },
-  ]
+  ].filter(Boolean)
 });
-
-async function swapProducts(productId, currentIdx, direction) {
-  var items = window.productsTable.lastData ? window.productsTable.lastData.items : [];
-  var targetIdx = currentIdx + direction;
-  if (targetIdx < 0 || targetIdx >= items.length) return;
-  var targetId = items[targetIdx].id;
-  var r = await api.post('/catalog/admin/swap', { id_a: productId, id_b: targetId });
-  if (!r._failed) window.productsTable.load();
-}
 
 window.productsTable.load();
 </script>

@@ -9,10 +9,11 @@ Built for quick deployment on **CPanel** shared hosting, Docker, or any WSGI ser
 ## Features
 
 - Admin panel with HTMX + SmartTable (dynamic filters, sorting, pagination)
-- Telegram integration (order notifications, password recovery, test messages)
-- JWT authentication (httpOnly cookie + Bearer header)
+- Catalog taxonomy: category tree, tags, inherited category attributes
+- Telegram integration (order notifications to per-user chat IDs, per-user login codes)
+- Role-aware JWT authentication (httpOnly cookie + Bearer header)
 - Swagger/OpenAPI docs at `/api/docs`
-- Declarative mock data seeding via YAML config
+- Superadmin demo-data generator from the admin UI
 - CPanel-ready (`passenger_wsgi.py` included)
 
 ---
@@ -30,14 +31,16 @@ pip install -r requirements.txt
 # or with uv:
 uv sync
 
-# 3. Seed the database
-PYTHONPATH=src uv run data/seed.py
-
-# 4. Run
+# 3. Run
 PYTHONPATH=src FLASK_DEBUG=1 uv run src/root/entrypoints/api.py
 ```
 
-Open http://localhost:5000 — admin login with `admin` / `changeme`.
+Open http://localhost:5000:
+
+- Owner login: `admin` / `changeme`
+- Dev superadmin login: `superadmin` / `superadmin`
+
+The dev superadmin can sign in with the fallback password, but cannot download a database dump until that password is changed.
 
 Swagger docs: http://localhost:5000/api/docs
 
@@ -63,11 +66,27 @@ Runs on port 5000. Database is persisted in `./data/shop.db`, uploads in `./medi
 | `ACCESS_JWT_SECRET`     | `change-me-in-production`| JWT signing secret                      |
 | `ACCESS_DEFAULT_LOGIN`  | `admin`                 | Default admin username                   |
 | `ACCESS_DEFAULT_PASSWORD`| `changeme`             | Default admin password                   |
+| `ACCESS_DEFAULT_TELEGRAM_CHAT_ID`| ``          | Initial per-user Telegram chat for default owner |
+| `ACCESS_SUPERADMIN_LOGIN`| `superadmin`           | Developer superadmin login               |
+| `ACCESS_SUPERADMIN_PASSWORD`| dev fallback only     | Superadmin password; required in prod    |
+| `ACCESS_SUPERADMIN_TELEGRAM_CHAT_ID`| ``       | Initial per-user Telegram chat for superadmin |
+| `ACCESS_RECOVERY_CODE_TTL_MINUTES`| `5`        | Telegram code lifetime                    |
+| `ACCESS_RECOVERY_CODE_COOLDOWN_SECONDS`| `60`  | Minimum seconds between code sends        |
+| `ACCESS_RECOVERY_CODE_MAX_ATTEMPTS`| `5`       | Wrong code attempts before lockout        |
+| `ACCESS_RECOVERY_CODE_LOCKOUT_MINUTES`| `15`   | Lockout duration after too many failures  |
+| `ACCESS_OWNER_CAN_VIEW_CATEGORY_TREE`| `true`  | Legacy flag; category structure read is always allowed for authenticated admins |
+| `ACCESS_OWNER_CAN_EDIT_TAXONOMY`| `false`      | Owner can edit categories/tags/attributes|
+| `ACCESS_OWNER_CAN_VIEW_PRODUCTS`| `false`      | Owner can view product admin             |
+| `ACCESS_OWNER_CAN_EDIT_PRODUCTS`| `false`      | Owner can mutate products                |
+| `ACCESS_OWNER_CAN_VIEW_ORDERS`| `false`        | Owner can view orders                    |
+| `ACCESS_OWNER_CAN_MANAGE_ORDERS`| `false`      | Owner can update/delete orders           |
+| `ACCESS_OWNER_CAN_MANAGE_SETTINGS`| `false`    | Owner can edit store/system settings     |
+| `ACCESS_OWNER_CAN_CREATE_DEMO_DATA`| `false`   | Owner can run demo-data generator        |
 | `CATALOG_UPLOAD_DIR`    | `media/products`        | Directory for product image uploads      |
 | `SYSTEM_RECOVERY_TOKEN` | `change-me-in-production`| Secret token for password recovery URL  |
 | `PORT`                  | `5000`                  | Server port                              |
 
-> Telegram bot token and chat ID are configured through the admin UI (Settings page), not env vars.
+> Telegram bot token is global and configured by superadmin in Settings → Оповещения. Each user binds their own Telegram Chat ID on the account page. New-order notifications are sent to active owners and superadmins with a bound chat ID.
 
 ---
 
@@ -105,9 +124,13 @@ src/{context}/
 
 ## Database
 
-SQLite by default. All tables are auto-created on app startup.
+SQLite by default. All tables are auto-created on app startup, and SQLite compatibility patches add supported missing columns for existing template databases.
 
-**Tables:** `products`, `product_images`, `orders`, `admins`, `settings`
+**Tables:** `products`, `product_images`, `categories`, `tags`, `product_tags`,
+`category_attributes`, `attribute_options`, `product_attribute_values`,
+`orders`, `admins`, `settings`
+
+The admin UI database dump is SQLite-only and requires a superadmin account whose password has been changed after bootstrap. The fallback `superadmin/superadmin` dev account is intentionally blocked from this action.
 
 See [docs/database.md](docs/database.md) for the full schema reference.
 
@@ -123,39 +146,23 @@ See [docs/filters.md](docs/filters.md) for details.
 
 ## Adding New Entities
 
-For every new table you need: ORM model, schema endpoint, search endpoint, SmartTable instance, and seed config entry.
+For every new table you need: ORM model, schema endpoint, search endpoint, SmartTable instance, admin UI route, and docs.
 
 See [docs/adding_new_table.md](docs/adding_new_table.md) for the full 12-step guide.
 
+For broader engineering rules, see [docs/development_guidelines.md](docs/development_guidelines.md). The current review and remediation priorities are in [docs/code_review.md](docs/code_review.md).
+
 ---
 
-## Mock Data Seeding
+## Demo Data
 
-Mock data is configured declaratively in `data/seed_config.yaml`:
+CLI seeding was removed. Superadmin can create demo catalog data from `/admin/categories/` with the “Создать демо-данные” button. It idempotently creates missing demo categories, tags, attributes, and a small product set for every active leaf category.
 
-```yaml
-products:
-  count: 10
-  fields:
-    title:  { type: faker, method: catch_phrase }
-    price:  { type: range, min: 199.0, max: 49999.0, precision: 2 }
-    images: { type: download_images, min: 1, max: 3, width: 300, height: 300 }
+For existing SQLite databases created before taxonomy support, run:
 
-orders:
-  count: 15
-  fields:
-    name:   { type: faker, method: name }
-    phone:  { type: faker, method: phone_number }
-    status: { type: enum, values: ["new", "processing", "done", "canceled"] }
+```bash
+PYTHONPATH=src uv run data/migrate_taxonomy.py
 ```
-
-Поддерживаемые типы полей: `faker`, `choice`/`enum`, `range`, `int_range`, `pattern`, `sequence`, `fixed`, `download_images`, `placeholder_images`.
-
-Дефолтная локаль Faker — `ru_RU`. Можно переопределить: `{ type: faker, method: name, locale: en_US }`.
-
-Run: `PYTHONPATH=src python data/seed.py`
-
-The seed script is idempotent — it skips entities that already have data.
 
 ---
 

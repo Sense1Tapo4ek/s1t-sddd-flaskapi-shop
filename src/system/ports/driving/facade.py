@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from html import escape
 
 from system.config import SystemConfig
 from system.app.interfaces.i_notification_channel import INotificationChannel
+from shared.adapters.driven.telegram_client import TelegramClient
 
 from ...app import (
     GetSettingsQuery,
@@ -27,6 +29,7 @@ class SystemFacade:
     _recover_password_uc: RecoverPasswordUseCase
     _fetch_chat_id_uc: FetchTelegramChatIdUseCase
     _notification_channel: INotificationChannel
+    _telegram_client: TelegramClient
 
     def get_config(self) -> SystemConfig:
         return self._config
@@ -62,6 +65,46 @@ class SystemFacade:
         """Send a notification via the configured channel."""
         self._notification_channel.send(subject=subject, body=body)
 
+    def send_notification_to_chat(
+        self,
+        *,
+        chat_id: str,
+        subject: str,
+        body: str,
+    ) -> bool:
+        settings = self._get_query()
+        if not settings.telegram_bot_token or not chat_id:
+            return False
+        return self._telegram_client.send_message(
+            token=settings.telegram_bot_token,
+            chat_id=chat_id,
+            text=f"<b>{escape(subject)}</b>\n{escape(body)}",
+        )
+
     def is_notification_configured(self) -> bool:
         """Check whether the notification channel is configured."""
         return self._notification_channel.is_configured()
+
+    def send_login_code(
+        self,
+        *,
+        chat_id: str,
+        login: str,
+        code: str,
+        title: str = "Login Code",
+        ttl_minutes: int = 5,
+    ) -> bool:
+        settings = self._get_query()
+        if not settings.telegram_bot_token:
+            return False
+        text = (
+            f"<b>{escape(title)}</b>\n\n"
+            f"Account: <code>{escape(login)}</code>\n"
+            f"Code: <code>{escape(code)}</code>\n\n"
+            f"Valid for {ttl_minutes} minutes."
+        )
+        return self._telegram_client.send_message(
+            token=settings.telegram_bot_token,
+            chat_id=chat_id,
+            text=text,
+        )

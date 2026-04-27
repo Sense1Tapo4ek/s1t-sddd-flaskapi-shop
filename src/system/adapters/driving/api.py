@@ -1,7 +1,7 @@
 from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
-from shared.adapters.driving.middleware import jwt_required
+from shared.adapters.driving.middleware import permission_required
 from shared.ports.driving.schemas import SuccessResponse
 from system.ports.driving import (
     SystemFacade,
@@ -19,7 +19,7 @@ system_bp = APIBlueprint("system", __name__, url_prefix="/system", tag="System")
 
 
 @system_bp.get("/settings")
-@jwt_required
+@permission_required("manage_settings")
 @system_bp.output(SettingsOut)
 @system_bp.doc(
     summary="Get all settings (ADMIN ONLY)",
@@ -32,7 +32,7 @@ def get_settings(facade: FromDishka[SystemFacade]):
 
 
 @system_bp.put("/settings")
-@jwt_required
+@permission_required("manage_settings")
 @system_bp.input(SettingsUpdateIn)
 @system_bp.output(SettingsOut)
 @system_bp.doc(
@@ -46,7 +46,7 @@ def update_settings(json_data: SettingsUpdateIn, facade: FromDishka[SystemFacade
 
 
 @system_bp.post("/settings/test-telegram")
-@jwt_required
+@permission_required("manage_settings")
 @system_bp.output(SuccessResponse)
 @system_bp.doc(
     summary="Send test Telegram message (ADMIN ONLY)",
@@ -60,7 +60,7 @@ def test_telegram(facade: FromDishka[SystemFacade]):
 
 
 @system_bp.post("/settings/telegram/fetch-chat-id")
-@jwt_required
+@permission_required("manage_settings")
 @system_bp.input(FetchChatIdIn)
 @system_bp.output(TelegramChatIdOut)
 @system_bp.doc(
@@ -92,7 +92,7 @@ def get_public_info(facade: FromDishka[SystemFacade]):
 @system_bp.output(SuccessResponse)
 @system_bp.doc(
     summary="Recover password via Telegram (Public)",
-    description="Generates new credentials and sends them to the configured Telegram chat. Requires matching the secret recovery token.",
+    description="Generates a recovery code and sends it to the target admin user's Telegram chat. Requires matching the secret recovery token.",
 )
 @inject
 def recover_password(token: str, facade: FromDishka[SystemFacade]):

@@ -34,15 +34,27 @@ class RecoverPasswordUseCase:
         if settings is None:
             raise SettingsNotFoundError()
 
-        if not settings.is_telegram_configured:
+        if not settings.telegram_bot_token:
             raise TelegramNotConfiguredError()
 
         # Cross-context boundary call via ACL
-        code = self._access_acl.generate_recovery_code()
+        login, chat_id, code = self._access_acl.request_recovery_code()
+        if not chat_id:
+            self._access_acl.clear_recovery_code()
+            raise TelegramNotConfiguredError()
 
-        text = f"<b>Login Code</b>\n\nYour one-time code:\n<code>{code}</code>\n\nValid for 5 minutes."
-        return self._client.send_message(
+        text = (
+            "<b>Login Code</b>\n\n"
+            f"Account: <code>{login}</code>\n"
+            "Your one-time code:\n"
+            f"<code>{code}</code>\n\n"
+            "Valid for 5 minutes."
+        )
+        sent = self._client.send_message(
             token=settings.telegram_bot_token,
-            chat_id=settings.telegram_chat_id,
+            chat_id=chat_id,
             text=text,
         )
+        if not sent:
+            self._access_acl.clear_recovery_code()
+        return sent

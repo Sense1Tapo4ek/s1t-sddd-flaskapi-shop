@@ -5,13 +5,30 @@ const OP_LABELS = {
   lte: '≤'
 };
 
+function jsLiteral(value) {
+  return esc(JSON.stringify(value == null ? '' : value));
+}
+
 class SmartTable {
-  constructor({ instanceName, endpoint, schemaEndpoint, containerId, columns, defaultSortBy = 'id', defaultSortDir = 'desc', emptyText = 'Нет данных' }) {
+  constructor({
+    instanceName,
+    endpoint,
+    schemaEndpoint,
+    containerId,
+    columns,
+    defaultSortBy = 'id',
+    defaultSortDir = 'desc',
+    emptyText = 'Нет данных',
+    staticFilters = [],
+    wide = false
+  }) {
     this.instanceName = instanceName;
     this.endpoint = endpoint;
     this.schemaEndpoint = schemaEndpoint;
     this.container = document.getElementById(containerId);
     this.emptyText = emptyText;
+    this.staticFilters = staticFilters || [];
+    this.wide = Boolean(wide);
 
     this.columns = columns.map(c => ({ ...c, visible: c.visible !== false }));
     this.schema = null;
@@ -51,7 +68,7 @@ class SmartTable {
     if (this.state.sort_by) params.set('sort_by', this.state.sort_by);
     if (this.state.sort_dir) params.set('sort_dir', this.state.sort_dir);
 
-    this.state.activeFilters.forEach(f => {
+    [...this.staticFilters, ...this.state.activeFilters].forEach(f => {
       const paramKey = f.op === 'eq' ? f.key : `${f.key}__${f.op}`;
       params.append(paramKey, f.val);
     });
@@ -113,6 +130,31 @@ class SmartTable {
     this.load();
   }
 
+  setStaticFilters(filters) {
+    this.staticFilters = filters || [];
+    this.state.page = 1;
+    return this.load();
+  }
+
+  setColumns(columns, { preserveVisibility = true } = {}) {
+    const previousVisibility = new Map(this.columns.map(c => [c.key, c.visible]));
+    this.columns = columns.map(c => ({
+      ...c,
+      visible: preserveVisibility && previousVisibility.has(c.key)
+        ? previousVisibility.get(c.key)
+        : c.visible !== false
+    }));
+  }
+
+  resetInteractionState(defaultSortBy = 'id', defaultSortDir = 'desc') {
+    this.state.page = 1;
+    this.state.sort_by = defaultSortBy;
+    this.state.sort_dir = defaultSortDir;
+    this.state.activeFilters = [];
+    this.openPopoverKey = null;
+    this.configOpen = false;
+  }
+
   toggleConfig() {
     this.configOpen = !this.configOpen;
     this.render();
@@ -136,12 +178,20 @@ class SmartTable {
   render() {
     const data = this.lastData;
     const visibleCols = this.columns.filter(c => c.visible);
+    const tableRef = `window[${jsLiteral(this.instanceName)}]`;
+
+    const staticFiltersHTML = this.staticFilters.map(f => `
+      <div class="filter-chip filter-chip--static">
+        <span>${esc(f.label)} ${OP_LABELS[f.op] || f.op}</span>
+        <span class="filter-chip__val">${esc(f.displayVal || f.val)}</span>
+      </div>
+    `).join('');
 
     const activeFiltersHTML = this.state.activeFilters.map((f, idx) => `
       <div class="filter-chip">
         <span>${esc(f.label)} ${OP_LABELS[f.op] || f.op}</span>
         <span class="filter-chip__val">${esc(f.val)}</span>
-        <button class="filter-chip__del" onclick="window.${this.instanceName}.removeFilter(${idx})">&times;</button>
+        <button class="filter-chip__del" onclick="${tableRef}.removeFilter(${idx})">&times;</button>
       </div>
     `).join('');
 
@@ -151,7 +201,9 @@ class SmartTable {
     }
 
     const headers = visibleCols.map(c => {
-      let thContent = `<span class="sortable" onclick="window.${this.instanceName}.handleSort('${c.key}')">${esc(c.label)}</span>`;
+      let thContent = c.sortable
+        ? `<button type="button" class="sortable th-sort-btn" onclick="${tableRef}.handleSort(${jsLiteral(c.key)})" aria-label="Сортировать по ${esc(c.label)}">${esc(c.label)}</button>`
+        : `<span class="th-label">${esc(c.label)}</span>`;
 
       if (c.sortable) {
         let icon = '↕', iconClass = 'sort-icon';
@@ -167,18 +219,20 @@ class SmartTable {
       let popoverHTML = '';
 
       if (schemaField) {
-        filterBtnHTML = `<button class="th-filter-btn" onclick="event.stopPropagation(); window.${this.instanceName}.togglePopover('${c.key}')">+</button>`;
+        filterBtnHTML = `<button class="th-filter-btn" onclick="event.stopPropagation(); ${tableRef}.togglePopover(${jsLiteral(c.key)})">+</button>`;
 
         if (this.openPopoverKey === c.key) {
           const singleOp = schemaField.operators.length === 1;
-          const applyCall = `window.${this.instanceName}.applyFilter('${c.key}', document.getElementById('popop_${c.key}').value, document.getElementById('popval_${c.key}').value, '${c.label}')`;
+          const operatorId = `popop_${c.key}`;
+          const valueId = `popval_${c.key}`;
+          const applyCall = `${tableRef}.applyFilter(${jsLiteral(c.key)}, document.getElementById(${jsLiteral(operatorId)}).value, document.getElementById(${jsLiteral(valueId)}).value, ${jsLiteral(c.label)})`;
 
           let operatorHTML = '';
           if (singleOp) {
             const op = schemaField.operators[0];
             operatorHTML = `
               <div class="filter-op-label">${OP_LABELS[op] || op}</div>
-              <input type="hidden" id="popop_${c.key}" value="${op}">
+              <input type="hidden" id="${esc(operatorId)}" value="${esc(op)}">
             `;
           } else {
             const operatorOptions = schemaField.operators.map(op =>
@@ -186,7 +240,7 @@ class SmartTable {
             ).join('');
             operatorHTML = `
               <div class="select-wrapper">
-                <select id="popop_${c.key}" class="form-input form-input--sm">${operatorOptions}</select>
+                <select id="${esc(operatorId)}" class="form-input form-input--sm">${operatorOptions}</select>
               </div>
             `;
           }
@@ -196,14 +250,14 @@ class SmartTable {
             const opts = schemaField.options.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
             inputHTML = `
               <div class="select-wrapper">
-                <select id="popval_${c.key}" class="form-input form-input--sm">${opts}</select>
+                <select id="${esc(valueId)}" class="form-input form-input--sm">${opts}</select>
               </div>
             `;
           } else {
             let inputType = 'text';
             if (schemaField.type === 'number') inputType = 'number';
             if (schemaField.type === 'date') inputType = 'date';
-            inputHTML = `<input id="popval_${c.key}" type="${inputType}" class="form-input form-input--sm" placeholder="Значение…"
+            inputHTML = `<input id="${esc(valueId)}" type="${inputType}" class="form-input form-input--sm" placeholder="Значение…"
               onkeydown="if(event.key==='Enter'){event.preventDefault();${applyCall};}">`;
           }
 
@@ -234,14 +288,14 @@ class SmartTable {
 
     const columnsConfigHTML = `
       <div style="position:relative;">
-        <button class="btn btn--ghost btn--sm" onclick="event.stopPropagation(); window.${this.instanceName}.toggleConfig()">Колонки</button>
+        <button class="btn btn--ghost btn--sm" onclick="event.stopPropagation(); ${tableRef}.toggleConfig()">Колонки</button>
         ${this.configOpen ? `
           <div class="filter-popover" style="position:absolute; right:0; left:auto; top:calc(100% + 8px); padding:16px; min-width:200px; z-index:9999; max-height:350px; overflow-y:auto;">
             <div class="filter-popover__title" style="margin-bottom:12px;">Видимые колонки</div>
             <div style="display:flex; flex-direction:column; gap:8px;">
               ${this.columns.map(c => `
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px;">
-                  <input type="checkbox" ${c.visible ? 'checked' : ''} onchange="window.${this.instanceName}.toggleColumn('${c.key}')">
+                  <input type="checkbox" ${c.visible ? 'checked' : ''} onchange="${tableRef}.toggleColumn(${jsLiteral(c.key)})">
                   ${esc(c.label)}
                 </label>
               `).join('')}
@@ -256,7 +310,7 @@ class SmartTable {
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:13px; color:var(--color-text-muted);">Показывать:</span>
-            <select class="form-input form-input--sm" style="width:auto;" onchange="window.${this.instanceName}.setLimit(this.value)">
+            <select class="form-input form-input--sm" style="width:auto;" onchange="${tableRef}.setLimit(this.value)">
               <option value="10" ${this.state.limit === 10 ? 'selected' : ''}>10</option>
               <option value="20" ${this.state.limit === 20 ? 'selected' : ''}>20</option>
               <option value="50" ${this.state.limit === 50 ? 'selected' : ''}>50</option>
@@ -265,23 +319,23 @@ class SmartTable {
           ${columnsConfigHTML}
         </div>
         <div style="display:flex; align-items:center; gap:4px;">
-          <button class="btn btn--ghost btn--sm" ${isFirst ? 'disabled' : ''} onclick="window.${this.instanceName}.setPage(1)">&laquo;</button>
-          <button class="btn btn--ghost btn--sm" ${isFirst ? 'disabled' : ''} onclick="window.${this.instanceName}.setPage(${this.state.page - 1})">&lsaquo;</button>
+          <button class="btn btn--ghost btn--sm" ${isFirst ? 'disabled' : ''} onclick="${tableRef}.setPage(1)">&laquo;</button>
+          <button class="btn btn--ghost btn--sm" ${isFirst ? 'disabled' : ''} onclick="${tableRef}.setPage(${this.state.page - 1})">&lsaquo;</button>
           <span style="font-size:13px; color:var(--color-text-muted); display:flex; align-items:center; gap:6px; margin:0 4px;">
             стр.
-            <input type="number" class="form-input form-input--sm" style="width:50px; text-align:center;" value="${this.state.page}" min="1" max="${pages}" onchange="window.${this.instanceName}.setPage(this.value)">
+            <input type="number" class="form-input form-input--sm" style="width:50px; text-align:center;" value="${this.state.page}" min="1" max="${pages}" onchange="${tableRef}.setPage(this.value)">
             из ${pages} &nbsp;·&nbsp; всего: ${data.total}
           </span>
-          <button class="btn btn--ghost btn--sm" ${isLast ? 'disabled' : ''} onclick="window.${this.instanceName}.setPage(${this.state.page + 1})">&rsaquo;</button>
-          <button class="btn btn--ghost btn--sm" ${isLast ? 'disabled' : ''} onclick="window.${this.instanceName}.setPage(${pages})">&raquo;</button>
+          <button class="btn btn--ghost btn--sm" ${isLast ? 'disabled' : ''} onclick="${tableRef}.setPage(${this.state.page + 1})">&rsaquo;</button>
+          <button class="btn btn--ghost btn--sm" ${isLast ? 'disabled' : ''} onclick="${tableRef}.setPage(${pages})">&raquo;</button>
         </div>
       </div>
     `;
 
     this.container.innerHTML = `
-      ${activeFiltersHTML ? `<div class="active-filters">${activeFiltersHTML}</div>` : ''}
+      ${staticFiltersHTML || activeFiltersHTML ? `<div class="active-filters">${staticFiltersHTML}${activeFiltersHTML}</div>` : ''}
       ${topControlsHTML}
-      <div style="border:1px solid var(--color-border); border-radius:var(--radius); overflow:hidden;">
+      <div class="${this.wide ? 'smart-table smart-table--wide' : ''}" style="border:1px solid var(--color-border); border-radius:var(--radius); ${this.wide ? 'overflow-x:auto;' : 'overflow:hidden;'}">
         <table class="table">
           <thead><tr>${headers}</tr></thead>
           <tbody>${rowsHTML}</tbody>

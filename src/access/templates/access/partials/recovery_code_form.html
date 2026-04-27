@@ -1,7 +1,10 @@
 <p style="font-size:0.875rem; color:var(--color-text-muted); margin-bottom:1rem;">
   Код отправлен в Telegram. Введите 6-значный код для входа.
+  Код действителен {{ recovery_code_ttl_minutes }} мин.
 </p>
 <form hx-post="/admin/verify-code" hx-target="#code-error" hx-swap="innerHTML">
+    <input type="hidden" name="login" value="{{ login }}">
+    <input type="hidden" name="remember_me" value="{{ 'on' if remember_me else '' }}">
     <div class="form-group">
         <label class="form-label" for="code">Код восстановления</label>
         <input class="form-input" type="text" id="code" name="code"

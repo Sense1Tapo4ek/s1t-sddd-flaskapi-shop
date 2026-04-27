@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% set active = "catalog" %}
+
+{% block title %}Каталог — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="catalog-workspace" data-initial-view="{{ request.args.get('view', 'tree') }}">
+  <div class="catalog-workspace__masthead">
+    <div>
+      <div class="catalog-workspace__eyebrow">Рабочий центр</div>
+      <h2 class="page-title">Каталог</h2>
+    </div>
+    <div class="catalog-workspace__actions">
+      {% if has_perm('edit_taxonomy') %}
+      <button class="btn btn--ghost btn--sm" type="button" onclick="openCatalogTags()">Теги</button>
+      {% endif %}
+      {% if has_perm('create_demo_data') %}
+      <button class="btn btn--ghost btn--sm" type="button" onclick="createDemoData()">Демо-данные</button>
+      {% endif %}
+      {% if has_perm('edit_taxonomy') %}
+      <button class="btn btn--primary btn--sm" type="button" onclick="createRootCategory()">+ Категория</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="catalog-shell">
+    <aside class="catalog-tree-panel">
+      <div class="catalog-tree-panel__header">
+        <div>
+          <div class="catalog-tree-panel__title">Дерево</div>
+          <div class="catalog-tree-panel__hint">Выберите категорию</div>
+        </div>
+        <button class="btn btn--ghost btn--sm" type="button" onclick="reloadCatalogTree()">Обновить</button>
+      </div>
+      <input class="form-input form-input--sm catalog-tree-panel__search"
+             type="search"
+             placeholder="Найти категорию..."
+             oninput="filterCategoryTree(this.value)">
+      <div id="categoryTree" class="catalog-tree-panel__body"></div>
+    </aside>
+
+    <main class="catalog-detail-panel" id="catalogDetailPanel">
+      <div class="catalog-empty">
+        <div class="catalog-empty__title">Выберите категорию</div>
+        <div class="catalog-empty__text">Слева находится дерево каталога. После выбора здесь появятся настройки, атрибуты и товары.</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="categoryModal" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle" onclick="if(event.target===this)closeCategoryForm()">
+  <div class="modal">
+    <div class="modal__header">
+      <span id="categoryModalTitle">Категория</span>
+      <button class="modal__close" type="button" onclick="closeCategoryForm()">&times;</button>
+    </div>
+    <form class="modal__body form form--wide" id="categoryModalForm" onsubmit="saveCategoryModal(event)">
+      <input type="hidden" id="category-id">
+      <div class="form-group">
+        <label class="form-label" for="category-title">Название</label>
+        <input class="form-input" id="category-title" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="category-slug">Slug</label>
+        <input class="form-input" id="category-slug" placeholder="Автоматически из названия">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="category-parent">Родитель</label>
+        <select class="form-input" id="category-parent"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="category-description">Описание</label>
+        <textarea class="form-input form-textarea" id="category-description" rows="4"></textarea>
+      </div>
+      <label class="catalog-checkbox">
+        <input type="checkbox" id="category-active" checked>
+        <span>Активна</span>
+      </label>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" onclick="closeCategoryForm()">Отмена</button>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="attributeModal" role="dialog" aria-modal="true" aria-labelledby="attributeModalTitle" onclick="if(event.target===this)closeAttributeForm()">
+  <div class="modal modal--wide">
+    <div class="modal__header">
+      <span id="attributeModalTitle">Атрибут</span>
+      <button class="modal__close" type="button" onclick="closeAttributeForm()">&times;</button>
+    </div>
+    <form class="modal__body form form--wide" id="attributeForm" onsubmit="saveAttribute(event)">
+      <input type="hidden" id="attribute-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="attribute-title">Название</label>
+          <input class="form-input" id="attribute-title" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="attribute-code">Код</label>
+          <input class="form-input" id="attribute-code" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="attribute-type">Тип</label>
+          <select class="form-input" id="attribute-type" onchange="syncAttributeTypeFields()">
+            <option value="text">Текст</option>
+            <option value="number">Число</option>
+            <option value="boolean">Да/нет</option>
+            <option value="select">Один вариант</option>
+            <option value="multiselect">Несколько вариантов</option>
+            <option value="date">Дата</option>
+            <option value="url">Ссылка</option>
+            <option value="file">Файл</option>
+            <option value="image">Изображение</option>
+          </select>
+        </div>
+        <div class="form-group" id="attributeUnitBlock">
+          <label class="form-label" for="attribute-unit">Единица</label>
+          <input class="form-input" id="attribute-unit" placeholder="см, кг, BYN...">
+        </div>
+      </div>
+
+      <div class="catalog-switches">
+        <label><input type="checkbox" id="attribute-required"> Обязательный</label>
+      </div>
+
+      <div class="form-group" id="attributeValueModeBlock" hidden>
+        <label class="form-label" for="attribute-value-mode">Значений</label>
+        <select class="form-input" id="attribute-value-mode">
+          <option value="single">Одно значение</option>
+          <option value="multiple">Несколько значений</option>
+        </select>
+      </div>
+
+      <div class="attribute-options" id="attributeOptionsBlock" hidden>
+        <div class="attribute-options__header">
+          <div>
+            <div class="attribute-options__title">Варианты</div>
+            <div class="attribute-options__hint">Очередность задается положением в списке, без отдельного поля сортировки.</div>
+          </div>
+          <button class="btn btn--ghost btn--sm" type="button" onclick="addAttributeOption()">+ Вариант</button>
+        </div>
+        <div id="attributeOptions"></div>
+      </div>
+
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" onclick="closeAttributeForm()">Отмена</button>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tagModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeTagForm()">
+  <div class="modal">
+    <div class="modal__header">
+      <span id="tagModalTitle">Тег</span>
+      <button class="modal__close" type="button" onclick="closeTagForm()">&times;</button>
+    </div>
+    <form class="modal__body" id="tagForm" onsubmit="saveTag(event)">
+      <input type="hidden" id="tag-id">
+      <div class="form-group">
+        <label class="form-label" for="tag-title">Название</label>
+        <input class="form-input" id="tag-title" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="tag-slug">Slug</label>
+        <input class="form-input" id="tag-slug">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="tag-color">Цвет</label>
+          <input class="form-input" type="color" id="tag-color" value="#7c8c6e">
+        </div>
+        <label class="form-group catalog-checkbox">
+          <input type="checkbox" id="tag-active" checked>
+          <span>Активен</span>
+        </label>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" onclick="closeTagForm()">Отмена</button>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/smart-table.js"></script>
+<script>
+window.catalogPermissions = {
+  canEditTaxonomy: {{ 'true' if has_perm('edit_taxonomy') else 'false' }},
+  canViewProducts: {{ 'true' if has_perm('view_products') else 'false' }},
+  canEditProducts: {{ 'true' if has_perm('edit_products') else 'false' }},
+  canCreateDemoData: {{ 'true' if has_perm('create_demo_data') else 'false' }},
+};
+</script>
+<script src="/static/js/catalog-workspace.js"></script>
+{% endblock %}

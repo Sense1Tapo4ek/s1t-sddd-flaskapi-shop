@@ -4,6 +4,57 @@
       class="form form--wide">
 
   <section class="form-section">
+    <h3 class="form-section__title">Приложение</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Базовое имя шаблона и подпись админ-панели без изменения кода или env.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="app_name">Имя приложения</label>
+        <input class="form-input" type="text" id="app_name" name="app_name"
+               placeholder="Shop Admin"
+               value="{{ settings.branding.app_name }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="admin_panel_title">Подпись панели</label>
+        <input class="form-input" type="text" id="admin_panel_title" name="admin_panel_title"
+               placeholder="Админ панель"
+               value="{{ settings.branding.admin_panel_title }}">
+      </div>
+    </div>
+  </section>
+
+  <section class="form-section">
+    <h3 class="form-section__title">Доступы к каталогу для owner</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Все администраторы видят структуру каталога. Ниже настраиваются права на изменения и товары.
+    </p>
+    <div class="form-row">
+      <p style="font-size:13px; color:var(--color-text-muted); margin:0;">
+        Просмотр дерева категорий включен всегда.
+      </p>
+      <label class="form-checkbox">
+        <input type="checkbox" name="owner_can_edit_taxonomy" {% if settings.catalog_access.owner_can_edit_taxonomy %}checked{% endif %}>
+        <span>Редактирование категорий, атрибутов и тегов</span>
+      </label>
+    </div>
+    <div class="form-row">
+      <label class="form-checkbox">
+        <input type="checkbox" name="owner_can_view_products" {% if settings.catalog_access.owner_can_view_products %}checked{% endif %}>
+        <span>Просмотр товаров</span>
+      </label>
+      <label class="form-checkbox">
+        <input type="checkbox" name="owner_can_edit_products" {% if settings.catalog_access.owner_can_edit_products %}checked{% endif %}>
+        <span>Редактирование товаров</span>
+      </label>
+    </div>
+    <label class="form-checkbox">
+      <input type="checkbox" name="owner_can_create_demo_data" {% if settings.catalog_access.owner_can_create_demo_data %}checked{% endif %}>
+      <span>Создание тестовых данных</span>
+    </label>
+  </section>
+
+  <section class="form-section">
     <h3 class="form-section__title">Контактная информация</h3>
     <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
       Отображается в шапке, подвале и на странице контактов.
@@ -72,6 +123,16 @@
              value="{{ settings.socials.instagram }}">
     </div>
   </section>
+
+  {% if request.admin_payload is defined and request.admin_payload.get('role') == 'superadmin' %}
+  <section class="form-section">
+    <h3 class="form-section__title">Обслуживание</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Снимок текущей SQLite базы для ручного хранения или переноса.
+    </p>
+    <a class="btn btn--ghost" href="/admin/settings/database-dump">Скачать дамп БД</a>
+  </section>
+  {% endif %}
 
   <div class="form-actions" style="margin-bottom:48px;">
     <button class="btn btn--primary" type="submit">Сохранить</button>

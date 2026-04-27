@@ -1,15 +1,15 @@
 import os
 from pathlib import Path
+from typing import Callable
+
 from apiflask import APIFlask
 from flask import send_from_directory, redirect, render_template
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from jinja2 import ChoiceLoader, FileSystemLoader
-import logging
-from sqlalchemy import create_engine, select, func
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
-from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from dishka.integrations.flask import setup_dishka
 
@@ -18,49 +18,47 @@ from root.container import build_container
 
 # Configs
 from root.config import RootConfig
-from shared.config import InfraConfig
 from catalog.config import CatalogConfig
 from access.config import AccessConfig
+from access.app.runtime_permissions import RuntimePermissionProvider
+from access.permissions import RUNTIME_CATALOG_PERMISSIONS
+from access.ports.driven.bootstrap import bootstrap_access_defaults
+from system.ports.driven.bootstrap import bootstrap_system_defaults
+from system.ports.driving.facade import SystemFacade
+from system.ports.driving.runtime_template import runtime_template_settings
 
-from shared.adapters.driving.middleware import init_middleware
+from shared.adapters.driving.middleware import (
+    current_admin_payload,
+    has_permission,
+    init_middleware,
+    jwt_required,
+)
 from shared.adapters.driving.error_handlers import init_error_handlers
 
 # Import all ORM model modules to register them with the shared Base
+import access.adapters.driven.db.models  # noqa: F401
 import catalog.adapters.driven.db.models  # noqa: F401
 import ordering.adapters.driven.db.models  # noqa: F401
+import system.adapters.driven.db.models  # noqa: F401
 
 from shared.adapters.driven.db.base import Base
-from access.adapters.driven.db.models import UserModel
-from system.adapters.driven.db.models import SettingsModel
-
-logger = logging.getLogger("app.bootstrap")
+from shared.adapters.driven.db.compat import ensure_sqlite_compatibility
 
 
-def _ensure_defaults(engine, access_config: AccessConfig) -> None:
-    with Session(engine) as session:
-        admin_count = session.execute(
-            select(func.count(UserModel.id))
-        ).scalar()
-        if admin_count == 0:
-            admin = UserModel(
-                login=access_config.default_login,
-                password_hash=generate_password_hash(access_config.default_password),
-            )
-            session.add(admin)
-            session.commit()
-            logger.info(
-                "Created default admin: %s / %s",
-                access_config.default_login,
-                access_config.default_password,
-            )
-
-        settings = session.execute(
-            select(SettingsModel).where(SettingsModel.id == 1)
-        ).scalar()
-        if not settings:
-            session.add(SettingsModel(id=1))
-            session.commit()
-            logger.info("Created default system settings")
+def _first_admin_path() -> str:
+    payload = current_admin_payload()
+    if (
+        payload.get("role") == "superadmin"
+        or has_permission("view_products")
+        or has_permission("view_category_tree")
+        or has_permission("edit_taxonomy")
+    ):
+        return "/admin/catalog/"
+    if has_permission("view_orders"):
+        return "/admin/orders/"
+    if has_permission("manage_settings"):
+        return "/admin/settings/store"
+    return "/admin/account"
 
 # Blueprints (imported directly — no init functions needed, Dishka injects facades)
 from catalog.adapters.driving.api import catalog_bp
@@ -69,10 +67,10 @@ from access.adapters.driving.api import access_bp
 from system.adapters.driving.api import system_bp
 
 # Admin blueprints
-from catalog.adapters.driving.admin import catalog_admin_bp
+from catalog.adapters.driving.admin import catalog_admin_bp, taxonomy_admin_bp
 from ordering.adapters.driving.admin import ordering_admin_bp
 from access.adapters.driving.admin import access_admin_bp
-from system.adapters.driving.admin import system_admin_bp
+from system.adapters.driving.admin import account_admin_bp, system_admin_bp
 
 
 def create_app() -> APIFlask:
@@ -103,18 +101,38 @@ def create_app() -> APIFlask:
 
     container = build_container()
 
-    infra_config = container.get(InfraConfig)
     access_config = container.get(AccessConfig)
     catalog_config = container.get(CatalogConfig)
+    engine = container.get(Engine)
+    session_factory = container.get(Callable[[], Session])
+    permission_provider = container.get(RuntimePermissionProvider)
+    system_facade = container.get(SystemFacade)
 
     os.makedirs("media", exist_ok=True)
-    engine = create_engine(infra_config.database_url, echo=False)
 
     # All models share one Base — a single create_all covers everything
     Base.metadata.create_all(engine)
-    _ensure_defaults(engine, access_config)
+    ensure_sqlite_compatibility(engine)
+    bootstrap_access_defaults(
+        session_factory,
+        access_config=access_config,
+        root_config=root_config,
+    )
+    bootstrap_system_defaults(
+        session_factory,
+        access_config=access_config,
+        root_config=root_config,
+    )
 
     app.jinja_env.globals["app_name"] = root_config.app_name
+    app.jinja_env.globals["admin_panel_title"] = "Админ панель"
+    app.jinja_env.globals["has_perm"] = has_permission
+    app.config["PERMISSION_PROVIDER"] = permission_provider
+    app.config["RUNTIME_PERMISSION_KEYS"] = RUNTIME_CATALOG_PERMISSIONS
+
+    @app.context_processor
+    def inject_runtime_template_settings():
+        return runtime_template_settings(system_facade, root_config)
 
     init_middleware(app, access_config.jwt_secret)
     init_error_handlers(app)
@@ -172,15 +190,25 @@ def create_app() -> APIFlask:
 
     # Admin blueprints
     app.register_blueprint(catalog_admin_bp)
+    app.register_blueprint(taxonomy_admin_bp)
     app.register_blueprint(ordering_admin_bp)
     app.register_blueprint(access_admin_bp)
     app.register_blueprint(system_admin_bp)
+    app.register_blueprint(account_admin_bp)
 
     # Dishka wiring — AFTER all blueprints
     setup_dishka(container, app)
 
     if root_config.app_env == "prod":
-        limiter.limit(root_config.rate_limit_login)(app.view_functions["access.login"])
+        for endpoint in (
+            "access.login",
+            "access_admin.login",
+            "access_admin.request_telegram_code",
+            "access_admin.verify_recovery_code",
+            "system_admin.request_password_confirmation_code",
+        ):
+            if endpoint in app.view_functions:
+                limiter.limit(root_config.rate_limit_login)(app.view_functions[endpoint])
         limiter.limit(root_config.rate_limit_order)(
             app.view_functions["ordering.place_order"]
         )
@@ -197,14 +225,16 @@ def create_app() -> APIFlask:
     @app.route("/")
     @app.doc(hide=True)
     def index():
-        return redirect("/admin/products")
+        return redirect("/admin/")
 
     @app.route("/admin/")
+    @jwt_required
     @app.doc(hide=True)
     def admin_index():
-        return redirect("/admin/products")
+        return redirect(_first_admin_path())
 
     @app.route("/admin/help")
+    @jwt_required
     @app.doc(hide=True)
     def admin_help():
         return render_template("help.html")

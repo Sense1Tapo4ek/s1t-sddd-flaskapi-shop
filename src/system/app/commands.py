@@ -17,3 +17,10 @@ class UpdateSettingsCommand:
     instagram: str | None = None
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
+    app_name: str | None = None
+    admin_panel_title: str | None = None
+    owner_can_view_category_tree: bool | None = None
+    owner_can_edit_taxonomy: bool | None = None
+    owner_can_view_products: bool | None = None
+    owner_can_edit_products: bool | None = None
+    owner_can_create_demo_data: bool | None = None

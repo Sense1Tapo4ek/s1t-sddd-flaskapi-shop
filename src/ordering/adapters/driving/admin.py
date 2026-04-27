@@ -4,7 +4,7 @@ from dishka.integrations.flask import inject, FromDishka
 
 from ordering.ports.driving.facade import OrderingFacade
 from ordering.ports.driving.schemas import OrderStatusUpdateIn
-from shared.adapters.driving.middleware import jwt_required
+from shared.adapters.driving.middleware import permission_required
 from shared.adapters.driving.htmx import render_partial_or_full
 from shared.helpers.parsing import parse_table_params
 
@@ -12,7 +12,7 @@ ordering_admin_bp = APIBlueprint("ordering_admin", __name__, url_prefix="/admin/
 
 
 @ordering_admin_bp.route("/")
-@jwt_required
+@permission_required("view_orders")
 @inject
 def orders_page(facade: FromDishka[OrderingFacade]):
     result = facade.list_orders(page=1, limit=20, sort_by="created_at", sort_dir="desc")
@@ -24,7 +24,7 @@ def orders_page(facade: FromDishka[OrderingFacade]):
 
 
 @ordering_admin_bp.route("/table")
-@jwt_required
+@permission_required("view_orders")
 @inject
 def orders_table(facade: FromDishka[OrderingFacade]):
     params = parse_table_params(request.args)
@@ -33,7 +33,7 @@ def orders_table(facade: FromDishka[OrderingFacade]):
 
 
 @ordering_admin_bp.route("/<int:order_id>/status", methods=["PATCH"])
-@jwt_required
+@permission_required("manage_orders")
 @inject
 def update_status(order_id: int, facade: FromDishka[OrderingFacade]):
     status = request.form.get("status")
@@ -45,7 +45,7 @@ def update_status(order_id: int, facade: FromDishka[OrderingFacade]):
 
 
 @ordering_admin_bp.route("/test", methods=["POST"])
-@jwt_required
+@permission_required("manage_orders")
 @inject
 def create_test_order(facade: FromDishka[OrderingFacade]):
     from ordering.ports.driving.schemas import OrderIn
@@ -61,7 +61,7 @@ def create_test_order(facade: FromDishka[OrderingFacade]):
 
 
 @ordering_admin_bp.route("/badge")
-@jwt_required
+@permission_required("view_orders")
 @inject
 def orders_badge(facade: FromDishka[OrderingFacade]):
     result = facade.list_orders(page=1, limit=1, filters={"status__eq": "new"})
@@ -69,5 +69,4 @@ def orders_badge(facade: FromDishka[OrderingFacade]):
     if count > 0:
         return f'<span class="badge badge--new">{count}</span>'
     return '<span></span>'
-
 

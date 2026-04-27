@@ -1,22 +1,27 @@
 import json
-from flask import request, render_template, make_response
+from flask import request, render_template, make_response, redirect
 from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
 from catalog.ports.driving.facade import CatalogFacade
-from shared.adapters.driving.middleware import jwt_required
+from shared.adapters.driving.middleware import any_permission_required, permission_required
 from shared.adapters.driving.htmx import render_partial_or_full
-from shared.helpers.parsing import safe_float, parse_table_params
+from shared.helpers.parsing import parse_optional_int, safe_float, parse_table_params
 
 catalog_admin_bp = APIBlueprint("catalog_admin", __name__, url_prefix="/admin/products", enable_openapi=False)
-
-
+taxonomy_admin_bp = APIBlueprint("catalog_taxonomy_admin", __name__, url_prefix="/admin", enable_openapi=False)
 
 
 @catalog_admin_bp.route("/")
-@jwt_required
+@permission_required("view_products")
+def products_page():
+    return redirect("/admin/catalog/?view=products")
+
+
+@catalog_admin_bp.route("/legacy")
+@permission_required("view_products")
 @inject
-def products_page(facade: FromDishka[CatalogFacade]):
+def legacy_products_page(facade: FromDishka[CatalogFacade]):
     result = facade.search_products(page=1, limit=20, sort_by="created_at", sort_dir="desc")
     return render_partial_or_full(
         "catalog/partials/table.html",
@@ -26,7 +31,7 @@ def products_page(facade: FromDishka[CatalogFacade]):
 
 
 @catalog_admin_bp.route("/table")
-@jwt_required
+@permission_required("view_products")
 @inject
 def products_table(facade: FromDishka[CatalogFacade]):
     params = parse_table_params(request.args)
@@ -35,25 +40,35 @@ def products_table(facade: FromDishka[CatalogFacade]):
 
 
 @catalog_admin_bp.route("/new")
-@jwt_required
+@permission_required("edit_products")
 def product_page_new():
-    return render_template("catalog/pages/product_form.html", product_id=None)
+    category_id = parse_optional_int(request.args.get("category_id"), "category_id")
+    return render_template(
+        "catalog/pages/product_form.html",
+        product_id=None,
+        initial_category_id=category_id,
+    )
 
 
 @catalog_admin_bp.route("/<int:product_id>/edit")
-@jwt_required
+@permission_required("edit_products")
 def product_page_edit(product_id: int):
-    return render_template("catalog/pages/product_form.html", product_id=product_id)
+    category_id = parse_optional_int(request.args.get("category_id"), "category_id")
+    return render_template(
+        "catalog/pages/product_form.html",
+        product_id=product_id,
+        initial_category_id=category_id,
+    )
 
 
 @catalog_admin_bp.route("/form/new")
-@jwt_required
+@permission_required("edit_products")
 def product_form_new():
-    return render_template("catalog/partials/form.html", product=None)
+    return render_template("catalog/partials/form.html", product=None, initial_category_id=None)
 
 
 @catalog_admin_bp.route("/<int:product_id>/form")
-@jwt_required
+@permission_required("edit_products")
 @inject
 def product_form_edit(product_id: int, facade: FromDishka[CatalogFacade]):
     product = facade.get_detail(product_id)
@@ -61,7 +76,7 @@ def product_form_edit(product_id: int, facade: FromDishka[CatalogFacade]):
 
 
 @catalog_admin_bp.route("/", methods=["POST"])
-@jwt_required
+@permission_required("edit_products")
 @inject
 def create_product(facade: FromDishka[CatalogFacade]):
     title = request.form.get("title", "")
@@ -85,7 +100,7 @@ def create_product(facade: FromDishka[CatalogFacade]):
 
 
 @catalog_admin_bp.route("/<int:product_id>", methods=["PUT"])
-@jwt_required
+@permission_required("edit_products")
 @inject
 def update_product(product_id: int, facade: FromDishka[CatalogFacade]):
     kwargs = {}
@@ -115,10 +130,26 @@ def update_product(product_id: int, facade: FromDishka[CatalogFacade]):
 
 
 @catalog_admin_bp.route("/<int:product_id>", methods=["DELETE"])
-@jwt_required
+@permission_required("edit_products")
 @inject
 def delete_product(product_id: int, facade: FromDishka[CatalogFacade]):
     facade.delete_product(product_id)
     return "", 200
 
 
+@taxonomy_admin_bp.route("/categories/")
+@permission_required("view_category_tree")
+def categories_page():
+    return redirect("/admin/catalog/?view=tree")
+
+
+@taxonomy_admin_bp.route("/tags/")
+@permission_required("view_category_tree")
+def tags_page():
+    return redirect("/admin/catalog/?view=tags")
+
+
+@taxonomy_admin_bp.route("/catalog/")
+@any_permission_required("view_category_tree", "view_products", "edit_taxonomy")
+def catalog_page():
+    return render_template("catalog/pages/catalog.html")

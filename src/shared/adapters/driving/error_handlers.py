@@ -55,7 +55,7 @@ def init_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(DrivenPortError)
     def handle_driven_port_error(e: DrivenPortError):
-        logger.error("Port Failure: %s", e.message, exc_info=True)
+        logger.error("Port Failure: %s", e.message)
         if is_htmx():
             return _htmx_toast(e.message, 500)
         return _json_response(e, 500)
@@ -63,13 +63,18 @@ def init_error_handlers(app: Flask) -> None:
     @app.errorhandler(DrivingAdapterError)
     def handle_driving_adapter_error(e: DrivingAdapterError):
         logger.info("Auth Failure: %s", e.message)
+        status = 403 if e.code in {"FORBIDDEN", "CSRF_INVALID"} else 401
         if is_htmx():
+            if e.code == "CSRF_INVALID":
+                return _htmx_toast("Сессия устарела. Обновите страницу.", 403)
+            if status == 403:
+                return _htmx_toast("Недостаточно прав", 403)
             response = make_response("")
             response.headers["HX-Redirect"] = "/admin/login"
             return response
-        if request.path.startswith("/admin"):
+        if request.path.startswith("/admin") and status == 401:
             return redirect("/admin/login")
-        return _json_response(e, 401)
+        return _json_response(e, status)
 
     @app.errorhandler(DrivenAdapterError)
     def handle_driven_adapter_error(e: DrivenAdapterError):

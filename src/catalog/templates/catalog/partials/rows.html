@@ -5,6 +5,7 @@
   <td>{{ "%.2f"|format(product.price) }}</td>
   <td>{{ product.created_at }}</td>
   <td class="actions">
+    {% if has_perm('edit_products') %}
     <button class="btn btn--ghost btn--sm"
             hx-get="/admin/products/{{ product.id }}/form"
             hx-target="#modal-container"
@@ -14,6 +15,9 @@
             hx-target="closest tr"
             hx-swap="outerHTML"
             hx-confirm="Удалить этот товар?">Удалить</button>
+    {% else %}
+    —
+    {% endif %}
   </td>
 </tr>
 {% else %}

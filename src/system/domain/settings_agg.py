@@ -28,6 +28,13 @@ class SiteSettings:
     instagram: str
     telegram_bot_token: str
     telegram_chat_id: str
+    app_name: str = "Shop Admin"
+    admin_panel_title: str = "Админ панель"
+    owner_can_view_category_tree: bool = True
+    owner_can_edit_taxonomy: bool = False
+    owner_can_view_products: bool = False
+    owner_can_edit_products: bool = False
+    owner_can_create_demo_data: bool = False
 
     @property
     def is_telegram_configured(self) -> bool:
@@ -46,3 +53,15 @@ class SiteSettings:
                 if not (lo <= val <= hi):
                     raise InvalidCoordsError(key.split("_")[1], val)
             setattr(self, key, val)
+        self._normalize_catalog_access()
+
+    def _normalize_catalog_access(self) -> None:
+        self.owner_can_view_category_tree = True
+        if self.owner_can_create_demo_data:
+            self.owner_can_edit_taxonomy = True
+            self.owner_can_view_products = True
+            self.owner_can_edit_products = True
+        if self.owner_can_edit_taxonomy:
+            self.owner_can_view_category_tree = True
+        if self.owner_can_edit_products:
+            self.owner_can_view_products = True

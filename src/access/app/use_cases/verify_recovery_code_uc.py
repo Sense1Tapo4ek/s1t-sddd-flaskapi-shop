@@ -1,9 +1,12 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from shared.helpers.security import verify_password, create_jwt
+from access.config import AccessConfig
+from shared.helpers.security import verify_password
 from shared.generics.errors import DomainError
+from ...domain import AdminInactiveError, RecoveryCodeLockedError, User
 from ..interfaces import IAdminRepo
+from .login_uc import create_access_token
 
 
 class InvalidRecoveryCodeError(DomainError):
@@ -21,26 +24,91 @@ class VerifyRecoveryCodeUseCase:
     """
 
     _repo: IAdminRepo
-    _jwt_secret: str
+    _config: AccessConfig
 
-    def __call__(self, code: str, admin_id: int = 1) -> str:
-        user = self._repo.get_by_id(admin_id)
-        if user is None or user.recovery_code_hash is None:
+    def _as_utc(self, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+    def _verify_code(self, user: User, code: str) -> None:
+        if not user.is_active:
+            raise AdminInactiveError()
+
+        now = datetime.now(timezone.utc)
+        locked_until = self._as_utc(user.recovery_code_locked_until)
+        if locked_until and locked_until > now:
+            raise RecoveryCodeLockedError()
+
+        if user.recovery_code_hash is None:
             raise InvalidRecoveryCodeError()
 
-        if user.recovery_code_expires is None or user.recovery_code_expires.replace(
-            tzinfo=timezone.utc
-        ) < datetime.now(timezone.utc):
+        expires = self._as_utc(user.recovery_code_expires)
+        if expires is None or expires < now:
             self._repo.clear_recovery_code(user.id)
             raise InvalidRecoveryCodeError()
 
         if not verify_password(code, user.recovery_code_hash):
+            attempts = (user.recovery_code_attempts or 0) + 1
+            next_locked_until = None
+            if attempts >= self._config.recovery_code_max_attempts:
+                next_locked_until = now + timedelta(
+                    minutes=self._config.recovery_code_lockout_minutes
+                )
+            self._repo.record_recovery_failure(
+                user.id,
+                attempts,
+                next_locked_until,
+            )
+            if next_locked_until is not None:
+                raise RecoveryCodeLockedError()
             raise InvalidRecoveryCodeError()
 
-        # Code is valid — clear it (one-time use)
         self._repo.clear_recovery_code(user.id)
 
-        return create_jwt(
-            payload={"sub": user.id, "login": user.login},
-            secret=self._jwt_secret,
+    def __call__(
+        self,
+        code: str,
+        admin_id: int = 1,
+        *,
+        remember_me: bool = False,
+        csrf_token: str | None = None,
+    ) -> str:
+        user = self._repo.get_by_id(admin_id)
+        if user is None:
+            raise InvalidRecoveryCodeError()
+
+        self._verify_code(user, code)
+
+        return create_access_token(
+            user,
+            self._config,
+            remember_me=remember_me,
+            csrf_token=csrf_token,
         )
+
+    def for_login(
+        self,
+        login: str,
+        code: str,
+        *,
+        remember_me: bool = False,
+        csrf_token: str | None = None,
+    ) -> str:
+        user = self._repo.get_by_login(login)
+        if user is None:
+            raise InvalidRecoveryCodeError()
+        return self(
+            code,
+            user.id,
+            remember_me=remember_me,
+            csrf_token=csrf_token,
+        )
+
+    def verify_for_user(self, admin_id: int, code: str) -> None:
+        user = self._repo.get_by_id(admin_id)
+        if user is None:
+            raise InvalidRecoveryCodeError()
+        self._verify_code(user, code)

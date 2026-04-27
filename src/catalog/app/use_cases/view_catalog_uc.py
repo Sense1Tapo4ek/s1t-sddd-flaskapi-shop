@@ -12,15 +12,30 @@ class ViewCatalogUseCase:
 
     _repo: IProductRepo
 
-    def get_paginated(self, page: int = 1, limit: int = 20) -> PaginatedResult[Product]:
-        params = PaginationParams(page=page, limit=limit, sort_by="id", sort_dir="desc")
+    def get_paginated(
+        self,
+        page: int = 1,
+        limit: int = 20,
+        filters: dict | None = None,
+    ) -> PaginatedResult[Product]:
+        safe_filters = dict(filters or {})
+        safe_filters["is_active"] = True
+        params = PaginationParams(
+            page=page,
+            limit=limit,
+            sort_by="id",
+            sort_dir="desc",
+            filters=safe_filters,
+        )
+        if filters:
+            return self._repo.search("", params)
         return self._repo.get_paginated(params)
 
-    def get_detail(self, product_id: int) -> Product:
+    def get_detail(self, product_id: int, *, include_inactive: bool = False) -> Product:
         product = self._repo.get_by_id(product_id)
-        if product is None:
+        if product is None or (not include_inactive and not product.is_active):
             raise ProductNotFoundError(product_id)
         return product
 
     def get_random(self, limit: int = 4) -> list[Product]:
-        return self._repo.get_random(limit)
+        return [product for product in self._repo.get_random(limit) if product.is_active]

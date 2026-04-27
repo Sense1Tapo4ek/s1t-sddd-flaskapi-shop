@@ -74,6 +74,19 @@ Each schema endpoint returns:
 | `gte`    | Greater or equal    | `column >= value`    | `≥`        |
 | `lte`    | Less or equal       | `column <= value`    | `≤`        |
 
+### Product Taxonomy Filters
+
+Product search supports relation filters in addition to direct product columns:
+
+| Query param | Example | Meaning |
+|-------------|---------|---------|
+| `category_id` | `category_id=4` | Products in category id 4 |
+| `category` | `category=dresses` | Products in category slug `dresses` |
+| `include_descendants` | `true` | Include child categories |
+| `tags` | `sale,new` | Products with any listed tag slug |
+| `attr.<code>` | `attr.size=M` | Attribute equality |
+| `attr.<code>__gte` | `attr.weight__gte=10` | Numeric attribute lower bound |
+
 ---
 
 ## Query Param Convention

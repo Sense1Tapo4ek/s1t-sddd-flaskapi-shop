@@ -48,6 +48,22 @@
     <textarea class="form-input form-textarea" id="f-description" name="description" rows="6"></textarea>
   </div>
 
+  <div class="form-section">
+    <div class="form-section__title">Классификация</div>
+    <div class="form-group">
+      <label class="form-label">Категория</label>
+      <div id="categorySelect"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Теги</label>
+      <div id="tagPicker" class="tag-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Атрибуты</label>
+      <div id="attributeForm"></div>
+    </div>
+  </div>
+
   <div class="form-group" id="currentImagesBlock" style="display:none;">
     <label class="form-label">Текущие фотографии</label>
     <div id="currentImages" class="image-grid"></div>
@@ -65,7 +81,7 @@
     <button class="btn btn--primary" type="submit">
       {% if product_id %}Сохранить{% else %}Создать{% endif %}
     </button>
-    <a href="/admin/products/" class="btn btn--ghost">Отмена</a>
+    <a href="{% if initial_category_id %}/admin/catalog/?view=products&category_id={{ initial_category_id }}{% else %}/admin/catalog/?view=products{% endif %}" class="btn btn--ghost">Отмена</a>
   </div>
 </form>
 
@@ -76,16 +92,75 @@
 <script src="/static/js/api.js"></script>
 <script>
 const productId = {{ product_id | tojson }};
+const initialCategoryId = {{ initial_category_id | default(none) | tojson }};
+const catalogReturnUrl = '/admin/catalog/?view=products' + (
+  initialCategoryId ? '&category_id=' + encodeURIComponent(initialCategoryId) : ''
+);
+let categorySelect = null;
+let tagPicker = null;
+let attributeForm = null;
+let loadedAttributeValues = {};
+
+function jsLiteral(value) {
+  return esc(JSON.stringify(value == null ? '' : value));
+}
+
+function showFormError(message) {
+  const alertEl = document.getElementById('formAlert');
+  alertEl.textContent = message;
+  alertEl.style.display = 'block';
+}
+
+function clearFormError() {
+  const alertEl = document.getElementById('formAlert');
+  alertEl.style.display = 'none';
+  alertEl.textContent = '';
+}
 
 // --- Load product for edit ---
 async function loadProduct() {
-  if (!productId) return;
-  const detail = await api.get('/catalog/' + productId);
+  if (!productId) {
+    await initTaxonomyControls(initialCategoryId, [], {});
+    return;
+  }
+  const detail = await api.get('/catalog/admin/products/' + productId);
   if (!detail || detail.error) return;
   document.getElementById('f-title').value = detail.title || '';
   document.getElementById('f-price').value = detail.price || '';
   document.getElementById('f-description').value = detail.description || '';
   renderCurrentImages(detail.images || []);
+  const attrValues = {};
+  (detail.attributes || []).forEach(attr => { attrValues[attr.code] = attr.value; });
+  await initTaxonomyControls(
+    detail.category_id || initialCategoryId,
+    (detail.tags || []).map(tag => tag.id),
+    attrValues
+  );
+}
+
+async function initTaxonomyControls(categoryId, tagIds, attrValues) {
+  loadedAttributeValues = attrValues || {};
+  if (!categorySelect) {
+    categorySelect = new CategoryTreeSelect({
+      containerId: 'categorySelect',
+      selectedId: categoryId,
+      leafOnly: true,
+      onChange: category => {
+        loadedAttributeValues = {};
+        attributeForm.load(category ? category.id : null, {});
+      }
+    });
+  }
+  if (!tagPicker) {
+    tagPicker = new TagPicker({ containerId: 'tagPicker', selectedIds: tagIds || [] });
+  }
+  if (!attributeForm) {
+    attributeForm = new AttributeForm({ containerId: 'attributeForm' });
+  }
+  categorySelect.selectedId = categoryId ? Number(categoryId) : null;
+  await categorySelect.load(categoryId);
+  await tagPicker.load(tagIds || []);
+  await attributeForm.load(categoryId, loadedAttributeValues);
 }
 
 function renderCurrentImages(images) {
@@ -96,40 +171,44 @@ function renderCurrentImages(images) {
   grid.innerHTML = images.map(src => `
     <div class="image-thumb" id="thumb_${btoa(src).replace(/=/g,'')}">
       <img src="${esc(src)}" alt=""
-           onclick="editExistingImage('${esc(src)}')" style="cursor:pointer;"
+           onclick="editExistingImage(${jsLiteral(src)})" style="cursor:pointer;"
            title="Клик — редактировать">
-      <button type="button" class="image-thumb__del" onclick="deleteImage(this, '${esc(src)}')">&#215;</button>
+      <button type="button" class="image-thumb__del" onclick="deleteImage(this, ${jsLiteral(src)})">&#215;</button>
     </div>
   `).join('');
 }
 
 async function editExistingImage(src) {
   if (!productId || !window.openImageEditor) return;
+  let blob;
   try {
-    const blob = await window.openImageEditor(src);
-    // 1. Delete old image
-    await fetch('/catalog/' + productId + '/images', {
-      method: 'DELETE',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_path: src }),
-    });
-    // 2. Upload edited image
-    const fd = new FormData();
-    fd.append('new_images', blob, 'edited.jpg');
-    await fetch('/catalog/' + productId, {
-      method: 'PUT',
-      credentials: 'same-origin',
-      body: fd,
-    });
-    // 3. Reload
-    loadProduct();
-    document.body.dispatchEvent(new CustomEvent('showToast', {
-      detail: { message: 'Фото обновлено', type: 'success' }
-    }));
+    blob = await window.openImageEditor(src);
   } catch (e) {
-    // User cancelled — do nothing
+    // User cancelled editor — do nothing.
+    return;
   }
+  if (!blob) return;
+
+  clearFormError();
+  const fd = new FormData();
+  fd.append('new_images', blob, 'edited.jpg');
+  const uploadRes = await api.put('/catalog/' + productId, fd);
+  if (uploadRes._failed || uploadRes.error) {
+    showFormError(uploadRes.message || uploadRes.error || 'Не удалось загрузить отредактированное фото');
+    return;
+  }
+
+  const deleteRes = await api.del('/catalog/' + productId + '/images', { image_path: src });
+  if (deleteRes._failed || deleteRes.error) {
+    await loadProduct();
+    showFormError('Новое фото загружено, но старое не удалилось. Проверьте список фотографий и повторите удаление старого фото.');
+    return;
+  }
+
+  renderCurrentImages(deleteRes.images || uploadRes.images || []);
+  document.body.dispatchEvent(new CustomEvent('showToast', {
+    detail: { message: 'Фото обновлено', type: 'success' }
+  }));
 }
 
 async function deleteImage(btn, src) {
@@ -146,21 +225,48 @@ async function deleteImage(btn, src) {
 
 // --- Image editor on file select ---
 let editedImages = [];
+let nextEditedImageId = 1;
+
+function addEditedImagePreview(blob) {
+  const preview = document.getElementById('previewImages');
+  const id = nextEditedImageId++;
+  const url = URL.createObjectURL(blob);
+  editedImages.push({ id, blob, url });
+
+  const div = document.createElement('div');
+  div.className = 'image-thumb';
+  div.dataset.editedImageId = String(id);
+  div.innerHTML = `
+    <img src="${url}" alt="">
+    <button type="button" class="image-thumb__del" aria-label="Убрать фото из загрузки" onclick="removeEditedImage(${id})">&#215;</button>
+  `;
+  preview.appendChild(div);
+}
+
+function removeEditedImage(id) {
+  const item = editedImages.find(image => image.id === id);
+  if (!item) return;
+  URL.revokeObjectURL(item.url);
+  editedImages = editedImages.filter(image => image.id !== id);
+  const thumb = document.querySelector(`#previewImages [data-edited-image-id="${id}"]`);
+  if (thumb) thumb.remove();
+}
+
+function clearEditedImagePreviews() {
+  editedImages.forEach(image => URL.revokeObjectURL(image.url));
+  editedImages = [];
+  document.getElementById('previewImages').innerHTML = '';
+}
 
 document.getElementById('f-images').addEventListener('change', async function() {
-  const preview = document.getElementById('previewImages');
   const files = Array.from(this.files);
   for (const file of files) {
     try {
       const blob = window.openImageEditor
         ? await window.openImageEditor(file)
         : file;
-      editedImages.push(blob);
-      const url = URL.createObjectURL(blob);
-      const div = document.createElement('div');
-      div.className = 'image-thumb';
-      div.innerHTML = `<img src="${url}" alt="">`;
-      preview.appendChild(div);
+      if (!blob) continue;
+      addEditedImagePreview(blob);
     } catch (e) {
       // User cancelled editor for this file — skip
     }
@@ -171,8 +277,7 @@ document.getElementById('f-images').addEventListener('change', async function() 
 // --- Form submit ---
 document.getElementById('productForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  const alertEl = document.getElementById('formAlert');
-  alertEl.style.display = 'none';
+  clearFormError();
   const submitBtn = this.querySelector('button[type="submit"]');
   submitBtn.classList.add('btn--loading');
 
@@ -180,10 +285,19 @@ document.getElementById('productForm').addEventListener('submit', async function
   fd.append('title', document.getElementById('f-title').value);
   fd.append('price', document.getElementById('f-price').value);
   fd.append('description', document.getElementById('f-description').value);
+  if (categorySelect && categorySelect.getValue()) {
+    fd.append('category_id', categorySelect.getValue());
+  }
+  if (tagPicker) {
+    fd.append('tag_ids', tagPicker.getValue().join(','));
+  }
+  if (attributeForm) {
+    fd.append('attribute_values', JSON.stringify(attributeForm.getValue()));
+  }
 
   const fieldName = productId ? 'new_images' : 'images';
-  for (const blob of editedImages) {
-    fd.append(fieldName, blob, 'edited.jpg');
+  for (const image of editedImages) {
+    fd.append(fieldName, image.blob, 'edited.jpg');
   }
 
   const url    = productId ? `/catalog/${productId}` : '/catalog';
@@ -192,6 +306,7 @@ document.getElementById('productForm').addEventListener('submit', async function
   const res = await fetch(url, {
     method,
     credentials: 'same-origin',
+    headers: { 'X-CSRF-Token': getCsrfToken() },
     body: fd,
   }).then(r => r.json()).catch(err => ({ error: err.message }));
 
@@ -199,18 +314,16 @@ document.getElementById('productForm').addEventListener('submit', async function
 
   if (res.id || res.success) {
     if (productId) {
-      editedImages = [];
-      document.getElementById('previewImages').innerHTML = '';
+      clearEditedImagePreviews();
       loadProduct();
       document.body.dispatchEvent(new CustomEvent('showToast', {
         detail: { message: 'Сохранено', type: 'success' }
       }));
     } else {
-      window.location = '/admin/products/';
+      window.location = catalogReturnUrl;
     }
   } else {
-    alertEl.textContent = res.message || res.error || 'Ошибка сохранения';
-    alertEl.style.display = 'block';
+    showFormError(res.message || res.error || 'Ошибка сохранения');
   }
 });
 

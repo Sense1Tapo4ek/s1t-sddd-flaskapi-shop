@@ -1,12 +1,32 @@
 // Cookie-based API client (httpOnly JWT is sent automatically by the browser)
+function getCookie(name) {
+  return document.cookie
+    .split(';')
+    .map(part => part.trim())
+    .find(part => part.startsWith(name + '='))
+    ?.split('=')
+    .slice(1)
+    .join('=') || '';
+}
+
+function getCsrfToken() {
+  return decodeURIComponent(getCookie('csrf_token') || '');
+}
+
 const api = {
   async request(method, url, body = null) {
     const opts = { method, credentials: 'same-origin' };
+    const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(String(method).toUpperCase());
+    const csrfToken = unsafe ? getCsrfToken() : '';
     if (body instanceof FormData) {
       opts.body = body;
+      if (csrfToken) opts.headers = { 'X-CSRF-Token': csrfToken };
     } else if (body !== null) {
       opts.headers = { 'Content-Type': 'application/json' };
+      if (csrfToken) opts.headers['X-CSRF-Token'] = csrfToken;
       opts.body = JSON.stringify(body);
+    } else if (csrfToken) {
+      opts.headers = { 'X-CSRF-Token': csrfToken };
     }
     let r;
     try {

@@ -2,7 +2,7 @@ from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 from flask import request
 
-from shared.adapters.driving.middleware import jwt_required
+from shared.adapters.driving.middleware import permission_required
 from ordering.ports.driving import (
     OrderingFacade,
     OrderIn,
@@ -20,7 +20,7 @@ ordering_bp = APIBlueprint("ordering", __name__, url_prefix="/orders")
 @ordering_bp.input(OrderIn)
 @ordering_bp.doc(
     summary="Place new order (Public)",
-    description="Creates a new customer order. On success, sends a notification to the configured Telegram chat (if set up).",
+    description="Creates a new customer order. On success, sends notifications to active owner/superadmin Telegram chat IDs when the bot is configured.",
 )
 @inject
 def place_order(json_data: OrderIn, facade: FromDishka[OrderingFacade]):
@@ -32,7 +32,7 @@ def place_order(json_data: OrderIn, facade: FromDishka[OrderingFacade]):
 
 
 @ordering_bp.get("")
-@jwt_required
+@permission_required("view_orders")
 @ordering_bp.input(OrderSearchQuery, location="query")
 @ordering_bp.doc(
     summary="List orders (ADMIN ONLY)",
@@ -57,7 +57,7 @@ def list_orders(query_data: OrderSearchQuery, facade: FromDishka[OrderingFacade]
 
 
 @ordering_bp.get("/search/schema")
-@jwt_required
+@permission_required("view_orders")
 @ordering_bp.doc(
     summary="Order filter schema (ADMIN ONLY)",
     description="Returns available field configs and status options for building order filters.",
@@ -88,7 +88,7 @@ def admin_search_schema(facade: FromDishka[OrderingFacade]):
 
 
 @ordering_bp.patch("/<int:order_id>/status")
-@jwt_required
+@permission_required("manage_orders")
 @ordering_bp.input(OrderStatusUpdateIn)
 @ordering_bp.doc(
     summary="Update order status (ADMIN ONLY)",
@@ -102,7 +102,7 @@ def update_status(order_id: int, json_data: OrderStatusUpdateIn, facade: FromDis
 
 
 @ordering_bp.delete("/<int:order_id>")
-@jwt_required
+@permission_required("manage_orders")
 @ordering_bp.doc(
     summary="Delete order (ADMIN ONLY)",
     description="Permanently removes an order from the system.",

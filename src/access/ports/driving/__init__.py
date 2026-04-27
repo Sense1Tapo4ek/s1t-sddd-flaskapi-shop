@@ -3,6 +3,9 @@ from .schemas import (
     ChangePasswordIn,
     LoginIn,
     LoginOut,
+    TelegramBindingIn,
+    TelegramCodeRequestIn,
+    TelegramCodeVerifyIn,
 )
 
 __all__ = [
@@ -10,4 +13,7 @@ __all__ = [
     "LoginIn",
     "LoginOut",
     "ChangePasswordIn",
+    "TelegramBindingIn",
+    "TelegramCodeRequestIn",
+    "TelegramCodeVerifyIn",
 ]

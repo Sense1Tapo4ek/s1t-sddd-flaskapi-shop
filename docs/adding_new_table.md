@@ -20,7 +20,7 @@ This guide walks through adding a new entity to the shop template. We'll use a h
 | 8 | API blueprint     | REST endpoints + filter schema endpoint       |
 | 9 | Admin blueprint   | HTMX routes for the admin panel               |
 | 10| Admin template    | HTML page with SmartTable                     |
-| 11| Seed config       | Add entity to `data/seed_config.yaml`         |
+| 11| Demo data         | Optional: add entity to a demo-data use case  |
 | 12| Wiring            | DI provider + blueprint registration          |
 
 ---
@@ -291,39 +291,9 @@ window.reviewsTable.load();
 
 ---
 
-## Step 11: Seed Config
+## Step 11: Demo Data
 
-Add to `data/seed_config.yaml`:
-
-```yaml
-reviews:
-  count: 20
-  fields:
-    product_id:
-      type: int_range
-      min: 1
-      max: 10
-    author:
-      type: faker
-      method: name
-    rating:
-      type: int_range
-      min: 1
-      max: 5
-    text:
-      type: faker
-      method: text
-```
-
-Then register the entity in `data/seed.py` → `ENTITY_REGISTRY`:
-
-```python
-ENTITY_REGISTRY["reviews"] = {
-    "model": ReviewModel,
-    "columns": ["product_id", "author", "rating", "text"],
-    "has_images": False,
-}
-```
+CLI seed files are no longer used. If the entity needs sample data, add an idempotent generator to an application use case and expose it behind a superadmin-only admin action. Keep demo rows identifiable so repeated clicks do not duplicate them.
 
 ---
 

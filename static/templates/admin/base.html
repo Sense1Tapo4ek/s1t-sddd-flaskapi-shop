@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="/static/css/components/toasts.css">
   <link rel="stylesheet" href="/static/css/components/utils.css">
   <link rel="stylesheet" href="/static/css/components/smart-table.css">
+  <link rel="stylesheet" href="/static/css/components/taxonomy.css">
+  <link rel="stylesheet" href="/static/css/components/catalog-workspace.css">
   <link rel="stylesheet" href="/static/vendor/cropper.min.css">
   <link rel="stylesheet" href="/static/css/image-editor.css">
 </head>
@@ -27,10 +29,16 @@
     <aside class="sidebar">
       <div class="sidebar__brand">
         <span class="sidebar__logo">{{ app_name }}</span>
-        <span class="sidebar__sub">Админ панель</span>
+        <span class="sidebar__sub">{{ admin_panel_title }}</span>
       </div>
       <nav class="sidebar__nav">
-        <a href="/admin/products/" class="nav-link {% if active == 'products' %}nav-link--active{% endif %}">Товары</a>
+        <div class="sidebar__section-title">Каталог</div>
+        {% if has_perm('view_products') or has_perm('view_category_tree') or has_perm('edit_taxonomy') %}
+        <a href="/admin/catalog/" class="nav-link {% if active == 'catalog' %}nav-link--active{% endif %}">Каталог</a>
+        {% endif %}
+
+        {% if has_perm('view_orders') %}
+        <div class="sidebar__section-title">Продажи</div>
         <a href="/admin/orders/" class="nav-link {% if active == 'orders' %}nav-link--active{% endif %}" style="display: flex; justify-content: space-between; align-items: center;">
           <span>Заказы</span>
           <span
@@ -39,14 +47,19 @@
             hx-trigger="load, every 30s"
             hx-swap="innerHTML"></span>
         </a>
+        {% endif %}
 
         <div class="sidebar__section-title">Настройки</div>
+        {% if has_perm('manage_settings') %}
         <a href="/admin/settings/store" class="nav-link {% if active == 'settings' and tab == 'store' %}nav-link--active{% endif %}">Магазин</a>
-        <a href="/admin/settings/telegram" class="nav-link {% if active == 'settings' and tab == 'telegram' %}nav-link--active{% endif %}">Оповещения</a>
-        <a href="/admin/settings/security" class="nav-link {% if active == 'settings' and tab == 'security' %}nav-link--active{% endif %}">Безопасность</a>
+        {% endif %}
         <a href="/admin/help" class="nav-link {% if active == 'help' %}nav-link--active{% endif %}">Помощь</a>
       </nav>
       <div class="sidebar__footer">
+        <a href="/admin/account"
+          class="nav-link {% if active == 'account' %}nav-link--active{% endif %}">
+          <span>{{ request.admin_payload.get('login', 'Аккаунт') if request.admin_payload is defined else 'Аккаунт' }}</span>
+        </a>
         <a href="#"
           class="nav-link"
           hx-delete="/admin/logout"
@@ -82,9 +95,26 @@
   <script src="/static/js/image-editor.js"></script>
   <script src="/static/js/lightbox.js"></script>
   <script src="/static/js/modal.js"></script>
-  <script>
-  document.body.addEventListener("showToast", function(e) {
-      var d = e.detail, el = document.createElement("div");
+	  <script>
+	  function getCookie(name) {
+	      return document.cookie
+	          .split(";")
+	          .map(function(part) { return part.trim(); })
+	          .find(function(part) { return part.indexOf(name + "=") === 0; });
+	  }
+	  function getCsrfToken() {
+	      var raw = getCookie("csrf_token");
+	      return raw ? decodeURIComponent(raw.split("=").slice(1).join("=")) : "";
+	  }
+	  document.body.addEventListener("htmx:configRequest", function(e) {
+	      var method = String(e.detail.verb || "GET").toUpperCase();
+	      if (["POST", "PUT", "PATCH", "DELETE"].indexOf(method) === -1) return;
+	      var token = getCsrfToken();
+	      if (token) e.detail.headers["X-CSRF-Token"] = token;
+	  });
+
+	  document.body.addEventListener("showToast", function(e) {
+	      var d = e.detail, el = document.createElement("div");
       el.className = "toast toast--" + (d.type || "info");
       el.textContent = d.message;
       document.getElementById("toast-container").appendChild(el);
@@ -151,6 +181,9 @@
       }
   });
   </script>
+  <script src="/static/js/taxonomy-tree.js"></script>
+  <script src="/static/js/tag-picker.js"></script>
+  <script src="/static/js/attribute-form.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

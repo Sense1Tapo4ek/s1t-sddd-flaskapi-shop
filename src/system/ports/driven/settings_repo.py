@@ -21,6 +21,13 @@ class SettingsRepo(ISettingsRepo):
             instagram=model.instagram,
             telegram_bot_token=model.telegram_bot_token,
             telegram_chat_id=model.telegram_chat_id,
+            app_name=model.app_name or "Shop Admin",
+            admin_panel_title=model.admin_panel_title or "Админ панель",
+            owner_can_view_category_tree=bool(model.owner_can_view_category_tree),
+            owner_can_edit_taxonomy=bool(model.owner_can_edit_taxonomy),
+            owner_can_view_products=bool(model.owner_can_view_products),
+            owner_can_edit_products=bool(model.owner_can_edit_products),
+            owner_can_create_demo_data=bool(model.owner_can_create_demo_data),
         )
 
     @handle_db_errors("load settings")
@@ -49,4 +56,11 @@ class SettingsRepo(ISettingsRepo):
             model.instagram = settings.instagram
             model.telegram_bot_token = settings.telegram_bot_token
             model.telegram_chat_id = settings.telegram_chat_id
+            model.app_name = settings.app_name
+            model.admin_panel_title = settings.admin_panel_title
+            model.owner_can_view_category_tree = settings.owner_can_view_category_tree
+            model.owner_can_edit_taxonomy = settings.owner_can_edit_taxonomy
+            model.owner_can_view_products = settings.owner_can_view_products
+            model.owner_can_edit_products = settings.owner_can_edit_products
+            model.owner_can_create_demo_data = settings.owner_can_create_demo_data
             session.commit()

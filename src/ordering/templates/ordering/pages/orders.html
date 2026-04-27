@@ -9,7 +9,9 @@
     <h2 class="page-title">Заказы</h2>
     <button class="help-badge" onclick="document.getElementById('orders-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
+  {% if has_perm('manage_orders') %}
   <button class="btn btn--ghost btn--sm" onclick="createTestOrder()">+ Тестовый заказ</button>
+  {% endif %}
 </div>
 
 <div id="orders-container"></div>
@@ -40,6 +42,8 @@
 <script src="/static/js/api.js"></script>
 <script src="/static/js/smart-table.js"></script>
 <script>
+const CAN_MANAGE_ORDERS = {{ 'true' if has_perm('manage_orders') else 'false' }};
+
 const STATUS_LABELS = {
   new: 'Новый',
   processing: 'В обработке',
@@ -61,6 +65,7 @@ function statusBadge(status) {
 }
 
 async function deleteOrder(id) {
+  if (!CAN_MANAGE_ORDERS) return;
   if (!confirm('Удалить заказ #' + id + '?')) return;
   const r = await api.del('/orders/' + id);
   if (r.error) {
@@ -76,6 +81,7 @@ async function deleteOrder(id) {
 }
 
 async function createTestOrder() {
+  if (!CAN_MANAGE_ORDERS) return;
   const r = await api.post('/orders', { name: 'Тестовый клиент', phone: '+375291234567', comment: 'Тестовый заказ' });
   if (r._failed) return;
   window.ordersTable.load();
@@ -98,7 +104,7 @@ window.ordersTable = new SmartTable({
     { key: 'comment',    label: 'Комментарий',  sortable: false },
     { key: 'created_at', label: 'Дата',         sortable: true  },
     { key: 'status',     label: 'Статус',       sortable: true,  render: item => statusBadge(item.status) },
-    { key: 'actions',    label: 'Действия',     sortable: false, render: item => `<button class="btn btn--danger btn--sm" onclick="deleteOrder(${item.id})">Удалить</button>` },
+    { key: 'actions',    label: 'Действия',     sortable: false, render: item => CAN_MANAGE_ORDERS ? `<button class="btn btn--danger btn--sm" onclick="deleteOrder(${item.id})">Удалить</button>` : '—' },
   ]
 });
 

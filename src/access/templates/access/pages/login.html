@@ -75,6 +75,10 @@
                         </button>
                     </div>
                 </div>
+                <label style="display:flex;align-items:center;gap:8px;margin:4px 0 14px;font-size:13px;color:var(--color-text-muted);">
+                    <input type="checkbox" name="remember_me">
+                    <span>Запомнить меня на 30 дней</span>
+                </label>
                 <div class="error-msg" id="login-error"></div>
                 <div class="form-actions">
                     <button class="btn btn--primary" type="submit" style="width:100%">Войти</button>
@@ -82,20 +86,30 @@
             </form>
             <div class="forgot-link">
                 <button class="btn btn--ghost btn--sm" type="button"
-                        onclick="showRecovery()">Забыли пароль?</button>
+                        onclick="showRecovery()">Войти через Telegram</button>
             </div>
         </div>
 
         <div id="recovery-section" style="display:none">
             <p class="recovery-desc">
-                Одноразовый код для входа будет отправлен в привязанный Telegram-чат администратора.
-                Код действителен 5 минут.
+                Одноразовый код для входа будет отправлен в Telegram, привязанный к указанному логину.
+                Код действителен {{ recovery_code_ttl_minutes }} мин.
             </p>
+            <div class="form-group">
+                <label class="form-label" for="telegram-login">Логин</label>
+                <input class="form-input" type="text" id="telegram-login" name="login"
+                       autocomplete="username" required>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;margin:4px 0 14px;font-size:13px;color:var(--color-text-muted);">
+                <input type="checkbox" id="telegram-remember" name="remember_me">
+                <span>Запомнить меня на 30 дней</span>
+            </label>
             <div class="error-msg" id="recovery-error"></div>
             <div class="recovery-actions">
                 <button class="btn btn--ghost" type="button" onclick="hideRecovery()">Отмена</button>
                 <button class="btn btn--primary" type="button"
-                        hx-post="/admin/recover"
+                        hx-post="/admin/telegram/request-code"
+                        hx-include="#telegram-login, #telegram-remember"
                         hx-target="#recovery-section"
                         hx-swap="innerHTML">Получить код</button>
             </div>
@@ -119,6 +133,9 @@
     }
 
     function showRecovery() {
+        var login = document.getElementById('login');
+        var tgLogin = document.getElementById('telegram-login');
+        if (login && tgLogin && login.value && !tgLogin.value) tgLogin.value = login.value;
         document.getElementById('login-form').style.display = 'none';
         document.getElementById('recovery-section').style.display = '';
     }

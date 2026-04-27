@@ -10,7 +10,7 @@ All public endpoints are available without authentication.
 
 ### GET /catalog
 
-Get a paginated list of active products.
+Get a paginated list of active products. Public catalog reads always enforce active product visibility server-side; `is_active` query params are ignored.
 
 **Query params:**
 
@@ -18,12 +18,27 @@ Get a paginated list of active products.
 |--------|------|---------|-------------------|
 | `page` | int  | 1       | Page number (≥1)  |
 | `limit`| int  | 20      | Items per page (1-100) |
+| `category` | string | | Category slug |
+| `category_id` | int | | Category id |
+| `include_descendants` | bool | false | Include child categories |
+| `tags` | string | | Comma-separated tag slugs |
+| `attr.<code>` | string | | Attribute filter |
+
+Inactive products are not returned through category, tag, attribute, or dynamic filters.
 
 **Response** `200`:
 ```json
 {
   "items": [
-    { "id": 1, "title": "Wireless Headphones", "price": 49.99, "image": "/media/products/abc.jpg" }
+    {
+      "id": 1,
+      "title": "Wireless Headphones",
+      "price": 49.99,
+      "image": "/media/products/abc.jpg",
+      "category_id": 4,
+      "category": { "id": 4, "title": "Dresses", "slug": "dresses" },
+      "tags": []
+    }
   ],
   "total": 42,
   "page": 1,
@@ -54,7 +69,7 @@ Get random active products.
 
 ### GET /catalog/{product_id}
 
-Get full product details including all images.
+Get full product details including all images. Inactive products return the same not-found response as missing products.
 
 **Response** `200`:
 ```json
@@ -64,6 +79,11 @@ Get full product details including all images.
   "price": 49.99,
   "description": "High quality product with warranty.",
   "images": ["/media/products/abc.jpg", "/media/products/def.jpg"],
+  "category_id": 4,
+  "category": { "id": 4, "title": "Dresses", "slug": "dresses" },
+  "category_path": ["Clothing", "Dresses"],
+  "tags": [],
+  "attributes": [],
   "created_at": "2025-03-15"
 }
 ```
@@ -75,11 +95,23 @@ Get full product details including all images.
 
 ---
 
+## Catalog Taxonomy
+
+### GET /catalog/categories/tree
+
+Return active categories as a nested tree.
+
+### GET /catalog/tags
+
+Return active catalog tags. Public product counts count active products only.
+
+---
+
 ## Orders
 
 ### POST /orders
 
-Place a new customer order. If Telegram is configured, a notification is sent automatically.
+Place a new customer order. If a Telegram bot token is configured, notifications are sent to active owner/superadmin users with a bound `telegram_chat_id`. Notification delivery failures do not fail order placement.
 
 **Request body:**
 ```json
@@ -125,7 +157,7 @@ Get public store information (contacts, working hours, social links). No sensiti
 
 ### POST /system/settings/recover-password/{token}
 
-Trigger password recovery via Telegram. The `{token}` must match the `SYSTEM_RECOVERY_TOKEN` env var.
+Trigger password recovery via Telegram. The `{token}` must match the `SYSTEM_RECOVERY_TOKEN` env var. The message is sent to the target admin user's `telegram_chat_id`; global settings only provide the bot token.
 
 **Response** `200`:
 ```json
