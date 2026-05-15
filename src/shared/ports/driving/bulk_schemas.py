@@ -14,12 +14,17 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# Aggregate ids may be either int (autoincrement, the current project's
+# default) or UUID (future contexts that adopt UUID PKs). Pydantic tries
+# int first and falls back to UUID, so the discriminator stays unambiguous.
+AggregateId = Union[int, UUID]
+
 
 class BulkTargetIds(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["ids"] = "ids"
-    ids: list[UUID] = Field(..., min_length=1, max_length=1000)
+    ids: list[AggregateId] = Field(..., min_length=1, max_length=1000)
 
 
 class BulkTargetFilter(BaseModel):
@@ -38,7 +43,7 @@ BulkTarget = Annotated[
 class BulkFailureSchema(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    id: UUID
+    id: AggregateId
     reason: str
 
 

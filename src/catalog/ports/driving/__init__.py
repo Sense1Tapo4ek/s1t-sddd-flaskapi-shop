@@ -1,8 +1,14 @@
 from .facade import CatalogFacade
 from .schemas import (
     AdminProductListOut,
-    CatalogQuery,
+    AttributeOptionIn,
+    AttributeOptionOut,
+    BulkProductsActivateIn,
+    BulkProductsCategoryIn,
+    BulkProductsDeleteIn,
+    BulkProductsTagsIn,
     CatalogListOut,
+    CatalogQuery,
     CategoryAttributeCreateIn,
     CategoryAttributeOut,
     CategoryAttributesOut,
@@ -25,13 +31,17 @@ from .schemas import (
     TagOut,
     TagSummaryOut,
     TagUpdateIn,
-    AttributeOptionIn,
-    AttributeOptionOut,
 )
 
 __all__ = [
     "CatalogFacade",
     "AdminProductListOut",
+    "AttributeOptionIn",
+    "AttributeOptionOut",
+    "BulkProductsActivateIn",
+    "BulkProductsCategoryIn",
+    "BulkProductsDeleteIn",
+    "BulkProductsTagsIn",
     "CatalogQuery",
     "CatalogListOut",
     "CategoryAttributeCreateIn",
@@ -56,6 +66,4 @@ __all__ = [
     "TagOut",
     "TagSummaryOut",
     "TagUpdateIn",
-    "AttributeOptionIn",
-    "AttributeOptionOut",
 ]

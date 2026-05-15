@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from shared.generics.pagination import PaginatedResult
+from shared.ports.driving.bulk_schemas import BulkTarget
 from ...domain import (
     AttributeOption,
     Category,
@@ -432,3 +433,30 @@ class SwapSortOrderIn(BaseModel):
     model_config = ConfigDict(frozen=True)
     id_a: int
     id_b: int
+
+
+# ─── Bulk action inputs ─────────────────────────────────────────────
+
+
+class BulkProductsActivateIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget
+    active: bool
+
+
+class BulkProductsCategoryIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget
+    category_id: int = Field(..., ge=1)
+
+
+class BulkProductsTagsIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget
+    tag_ids: list[int] = Field(default_factory=list)
+    mode: str = Field(..., pattern="^(replace|add|remove)$")
+
+
+class BulkProductsDeleteIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget

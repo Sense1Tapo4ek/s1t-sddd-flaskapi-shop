@@ -1,6 +1,10 @@
 from dishka import Provider, Scope, provide
 
 from catalog.app import (
+    BulkAssignProductsCategoryUseCase,
+    BulkAssignProductsTagsUseCase,
+    BulkDeleteProductsUseCase,
+    BulkSetProductsActiveUseCase,
     CreateDemoDataUseCase,
     ManageCatalogUseCase,
     ManageTaxonomyUseCase,
@@ -45,6 +49,10 @@ class CatalogProvider(Provider):
     manage_uc = provide(ManageCatalogUseCase)
     taxonomy_uc = provide(ManageTaxonomyUseCase)
     demo_data_uc = provide(CreateDemoDataUseCase)
+    bulk_set_active_uc = provide(BulkSetProductsActiveUseCase)
+    bulk_assign_category_uc = provide(BulkAssignProductsCategoryUseCase)
+    bulk_assign_tags_uc = provide(BulkAssignProductsTagsUseCase)
+    bulk_delete_uc = provide(BulkDeleteProductsUseCase)
 
     # Facade
     facade = provide(CatalogFacade)

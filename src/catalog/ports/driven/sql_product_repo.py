@@ -11,8 +11,13 @@ from shared.generics.pagination import PaginatedResult, PaginationParams
 from shared.adapters.driven import SqlBaseRepo
 from shared.helpers.db import handle_db_errors
 
-from catalog.app.interfaces import IProductRepo
-from catalog.domain import Product, ProductAttributeValue, Tag
+from catalog.app.interfaces import BulkTagMode, IProductRepo
+from catalog.domain import (
+    Product,
+    ProductAttributeValue,
+    ProductNotFoundError,
+    Tag,
+)
 from catalog.adapters.driven.db.models import (
     CategoryAttributeModel,
     CategoryModel,
@@ -548,6 +553,127 @@ class SqlProductRepo(SqlBaseRepo[Product, ProductModel], IProductRepo):
                 session.commit()
                 return True
             return False
+
+    # ─── Bulk operations ────────────────────────────────────────────
+
+    def iter_ids_by_filter(
+        self,
+        filter_payload: dict,
+        *,
+        cursor: str | None,
+        limit: int,
+    ) -> tuple[list[int], str | None]:
+        """Cursor-paginated id loader. Reuses the search filter pipeline
+        and orders by ``products.id`` ascending so that ``cursor`` is the
+        last id from the previous page."""
+        with self._session_factory() as session:
+            query = (filter_payload or {}).get("q", "")
+            stmt = select(ProductModel.id)
+            if query:
+                fts_expr = literal_column(
+                    "MATCH (products.title, products.description) "
+                    "AGAINST (:fts_query IN BOOLEAN MODE)"
+                )
+                stmt = stmt.where(fts_expr).params(fts_query=query)
+
+            # _apply_taxonomy_filters expects a mutable filters dict;
+            # strip out the `q` key since it is handled above.
+            structural_filters = {k: v for k, v in (filter_payload or {}).items() if k != "q"}
+            stmt, _direct = self._apply_taxonomy_filters(session, stmt, structural_filters)
+
+            if cursor is not None:
+                try:
+                    cursor_id = int(cursor)
+                except (TypeError, ValueError):
+                    cursor_id = 0
+                stmt = stmt.where(ProductModel.id > cursor_id)
+
+            stmt = stmt.order_by(asc(ProductModel.id)).limit(limit)
+            rows = session.execute(stmt).scalars().all()
+            ids = list(rows)
+            next_cursor = str(ids[-1]) if len(ids) == limit else None
+            return ids, next_cursor
+
+    @handle_db_errors("bulk set product active")
+    def set_active(self, product_id: int, active: bool) -> None:
+        with self._session_factory() as session:
+            model = session.get(ProductModel, product_id)
+            if model is None:
+                raise ProductNotFoundError(product_id)
+            if model.is_active != active:
+                model.is_active = bool(active)
+                session.commit()
+
+    @handle_db_errors("bulk assign product category")
+    def assign_category(self, product_id: int, category_id: int) -> None:
+        with self._session_factory() as session:
+            model = session.get(ProductModel, product_id)
+            if model is None:
+                raise ProductNotFoundError(product_id)
+            if model.category_id == category_id:
+                return
+            model.category_id = category_id
+            # Attribute schema depends on category — clear stale values so
+            # the next edit reloads them from the new category definition.
+            session.query(ProductAttributeValueModel).filter(
+                ProductAttributeValueModel.product_id == product_id
+            ).delete()
+            session.commit()
+
+    @handle_db_errors("bulk apply product tags")
+    def apply_tags(
+        self,
+        product_id: int,
+        tag_ids: list[int],
+        mode: BulkTagMode,
+    ) -> None:
+        with self._session_factory() as session:
+            model = session.get(ProductModel, product_id)
+            if model is None:
+                raise ProductNotFoundError(product_id)
+
+            tag_ids = list(dict.fromkeys(int(t) for t in tag_ids))  # dedupe + coerce
+            if mode == "replace":
+                session.query(ProductTagModel).filter(
+                    ProductTagModel.product_id == product_id
+                ).delete()
+                for tag_id in tag_ids:
+                    session.add(ProductTagModel(product_id=product_id, tag_id=tag_id))
+            elif mode == "add":
+                existing = {
+                    row.tag_id
+                    for row in session.execute(
+                        select(ProductTagModel).where(
+                            ProductTagModel.product_id == product_id
+                        )
+                    ).scalars().all()
+                }
+                for tag_id in tag_ids:
+                    if tag_id not in existing:
+                        session.add(
+                            ProductTagModel(product_id=product_id, tag_id=tag_id)
+                        )
+            elif mode == "remove":
+                if tag_ids:
+                    session.query(ProductTagModel).filter(
+                        ProductTagModel.product_id == product_id,
+                        ProductTagModel.tag_id.in_(tag_ids),
+                    ).delete(synchronize_session=False)
+            # mode validation lives in the use case (InvalidBulkTagModeError);
+            # the repo trusts the caller.
+            session.commit()
+
+    @handle_db_errors("bulk delete product")
+    def bulk_delete_one(self, product_id: int) -> None:
+        # Image files are NOT cleaned up here — deferred to a background
+        # janitor; bulk delete in one HTTP request must stay fast. The
+        # ProductModel cascade deletes images/tags/attribute_values rows.
+        with self._session_factory() as session:
+            model = session.get(ProductModel, product_id)
+            if model is None:
+                raise ProductNotFoundError(product_id)
+            session.delete(model)
+            session.commit()
 
     @handle_db_errors("swap ids")
     def swap_ids(self, id_a: int, id_b: int) -> None:

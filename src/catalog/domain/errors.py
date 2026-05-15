@@ -49,3 +49,21 @@ class InvalidAttributeError(DomainError):
         super().__init__(
             message=f"Некорректный атрибут: {reason}", code="INVALID_ATTRIBUTE"
         )
+
+
+class ProductInUseByActiveOrderError(DomainError):
+    """Bulk delete blocked because the product is referenced by a non-terminal order."""
+
+    def __init__(self, product_id: int) -> None:
+        super().__init__(
+            message=f"Товар {product_id} используется в активном заказе",
+            code="product_in_use_by_active_order",
+        )
+
+
+class InvalidBulkTagModeError(DomainError):
+    def __init__(self, mode: str) -> None:
+        super().__init__(
+            message=f"Неизвестный режим bulk-операции с тегами: {mode!r}",
+            code="invalid_bulk_tag_mode",
+        )

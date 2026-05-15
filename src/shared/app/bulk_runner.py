@@ -15,10 +15,16 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Iterable, Protocol
-from uuid import UUID
+from uuid import UUID  # noqa: F401  re-exported via AggregateId
 
-from shared.generics.errors import DomainError
+from shared.generics.errors import ApplicationError, DomainError
+
+# Both DomainError (invariant) and ApplicationError (not-found / state) are
+# legitimate per-row outcomes in a bulk loop — neither should escalate the
+# entire request to 5xx. Infra errors (DrivenPortError, …) still propagate.
+BULK_FAILURE_EXCEPTIONS: tuple[type[Exception], ...] = (DomainError, ApplicationError)
 from shared.ports.driving.bulk_schemas import (
+    AggregateId,
     BulkFailureSchema,
     BulkResultSchema,
     BulkTarget,
@@ -45,7 +51,7 @@ class IFilterIdLoader(Protocol):
         *,
         cursor: str | None,
         limit: int,
-    ) -> tuple[list[UUID], str | None]:
+    ) -> tuple[list[AggregateId], str | None]:
         ...
 
 
@@ -58,7 +64,7 @@ class BulkRunner:
     version is the default.
     """
 
-    process_one: Callable[[UUID], None]
+    process_one: Callable[[AggregateId], None]
     load_filter_page: IFilterIdLoader | None = None
     batch_size: int = DEFAULT_BATCH_SIZE
 
@@ -69,7 +75,7 @@ class BulkRunner:
             return self._run_filter(target.filter)
         raise TypeError(f"unknown BulkTarget: {type(target).__name__}")
 
-    def _run_ids(self, ids: list[UUID]) -> BulkResultSchema:
+    def _run_ids(self, ids: list[AggregateId]) -> BulkResultSchema:
         failed: list[BulkFailureSchema] = []
         ok = 0
         for aggregate_id in ids:
@@ -103,11 +109,11 @@ class BulkRunner:
 
         return BulkResultSchema(total=total, ok=ok, failed=failed)
 
-    def _apply(self, aggregate_id: UUID, failed: list[BulkFailureSchema]) -> bool:
+    def _apply(self, aggregate_id: AggregateId, failed: list[BulkFailureSchema]) -> bool:
         try:
             self.process_one(aggregate_id)
             return True
-        except DomainError as e:
+        except BULK_FAILURE_EXCEPTIONS as e:
             failed.append(BulkFailureSchema(id=aggregate_id, reason=e.code))
             return False
 
@@ -117,7 +123,7 @@ class AsyncBulkRunner:
     """Async variant of :class:`BulkRunner`. Kept for parity; not used
     by the current Flask stack but available if an async UC needs it."""
 
-    process_one: Callable[[UUID], Awaitable[None]]
+    process_one: Callable[[AggregateId], Awaitable[None]]
     load_filter_page: IFilterIdLoader | None = None
     batch_size: int = DEFAULT_BATCH_SIZE
 
@@ -128,7 +134,7 @@ class AsyncBulkRunner:
             return await self._run_filter(target.filter)
         raise TypeError(f"unknown BulkTarget: {type(target).__name__}")
 
-    async def _run_ids(self, ids: Iterable[UUID]) -> BulkResultSchema:
+    async def _run_ids(self, ids: Iterable[AggregateId]) -> BulkResultSchema:
         failed: list[BulkFailureSchema] = []
         ok = 0
         total = 0
@@ -164,10 +170,10 @@ class AsyncBulkRunner:
 
         return BulkResultSchema(total=total, ok=ok, failed=failed)
 
-    async def _apply(self, aggregate_id: UUID, failed: list[BulkFailureSchema]) -> bool:
+    async def _apply(self, aggregate_id: AggregateId, failed: list[BulkFailureSchema]) -> bool:
         try:
             await self.process_one(aggregate_id)
             return True
-        except DomainError as e:
+        except BULK_FAILURE_EXCEPTIONS as e:
             failed.append(BulkFailureSchema(id=aggregate_id, reason=e.code))
             return False

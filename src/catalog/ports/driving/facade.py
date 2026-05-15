@@ -2,7 +2,17 @@ from dataclasses import dataclass
 from inspect import Parameter, signature
 from typing import Any, Callable
 
+from shared.ports.driving.bulk_schemas import BulkResultSchema
+
 from ...app import (
+    BulkAssignProductsCategoryCommand,
+    BulkAssignProductsCategoryUseCase,
+    BulkAssignProductsTagsCommand,
+    BulkAssignProductsTagsUseCase,
+    BulkDeleteProductsCommand,
+    BulkDeleteProductsUseCase,
+    BulkSetProductsActiveCommand,
+    BulkSetProductsActiveUseCase,
     CreateDemoDataUseCase,
     ManageCatalogUseCase,
     ManageTaxonomyUseCase,
@@ -10,6 +20,10 @@ from ...app import (
 )
 from .schemas import (
     AdminProductListOut,
+    BulkProductsActivateIn,
+    BulkProductsCategoryIn,
+    BulkProductsDeleteIn,
+    BulkProductsTagsIn,
     CatalogListOut,
     CategoryAttributeCreateIn,
     CategoryAttributeOut,
@@ -38,6 +52,10 @@ class CatalogFacade:
     _manage_uc: ManageCatalogUseCase
     _taxonomy_uc: ManageTaxonomyUseCase
     _demo_data_uc: CreateDemoDataUseCase
+    _bulk_set_active_uc: BulkSetProductsActiveUseCase
+    _bulk_assign_category_uc: BulkAssignProductsCategoryUseCase
+    _bulk_assign_tags_uc: BulkAssignProductsTagsUseCase
+    _bulk_delete_uc: BulkDeleteProductsUseCase
 
     def _taxonomy(self) -> ManageTaxonomyUseCase:
         return self._taxonomy_uc
@@ -136,6 +154,35 @@ class CatalogFacade:
             filters=safe_filters,
         )
         return AdminProductListOut.from_domain(res)
+
+    # --- Bulk actions ---
+    def bulk_set_products_active(self, payload: BulkProductsActivateIn) -> BulkResultSchema:
+        return self._bulk_set_active_uc(
+            BulkSetProductsActiveCommand(target=payload.target, active=payload.active)
+        )
+
+    def bulk_assign_products_category(
+        self, payload: BulkProductsCategoryIn
+    ) -> BulkResultSchema:
+        return self._bulk_assign_category_uc(
+            BulkAssignProductsCategoryCommand(
+                target=payload.target, category_id=payload.category_id
+            )
+        )
+
+    def bulk_assign_products_tags(self, payload: BulkProductsTagsIn) -> BulkResultSchema:
+        return self._bulk_assign_tags_uc(
+            BulkAssignProductsTagsCommand(
+                target=payload.target,
+                tag_ids=list(payload.tag_ids),
+                mode=payload.mode,  # type: ignore[arg-type]
+            )
+        )
+
+    def bulk_delete_products(self, payload: BulkProductsDeleteIn) -> BulkResultSchema:
+        return self._bulk_delete_uc(
+            BulkDeleteProductsCommand(target=payload.target)
+        )
 
     def create_product(
         self,

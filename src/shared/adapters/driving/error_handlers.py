@@ -5,12 +5,28 @@ import logging
 from flask import Flask, jsonify, make_response, redirect, request
 from werkzeug.exceptions import HTTPException
 
+from pydantic import ValidationError as PydanticValidationError
+
 from shared.generics.errors import (
     LayerError, DomainError, ApplicationError,
     DrivingPortError, DrivenPortError,
     DrivingAdapterError, DrivenAdapterError,
 )
 from shared.adapters.driving.htmx import is_htmx
+
+
+def _bulk_target_code(errors: list[dict]) -> str | None:
+    """Map Pydantic ValidationError details for BulkTargetIds.ids to stable codes."""
+    for err in errors:
+        loc = err.get("loc") or ()
+        if "ids" not in loc:
+            continue
+        err_type = err.get("type", "")
+        if err_type in {"too_short", "list_too_short"}:
+            return "bulk_target_empty"
+        if err_type in {"too_long", "list_too_long"}:
+            return "bulk_target_too_large"
+    return None
 
 logger = logging.getLogger("api.errors")
 GENERIC_OPERATION_FAILED = "Не удалось выполнить операцию. Попробуйте позже."
@@ -93,6 +109,31 @@ def init_error_handlers(app: Flask) -> None:
                 status=error.status_code,
                 detail=detail,
             )
+
+    @app.errorhandler(PydanticValidationError)
+    def handle_pydantic_validation_error(e: PydanticValidationError):
+        errors = e.errors()
+        # Surface stable codes for the well-known bulk-target limits.
+        bulk_code = _bulk_target_code(errors)
+        if bulk_code is not None:
+            logger.info("Bulk target rejected: %s", bulk_code)
+            if is_htmx():
+                return _htmx_toast(VALIDATION_ERROR_MESSAGE, 422)
+            return json_error_response(
+                code=bulk_code,
+                message=VALIDATION_ERROR_MESSAGE,
+                status=422,
+                detail=errors,
+            )
+        logger.info("Pydantic validation failed: %s errors", len(errors))
+        if is_htmx():
+            return _htmx_toast(VALIDATION_ERROR_MESSAGE, 422)
+        return json_error_response(
+            code="VALIDATION_ERROR",
+            message=VALIDATION_ERROR_MESSAGE,
+            status=422,
+            detail=errors,
+        )
 
     @app.errorhandler(DomainError)
     def handle_domain_error(e: DomainError):

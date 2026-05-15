@@ -1,8 +1,14 @@
 import json
-from flask import request, render_template, make_response, redirect
+from flask import jsonify, request, render_template, make_response, redirect
 from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
+from catalog.ports.driving import (
+    BulkProductsActivateIn,
+    BulkProductsCategoryIn,
+    BulkProductsDeleteIn,
+    BulkProductsTagsIn,
+)
 from catalog.ports.driving.facade import CatalogFacade
 from shared.adapters.driving.middleware import any_permission_required, permission_required
 from shared.adapters.driving.htmx import render_partial_or_full
@@ -135,6 +141,45 @@ def update_product(product_id: int, facade: FromDishka[CatalogFacade]):
 def delete_product(product_id: int, facade: FromDishka[CatalogFacade]):
     facade.delete_product(product_id)
     return "", 200
+
+
+# ─── Bulk actions ───────────────────────────────────────────────────
+
+
+@catalog_admin_bp.route("/bulk/activate", methods=["POST"])
+@permission_required("edit_products")
+@inject
+def products_bulk_activate(facade: FromDishka[CatalogFacade]):
+    payload = BulkProductsActivateIn.model_validate(request.get_json(silent=True) or {})
+    result = facade.bulk_set_products_active(payload)
+    return jsonify(result.model_dump(mode="json")), 200
+
+
+@catalog_admin_bp.route("/bulk/category", methods=["POST"])
+@permission_required("edit_products")
+@inject
+def products_bulk_category(facade: FromDishka[CatalogFacade]):
+    payload = BulkProductsCategoryIn.model_validate(request.get_json(silent=True) or {})
+    result = facade.bulk_assign_products_category(payload)
+    return jsonify(result.model_dump(mode="json")), 200
+
+
+@catalog_admin_bp.route("/bulk/tags", methods=["POST"])
+@permission_required("edit_products")
+@inject
+def products_bulk_tags(facade: FromDishka[CatalogFacade]):
+    payload = BulkProductsTagsIn.model_validate(request.get_json(silent=True) or {})
+    result = facade.bulk_assign_products_tags(payload)
+    return jsonify(result.model_dump(mode="json")), 200
+
+
+@catalog_admin_bp.route("/bulk/delete", methods=["POST"])
+@permission_required("edit_products")
+@inject
+def products_bulk_delete(facade: FromDishka[CatalogFacade]):
+    payload = BulkProductsDeleteIn.model_validate(request.get_json(silent=True) or {})
+    result = facade.bulk_delete_products(payload)
+    return jsonify(result.model_dump(mode="json")), 200
 
 
 @taxonomy_admin_bp.route("/categories/")
