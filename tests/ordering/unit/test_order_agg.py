@@ -73,26 +73,57 @@ class TestOrderStatusTransitions:
         [
             (OrderStatus.NEW, OrderStatus.DONE),
             (OrderStatus.PROCESSING, OrderStatus.NEW),
-            (OrderStatus.DONE, OrderStatus.PROCESSING),
-            (OrderStatus.CANCELED, OrderStatus.NEW),
         ],
     )
-    def test_forbidden_transition_is_rejected_without_mutation(
+    def test_illegal_transition_from_non_terminal_is_rejected(
         self, initial_status, target_status
     ):
         """
-        Given an order in a status without a transition to the target status,
-        When changing to the forbidden target status,
-        Then the domain rejects the transition and keeps the original status.
+        Given an order in a non-terminal status (NEW or PROCESSING),
+        When changing to a forbidden target that is not allowed by the matrix,
+        Then IllegalOrderTransitionError is raised with code "illegal_transition"
+        and the order status is not mutated.
         """
+        from ordering.domain import IllegalOrderTransitionError
+
         # Arrange
         order = Order.create(id=1, name="Alice", phone="+375291234567", comment="")
         order.status = initial_status
 
         # Act
-        with pytest.raises(InvalidOrderTransitionError) as exc_info:
+        with pytest.raises(IllegalOrderTransitionError) as exc_info:
             order.change_status(target_status)
 
         # Assert
-        assert exc_info.value.code == "INVALID_TRANSITION"
+        assert exc_info.value.code == "illegal_transition"
+        assert order.status is initial_status
+
+    @pytest.mark.parametrize(
+        ("initial_status", "target_status"),
+        [
+            (OrderStatus.DONE, OrderStatus.PROCESSING),
+            (OrderStatus.CANCELED, OrderStatus.NEW),
+        ],
+    )
+    def test_transition_from_terminal_is_rejected(
+        self, initial_status, target_status
+    ):
+        """
+        Given an order in a terminal status (DONE or CANCELED),
+        When attempting any status change,
+        Then OrderAlreadyTerminalError is raised with code "order_already_terminal"
+        and the order status is not mutated.
+        """
+        from ordering.domain import OrderAlreadyTerminalError
+
+        # Arrange
+        order = Order.create(id=1, name="Alice", phone="+375291234567", comment="")
+        order.status = initial_status
+
+        # Act
+        with pytest.raises(OrderAlreadyTerminalError) as exc_info:
+            order.change_status(target_status)
+
+        # Assert
+        assert exc_info.value.code == "order_already_terminal"
         assert order.status is initial_status

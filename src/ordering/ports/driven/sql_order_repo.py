@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import ClassVar
-from sqlalchemy import select
+from sqlalchemy import asc, select
 
 from shared.generics.pagination import PaginatedResult, PaginationParams
 from shared.adapters.driven.db.repository import SqlBaseRepo
@@ -65,3 +65,32 @@ class SqlOrderRepo(SqlBaseRepo[Order, OrderModel], IOrderRepo):
             return self._paginate(
                 session=session, stmt=stmt, params=params, default_sort="created_at"
             )
+
+    # ─── Bulk operations ────────────────────────────────────────────
+
+    def iter_ids_by_filter(
+        self,
+        filter_payload: dict,
+        *,
+        cursor: str | None,
+        limit: int,
+    ) -> tuple[list[int], str | None]:
+        """Cursor-paginated id loader for bulk operations. Orders by
+        ``orders.id`` ascending so that ``cursor`` is the last id from
+        the previous page."""
+        with self._session_factory() as session:
+            stmt = select(OrderModel.id)
+            stmt = self._apply_filters(stmt, filter_payload or {})
+
+            if cursor is not None:
+                try:
+                    cursor_id = int(cursor)
+                except (TypeError, ValueError):
+                    cursor_id = 0
+                stmt = stmt.where(OrderModel.id > cursor_id)
+
+            stmt = stmt.order_by(asc(OrderModel.id)).limit(limit)
+            rows = session.execute(stmt).scalars().all()
+            ids = list(rows)
+            next_cursor = str(ids[-1]) if len(ids) == limit else None
+            return ids, next_cursor

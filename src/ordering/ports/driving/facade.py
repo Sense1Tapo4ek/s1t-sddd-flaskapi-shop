@@ -1,6 +1,17 @@
 from dataclasses import dataclass
-from ...app import PlaceOrderUseCase, ProcessOrderUseCase, DeleteOrderUseCase, GetOrdersQuery, DeleteOrderCommand
-from .schemas import OrderIn, OrderStatusUpdateIn, OrderListOut
+
+from shared.ports.driving.bulk_schemas import BulkResultSchema
+
+from ...app import (
+    BulkChangeOrderStatusCommand,
+    BulkChangeOrderStatusUseCase,
+    DeleteOrderCommand,
+    DeleteOrderUseCase,
+    GetOrdersQuery,
+    PlaceOrderUseCase,
+    ProcessOrderUseCase,
+)
+from .schemas import BulkOrdersStatusIn, OrderIn, OrderListOut, OrderStatusUpdateIn
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14,6 +25,7 @@ class OrderingFacade:
     _place_uc: PlaceOrderUseCase
     _process_uc: ProcessOrderUseCase
     _delete_uc: DeleteOrderUseCase
+    _bulk_status_uc: BulkChangeOrderStatusUseCase
     _get_query: GetOrdersQuery
 
     def place_order(self, schema: OrderIn) -> int:
@@ -27,6 +39,13 @@ class OrderingFacade:
     def delete_order(self, order_id: int) -> None:
         cmd = DeleteOrderCommand(order_id=order_id)
         self._delete_uc(cmd)
+
+    def bulk_change_orders_status(
+        self, payload: BulkOrdersStatusIn
+    ) -> BulkResultSchema:
+        return self._bulk_status_uc(
+            BulkChangeOrderStatusCommand(target=payload.target, status=payload.status)
+        )
 
     def list_orders(
         self,

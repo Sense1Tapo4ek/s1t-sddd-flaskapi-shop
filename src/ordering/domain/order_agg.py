@@ -2,7 +2,11 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .order_status import OrderStatus
-from .errors import OrderCreationError, InvalidOrderTransitionError
+from .errors import (
+    OrderCreationError,
+    IllegalOrderTransitionError,
+    OrderAlreadyTerminalError,
+)
 
 _TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
     OrderStatus.NEW: {OrderStatus.PROCESSING, OrderStatus.CANCELED},
@@ -40,6 +44,9 @@ class Order:
         )
 
     def change_status(self, new_status: OrderStatus) -> None:
-        if new_status not in _TRANSITIONS.get(self.status, set()):
-            raise InvalidOrderTransitionError(self.status.value, new_status.value)
+        allowed = _TRANSITIONS.get(self.status, set())
+        if not allowed:
+            raise OrderAlreadyTerminalError(self.status.value, new_status.value)
+        if new_status not in allowed:
+            raise IllegalOrderTransitionError(self.status.value, new_status.value)
         self.status = new_status

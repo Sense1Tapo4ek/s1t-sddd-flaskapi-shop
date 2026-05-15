@@ -1,5 +1,11 @@
 from .facade import OrderingFacade
-from .schemas import OrderIn, OrderStatusUpdateIn, OrderListOut, OrderSearchQuery
+from .schemas import (
+    BulkOrdersStatusIn,
+    OrderIn,
+    OrderListOut,
+    OrderSearchQuery,
+    OrderStatusUpdateIn,
+)
 
 __all__ = [
     "OrderingFacade",
@@ -7,4 +13,5 @@ __all__ = [
     "OrderStatusUpdateIn",
     "OrderListOut",
     "OrderSearchQuery",
+    "BulkOrdersStatusIn",
 ]

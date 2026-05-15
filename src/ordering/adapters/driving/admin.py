@@ -1,9 +1,9 @@
-from flask import request, render_template
+from flask import jsonify, request, render_template
 from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
 from ordering.ports.driving.facade import OrderingFacade
-from ordering.ports.driving.schemas import OrderStatusUpdateIn
+from ordering.ports.driving.schemas import BulkOrdersStatusIn, OrderStatusUpdateIn
 from shared.adapters.driving.middleware import permission_required
 from shared.adapters.driving.htmx import render_partial_or_full
 from shared.helpers.parsing import parse_table_params
@@ -69,4 +69,16 @@ def orders_badge(facade: FromDishka[OrderingFacade]):
     if count > 0:
         return f'<span class="badge badge--new">{count}</span>'
     return '<span></span>'
+
+
+# ─── Bulk actions ───────────────────────────────────────────────────
+
+
+@ordering_admin_bp.route("/bulk/status", methods=["POST"])
+@permission_required("manage_orders")
+@inject
+def orders_bulk_status(facade: FromDishka[OrderingFacade]):
+    payload = BulkOrdersStatusIn.model_validate(request.get_json(silent=True) or {})
+    result = facade.bulk_change_orders_status(payload)
+    return jsonify(result.model_dump(mode="json")), 200
 

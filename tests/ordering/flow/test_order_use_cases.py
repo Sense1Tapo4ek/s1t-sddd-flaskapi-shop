@@ -171,21 +171,24 @@ class TestProcessOrderUseCase:
 
     def test_invalid_transition_propagates_and_does_not_save(self):
         """
-        Given an existing order and a forbidden target status,
+        Given an existing order in NEW and a forbidden target DONE (non-terminal origin),
         When processing the order,
-        Then the domain error propagates and the order is not saved.
+        Then IllegalOrderTransitionError propagates with code "illegal_transition"
+        and the order is not saved.
         """
+        from ordering.domain import IllegalOrderTransitionError
+
         # Arrange
         order = _order(order_id=9, status=OrderStatus.NEW)
         repo = InMemoryOrderRepo(orders=[order])
         use_case = ProcessOrderUseCase(_repo=repo)
 
         # Act
-        with pytest.raises(InvalidOrderTransitionError) as exc_info:
+        with pytest.raises(IllegalOrderTransitionError) as exc_info:
             use_case(ProcessOrderCommand(order_id=9, new_status=OrderStatus.DONE.value))
 
         # Assert
-        assert exc_info.value.code == "INVALID_TRANSITION"
+        assert exc_info.value.code == "illegal_transition"
         assert order.status is OrderStatus.NEW
         assert repo.saved == []
         assert repo.events == [("get_by_id", 9)]

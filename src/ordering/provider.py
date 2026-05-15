@@ -4,6 +4,9 @@ from ordering.config import OrderingConfig
 from ordering.app.use_cases.place_order_uc import PlaceOrderUseCase
 from ordering.app.use_cases.process_order_uc import ProcessOrderUseCase
 from ordering.app.use_cases.delete_order_uc import DeleteOrderUseCase
+from ordering.app.use_cases.bulk_change_order_status_uc import (
+    BulkChangeOrderStatusUseCase,
+)
 from ordering.app.queries.get_orders_query import GetOrdersQuery
 from ordering.app.interfaces.i_order_repo import IOrderRepo
 from ordering.app.interfaces.i_notification_acl import INotificationAcl
@@ -25,6 +28,7 @@ class OrderingProvider(Provider):
     place_uc = provide(PlaceOrderUseCase)
     process_uc = provide(ProcessOrderUseCase)
     delete_uc = provide(DeleteOrderUseCase)
+    bulk_status_uc = provide(BulkChangeOrderStatusUseCase)
     get_query = provide(GetOrdersQuery)
 
     facade = provide(OrderingFacade)

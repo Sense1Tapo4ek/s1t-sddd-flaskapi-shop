@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from shared.generics.pagination import PaginatedResult
+from shared.ports.driving.bulk_schemas import BulkTarget
 from ...app.commands import PlaceOrderCommand, ProcessOrderCommand
 from ...domain import Order
 
@@ -64,3 +65,12 @@ class OrderListOut(BaseModel):
         return cls(
             items=[OrderOut.from_domain(o) for o in result.items], total=result.total
         )
+
+
+# ─── Bulk action inputs ─────────────────────────────────────────────
+
+
+class BulkOrdersStatusIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget
+    status: str

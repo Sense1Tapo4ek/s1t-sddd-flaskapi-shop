@@ -47,6 +47,8 @@
     "PRODUCT_NOT_FOUND":            "Товар не найден",
     "TAG_NOT_FOUND":                "Тег не найден",
     "CATEGORY_NOT_FOUND":           "Категория не найдена",
+    "ORDER_NOT_FOUND":              "Заказ не найден",
+    "INVALID_TRANSITION":           "Недопустимый переход статуса",
     "forbidden":                    "Запрещено",
     "validation_error":             "Ошибка валидации",
   };
