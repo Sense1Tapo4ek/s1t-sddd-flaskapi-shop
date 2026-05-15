@@ -1,10 +1,11 @@
 from dishka import Container, make_container
 from dishka.integrations.flask import FlaskProvider
 
-from shared.provider import InfraProvider
+from access.provider import AccessProvider
 from catalog.provider import CatalogProvider
 from ordering.provider import OrderingProvider
-from access.provider import AccessProvider
+from root.storage_provider import StorageProvider
+from shared.provider import InfraProvider
 from system.provider import SystemProvider
 
 
@@ -15,8 +16,9 @@ def build_container() -> Container:
     return make_container(
         FlaskProvider(),
         InfraProvider(),
+        SystemProvider(),
         CatalogProvider(),
         OrderingProvider(),
         AccessProvider(),
-        SystemProvider(),
+        StorageProvider(),
     )

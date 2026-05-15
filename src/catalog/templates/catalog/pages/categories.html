@@ -7,6 +7,7 @@
 <div class="page-header">
   <div class="page-header__left">
     <h2 class="page-title">Категории</h2>
+    <button class="help-badge" onclick="document.getElementById('categories-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
   {% if has_perm('edit_taxonomy') %}
   <button class="btn btn--primary btn--sm" onclick="createRootCategory()">+ Корневая категория</button>
@@ -14,6 +15,23 @@
   {% if has_perm('create_demo_data') %}
   <button class="btn btn--ghost btn--sm" onclick="createDemoData()">Создать демо-данные</button>
   {% endif %}
+</div>
+
+<div class="modal-overlay" id="categories-help-modal" role="dialog" aria-modal="true" aria-label="Справка по категориям" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Категории — Справка
+      <button class="modal__close" onclick="document.getElementById('categories-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <ul style="padding-left:18px; margin:0;">
+        <li><strong>Дерево категорий:</strong> Выберите категорию слева для редактирования, добавления атрибутов или товаров.</li>
+        <li><strong>Корневая категория:</strong> Кнопка «+ Корневая категория» создаёт новую группу верхнего уровня.</li>
+        <li><strong>Атрибуты:</strong> Вкладка «Атрибуты» позволяет задать характеристики товаров в категории.</li>
+        <li><strong>Демо-данные:</strong> Кнопка «Создать демо-данные» добавляет тестовые товары в пустые конечные категории.</li>
+      </ul>
+    </div>
+  </div>
 </div>
 
 <div class="taxonomy-layout">
@@ -36,7 +54,7 @@
 {% block scripts %}
 <script src="/static/js/utils.js"></script>
 <script src="/static/js/api.js"></script>
-<script src="/static/js/smart-table.js"></script>
+<script src="/static/js/smart-table.js?v=3"></script>
 <script>
 let selectedCategoryId = null;
 let selectedCategory = null;
@@ -140,7 +158,7 @@ function createRootCategory() {
 
 async function createDemoData() {
   if (!CAN_CREATE_DEMO_DATA) return;
-  if (!confirm('Создать недостающие демо-данные для leaf-категорий?')) return;
+  if (!confirm('Создать недостающие демо-данные для конечных категорий?')) return;
   const res = await api.post('/catalog/admin/demo-data', {});
   if (res._failed) return;
   document.body.dispatchEvent(new CustomEvent('showToast', {
@@ -248,7 +266,7 @@ function ensureProductsTable() {
     columns: [
       { key: 'id', label: '#', sortable: true },
       { key: 'title', label: 'Название', sortable: true },
-      { key: 'price', label: 'Цена', sortable: true, render: p => parseFloat(p.price).toFixed(2) + ' BYN' },
+      { key: 'price', label: 'Цена', sortable: true, render: p => parseFloat(p.price).toFixed(2) + ' Br' },
       { key: 'category', label: 'Категория', sortable: false, render: p => p.category ? esc(p.category.title) : '—' },
       { key: 'tags', label: 'Теги', sortable: false, render: p => (p.tags || []).map(t => `<span class="badge">${esc(t.title)}</span>`).join(' ') || '—' },
       { key: 'actions', label: 'Действия', sortable: false, render: p => CAN_EDIT_PRODUCTS ? `<a href="/admin/products/${p.id}/edit" class="btn btn--ghost btn--sm">Изм.</a>` : '—' },

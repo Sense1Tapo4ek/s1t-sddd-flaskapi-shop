@@ -120,7 +120,7 @@ class TestTestNotificationUseCase:
 
         # Assert
         assert result is True
-        assert channel.sent == [("Test", "Notification integration works!")]
+        assert channel.sent == [("Тест", "Интеграция уведомлений работает!")]
 
 
 class TestRecoverPasswordUseCase:
@@ -229,11 +229,11 @@ class TestRecoverPasswordUseCase:
                 "token": "bot-token",
                 "chat_id": "user-chat",
                 "text": (
-                    "<b>Login Code</b>\n\n"
-                    "Account: <code>admin</code>\n"
-                    "Your one-time code:\n"
+                    "<b>Код для входа</b>\n\n"
+                    "Аккаунт: <code>admin</code>\n"
+                    "Ваш одноразовый код:\n"
                     "<code>654321</code>\n\n"
-                    "Valid for 5 minutes."
+                    "Действителен 5 минут."
                 ),
             }
         ]

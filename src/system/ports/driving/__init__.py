@@ -1,5 +1,12 @@
 from .facade import SystemFacade
-from .schemas import SettingsOut, InfoOut, SettingsUpdateIn, FetchChatIdIn
+from .schemas import (
+    FetchChatIdIn,
+    InfoOut,
+    SettingsOut,
+    SettingsUpdateIn,
+    StorageSettingsOut,
+    StorageSettingsUpdateIn,
+)
 
 __all__ = [
     "SystemFacade",
@@ -7,4 +14,6 @@ __all__ = [
     "InfoOut",
     "SettingsUpdateIn",
     "FetchChatIdIn",
+    "StorageSettingsOut",
+    "StorageSettingsUpdateIn",
 ]

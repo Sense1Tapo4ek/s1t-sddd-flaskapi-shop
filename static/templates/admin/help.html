@@ -10,11 +10,11 @@
   <link rel="stylesheet" href="/static/css/components/buttons.css">
   <style>
     html, body { height: auto; overflow: visible; }
-    body { background: var(--color-bg); padding: 40px 20px; font-family: var(--font-body); }
+    body { background: var(--color-bg); padding: 40px 20px; font-family: var(--font-base); }
     .help-container { max-width: 820px; margin: 0 auto; }
 
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-    .page-title { font-family: var(--font-serif); font-size: 24px; font-weight: 600; color: var(--color-text); margin: 0; }
+    .page-title { font-family: var(--font-serif, 'Noto Serif', serif); font-size: 24px; font-weight: 600; color: var(--color-text); margin: 0; }
 
     .help-group { margin-bottom: 32px; }
     .help-group__label {
@@ -46,14 +46,14 @@
       border-bottom: 1px solid var(--color-border);
     }
     .help-card__num {
-      font-family: var(--font-serif);
+      font-family: var(--font-serif, 'Noto Serif', serif);
       font-size: 13px;
       font-weight: 600;
       color: var(--color-text-muted);
       min-width: 20px;
     }
     .help-card__title {
-      font-family: var(--font-serif);
+      font-family: var(--font-serif, 'Noto Serif', serif);
       font-size: 17px;
       font-weight: 600;
       color: var(--color-text);
@@ -162,7 +162,7 @@
           <br><br>
           <strong>Первый вход:</strong> Логин и пароль для первоначального доступа предоставляет разработчик.
           После первого входа рекомендуется сразу сменить пароль в разделе
-          Настройки&nbsp;→&nbsp;Безопасность.
+          Аккаунт.
         </div>
       </div>
 
@@ -172,7 +172,7 @@
           <h2 class="help-card__title">Смена пароля</h2>
         </div>
         <div class="help-text">
-          <strong>Где найти:</strong> Настройки&nbsp;→&nbsp;Безопасность.
+          <strong>Где найти:</strong> Аккаунт.
           <br><br>
           Для смены пароля необходимо ввести текущий пароль и дважды — новый.
           Новый пароль должен содержать не менее 5 символов.
@@ -190,12 +190,12 @@
           <br><br>
           <strong>Как восстановить:</strong>
           <ol class="help-steps">
-            <li>На странице входа нажмите кнопку <strong>«Забыли пароль?»</strong>.</li>
+            <li>На странице входа нажмите кнопку <strong>«Войти через Telegram»</strong>.</li>
             <li>Появится диалог с описанием. Нажмите <strong>«Получить код»</strong>.</li>
             <li>В Telegram-боте придёт одноразовый 6-значный код.</li>
             <li>Введите код в поле на странице входа и нажмите <strong>«Войти»</strong>.</li>
             <li>После успешного входа сразу установите новый постоянный пароль в разделе
-                Настройки&nbsp;→&nbsp;Безопасность.</li>
+                Аккаунт.</li>
           </ol>
         </div>
         <div class="help-note">
@@ -272,7 +272,7 @@
           <br><br>
           <strong>Пошаговая инструкция:</strong>
           <ol class="help-steps">
-            <li>Перейдите в Настройки&nbsp;→&nbsp;Telegram.</li>
+            <li>Перейдите в Магазин&nbsp;→&nbsp;Telegram.</li>
             <li>Откройте Telegram, найдите официального бота <code>@BotFather</code>.
                 Следуйте его инструкциям для создания нового бота. Скопируйте полученный <strong>Token</strong>.</li>
             <li>Вставьте скопированный токен в поле <strong>«Bot Token»</strong> в панели управления.</li>
@@ -384,7 +384,7 @@
           <h2 class="help-card__title">Редактирование товара (форма)</h2>
         </div>
         <div class="help-text">
-          При нажатии «Изменить» или «Добавить товар» открывается форма редактирования.
+          При нажатии «Изменить» или «+ Новый товар» открывается форма редактирования.
           Обратите внимание на следующие особенности её работы:
           <ul class="help-list" style="margin-top:12px;">
             <li>

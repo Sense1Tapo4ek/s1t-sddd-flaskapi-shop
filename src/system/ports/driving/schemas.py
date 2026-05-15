@@ -1,11 +1,11 @@
 from pydantic import BaseModel, ConfigDict, Field
-from ...domain import SiteSettings
-from ...app import UpdateSettingsCommand
+from ...domain import SiteSettings, StorageSettings
+from ...app import UpdateSettingsCommand, UpdateStorageSettingsCommand
 
 
 class FetchChatIdIn(BaseModel):
     model_config = ConfigDict(frozen=True)
-    bot_token: str = Field(..., description="Telegram Bot Token to fetch updates from")
+    bot_token: str = Field(..., description="Токен бота Telegram для получения обновлений")
 
 
 class TelegramChatIdOut(BaseModel):
@@ -196,3 +196,57 @@ class SettingsUpdateIn(BaseModel):
         if self.catalog_access is not None:
             kwargs.update(self.catalog_access.model_dump(exclude_unset=True))
         return UpdateSettingsCommand(**kwargs)
+
+
+class StorageSettingsOut(BaseModel):
+    """
+    Storage configuration for the admin UI.
+
+    `secret_access_key` is NEVER returned, masked or otherwise — only a
+    boolean flag indicating whether a secret is currently stored.
+    """
+
+    model_config = ConfigDict(frozen=True)
+    backend: str
+    endpoint_url: str
+    region: str
+    bucket: str
+    access_key_id: str
+    secret_access_key_set: bool
+    public_base_url: str
+    force_path_style: bool
+
+    @classmethod
+    def from_domain(cls, s: StorageSettings) -> "StorageSettingsOut":
+        return cls(
+            backend=s.backend,
+            endpoint_url=s.endpoint_url,
+            region=s.region,
+            bucket=s.bucket,
+            access_key_id=s.access_key_id,
+            secret_access_key_set=bool(s.secret_access_key),
+            public_base_url=s.public_base_url,
+            force_path_style=s.force_path_style,
+        )
+
+
+class StorageSettingsUpdateIn(BaseModel):
+    """
+    Partial update payload. Omitted fields are kept as-is.
+    `secret_access_key=None` (or absent) keeps the stored value.
+    Pass an empty string to clear it.
+    """
+
+    model_config = ConfigDict(frozen=True)
+    backend: str | None = Field(None, pattern="^(local|s3)$")
+    endpoint_url: str | None = None
+    region: str | None = None
+    bucket: str | None = None
+    access_key_id: str | None = None
+    secret_access_key: str | None = None
+    public_base_url: str | None = None
+    force_path_style: bool | None = None
+    test_connection: bool = False
+
+    def to_command(self) -> UpdateStorageSettingsCommand:
+        return UpdateStorageSettingsCommand(**self.model_dump())

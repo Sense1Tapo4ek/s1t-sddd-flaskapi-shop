@@ -10,5 +10,5 @@ class TestNotificationUseCase:
     def __call__(self) -> bool:
         if not self._channel.is_configured():
             return False
-        self._channel.send("Test", "Notification integration works!")
+        self._channel.send("Тест", "Интеграция уведомлений работает!")
         return True

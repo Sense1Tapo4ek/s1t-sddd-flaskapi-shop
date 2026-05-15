@@ -13,12 +13,56 @@ from shared.generics.errors import (
 from shared.adapters.driving.htmx import is_htmx
 
 logger = logging.getLogger("api.errors")
+GENERIC_OPERATION_FAILED = "Не удалось выполнить операцию. Попробуйте позже."
+GENERIC_SERVICE_FAILED = "Сервис временно недоступен. Попробуйте позже."
+GENERIC_SERVER_ERROR = "Непредвиденная ошибка сервера"
+VALIDATION_ERROR_MESSAGE = "Проверьте данные запроса"
+
+_HTTP_DESCRIPTIONS = {
+    400: "Некорректный запрос",
+    401: "Требуется аутентификация",
+    403: "Доступ запрещён",
+    404: "Страница не найдена",
+    405: "Метод не поддерживается",
+    408: "Время ожидания запроса истекло",
+    409: "Конфликт",
+    410: "Ресурс удалён",
+    413: "Слишком большой запрос",
+    414: "Слишком длинный URI",
+    415: "Неподдерживаемый тип данных",
+    429: "Слишком много запросов",
+    500: "Внутренняя ошибка сервера",
+    502: "Ошибка шлюза",
+    503: "Сервис временно недоступен",
+    504: "Время ожидания шлюза истекло",
+}
+
+
+def _http_description(status_code: int | None) -> str:
+    if status_code is None:
+        return "Ошибка HTTP"
+    return _HTTP_DESCRIPTIONS.get(status_code, "Ошибка HTTP")
+
+
+def json_error_response(
+    *,
+    code: str,
+    message: str,
+    status: int,
+    detail: dict | list | None = None,
+):
+    body = {"error": code, "message": message, "success": False}
+    if detail is not None:
+        body["detail"] = detail
+    return jsonify(body), status
 
 
 def _json_response(error: LayerError, status: int):
-    return jsonify(
-        {"error": error.code, "message": error.message, "success": False}
-    ), status
+    return json_error_response(
+        code=error.code,
+        message=error.message,
+        status=status,
+    )
 
 
 def _htmx_toast(message: str, status_code: int):
@@ -30,6 +74,25 @@ def _htmx_toast(message: str, status_code: int):
 
 
 def init_error_handlers(app: Flask) -> None:
+    if hasattr(app, "error_processor"):
+        @app.error_processor
+        def handle_apiflask_error(error):
+            detail = error.detail or None
+            is_validation_error = bool(detail)
+            message = (
+                VALIDATION_ERROR_MESSAGE
+                if is_validation_error
+                else error.message or "Ошибка HTTP"
+            )
+            code = "VALIDATION_ERROR" if is_validation_error else "HTTP_ERROR"
+            if is_htmx():
+                return _htmx_toast(message, error.status_code)
+            return json_error_response(
+                code=code,
+                message=message,
+                status=error.status_code,
+                detail=detail,
+            )
 
     @app.errorhandler(DomainError)
     def handle_domain_error(e: DomainError):
@@ -57,8 +120,12 @@ def init_error_handlers(app: Flask) -> None:
     def handle_driven_port_error(e: DrivenPortError):
         logger.error("Port Failure: %s", e.message)
         if is_htmx():
-            return _htmx_toast(e.message, 500)
-        return _json_response(e, 500)
+            return _htmx_toast(GENERIC_OPERATION_FAILED, 500)
+        return json_error_response(
+            code=e.code,
+            message=GENERIC_OPERATION_FAILED,
+            status=500,
+        )
 
     @app.errorhandler(DrivingAdapterError)
     def handle_driving_adapter_error(e: DrivingAdapterError):
@@ -80,18 +147,29 @@ def init_error_handlers(app: Flask) -> None:
     def handle_driven_adapter_error(e: DrivenAdapterError):
         logger.critical("Infra Failure: %s", e.message, exc_info=True)
         if is_htmx():
-            return _htmx_toast(e.message, 503)
-        return _json_response(e, 503)
+            return _htmx_toast(GENERIC_SERVICE_FAILED, 503)
+        return json_error_response(
+            code=e.code,
+            message=GENERIC_SERVICE_FAILED,
+            status=503,
+        )
 
     @app.errorhandler(Exception)
     def handle_generic_error(e: Exception):
         if isinstance(e, HTTPException):
+            description = _http_description(e.code)
             if is_htmx():
-                return _htmx_toast(e.description, e.code)
-            return jsonify({"error": "HTTP_ERROR", "message": e.description}), e.code
+                return _htmx_toast(description, e.code)
+            return json_error_response(
+                code="HTTP_ERROR",
+                message=description,
+                status=e.code,
+            )
         logger.exception("Unhandled Exception")
         if is_htmx():
-            return _htmx_toast("Unexpected server error", 500)
-        return jsonify(
-            {"error": "INTERNAL_ERROR", "message": "Unexpected server error"}
-        ), 500
+            return _htmx_toast(GENERIC_SERVER_ERROR, 500)
+        return json_error_response(
+            code="INTERNAL_ERROR",
+            message=GENERIC_SERVER_ERROR,
+            status=500,
+        )

@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import Boolean, Integer, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from shared.adapters.driven import Base
+from shared.adapters.driven.db.base import mysql_table_opts
 
 
 class UserModel(Base):
@@ -12,6 +13,7 @@ class UserModel(Base):
     """
 
     __tablename__ = "admins"
+    __table_args__ = (mysql_table_opts(),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     login: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)

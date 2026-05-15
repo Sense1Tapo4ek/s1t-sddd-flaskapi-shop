@@ -6,7 +6,10 @@
 {% block content %}
 <div class="page-header">
   <div class="page-header__left">
-    <h2 class="page-title">Заказы</h2>
+    <div>
+      <h2 class="page-title">Заказы</h2>
+      <p style="font-size:13px; color:var(--color-text-muted); margin-top:4px;">Управление заказами клиентов. Используйте фильтры и сортировку для поиска.</p>
+    </div>
     <button class="help-badge" onclick="document.getElementById('orders-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
   {% if has_perm('manage_orders') %}
@@ -40,7 +43,7 @@
 {% block scripts %}
 <script src="/static/js/utils.js"></script>
 <script src="/static/js/api.js"></script>
-<script src="/static/js/smart-table.js"></script>
+<script src="/static/js/smart-table.js?v=3"></script>
 <script>
 const CAN_MANAGE_ORDERS = {{ 'true' if has_perm('manage_orders') else 'false' }};
 
@@ -60,7 +63,7 @@ const STATUS_BADGE_CLASS = {
 
 function statusBadge(status) {
   const cls = STATUS_BADGE_CLASS[status] || '';
-  const label = STATUS_LABELS[status] || status;
+  const label = STATUS_LABELS[status] || 'Неизвестно';
   return `<span class="badge ${cls}">${esc(label)}</span>`;
 }
 

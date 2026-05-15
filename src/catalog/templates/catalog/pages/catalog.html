@@ -27,7 +27,21 @@
     <aside class="catalog-tree-panel">
       <div class="catalog-tree-panel__header">
         <div>
-          <div class="catalog-tree-panel__title">Дерево</div>
+          <div class="catalog-tree-panel__title">
+            Дерево
+            <details class="block-help">
+              <summary class="help-badge help-badge--inline" title="Что такое дерево категорий">?</summary>
+              <div class="block-help__body">
+                <p><strong>Дерево категорий</strong> — структура каталога. Узел верхнего уровня — раздел («Одежда»), его дети — подкатегории («Платья»).</p>
+                <ul>
+                  <li>Клик по узлу — справа открываются настройки, атрибуты и товары категории.</li>
+                  <li>Поиск фильтрует по названию.</li>
+                  <li>Кнопка «Обновить» перезагружает дерево с сервера, если что-то изменилось в другой вкладке.</li>
+                  <li><strong>Товары привязываются только к листовым</strong> (конечным) категориям. У узлов с детьми товары можно посмотреть, но не добавлять.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
           <div class="catalog-tree-panel__hint">Выберите категорию</div>
         </div>
         <button class="btn btn--ghost btn--sm" type="button" onclick="reloadCatalogTree()">Обновить</button>
@@ -51,7 +65,21 @@
 <div class="modal-overlay" id="categoryModal" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle" onclick="if(event.target===this)closeCategoryForm()">
   <div class="modal">
     <div class="modal__header">
-      <span id="categoryModalTitle">Категория</span>
+      <span id="categoryModalTitle">Новая категория</span>
+      <details class="block-help">
+        <summary class="help-badge help-badge--inline" title="Как заполнить категорию">?</summary>
+        <div class="block-help__body block-help__body--right">
+          <p><strong>Категория</strong> — узел в дереве каталога.</p>
+          <ul>
+            <li><strong>Название</strong> — отображается в каталоге и админке.</li>
+            <li><strong>Slug</strong> — латиница в URL. Если оставить пустым, генерируется из названия.</li>
+            <li><strong>Родитель</strong> — позиция в дереве. «Без родителя» = корневой раздел.</li>
+            <li><strong>Описание</strong> — текст под заголовком категории на витрине.</li>
+            <li><strong>Активна</strong> — снятая галка скрывает категорию и все её товары на витрине, в БД ничего не удаляется.</li>
+          </ul>
+          <p>Удалить можно через таб «Настройки» у выбранной категории, и только если у неё нет дочерних узлов и товаров.</p>
+        </div>
+      </details>
       <button class="modal__close" type="button" onclick="closeCategoryForm()">&times;</button>
     </div>
     <form class="modal__body form form--wide" id="categoryModalForm" onsubmit="saveCategoryModal(event)">
@@ -88,6 +116,23 @@
   <div class="modal modal--wide">
     <div class="modal__header">
       <span id="attributeModalTitle">Атрибут</span>
+      <details class="block-help">
+        <summary class="help-badge help-badge--inline" title="Как настроить атрибут">?</summary>
+        <div class="block-help__body block-help__body--right">
+          <p><strong>Атрибут</strong> — поле, которое описывает товар в этой категории. Например, <em>Размер</em>, <em>Материал</em>, <em>Цвет</em>.</p>
+          <ul>
+            <li><strong>Код</strong> — латиница, snake_case, неизменяем после создания (по нему фильтры на витрине).</li>
+            <li><strong>Тип</strong> определяет, как выглядит ввод значения у товара:
+              <code>Текст</code>, <code>Число</code>, <code>Да/нет</code>,
+              <code>Один вариант</code>/<code>Несколько вариантов</code> (тогда внизу появятся «Варианты»),
+              <code>Дата</code>, <code>Ссылка</code>, <code>Файл</code>, <code>Изображение</code>.</li>
+            <li><strong>Единица</strong> — для числовых (см, кг, EUR).</li>
+            <li><strong>Обязательный</strong> — без значения товар нельзя сохранить.</li>
+            <li><strong>Варианты</strong> (для select/multiselect) — порядок отображения = порядок в списке.</li>
+          </ul>
+          <p>Атрибут, заданный на категории, <strong>наследуется всеми её потомками</strong>. На потомке его не редактируют — только смотрят.</p>
+        </div>
+      </details>
       <button class="modal__close" type="button" onclick="closeAttributeForm()">&times;</button>
     </div>
     <form class="modal__body form form--wide" id="attributeForm" onsubmit="saveAttribute(event)">
@@ -119,7 +164,7 @@
         </div>
         <div class="form-group" id="attributeUnitBlock">
           <label class="form-label" for="attribute-unit">Единица</label>
-          <input class="form-input" id="attribute-unit" placeholder="см, кг, BYN...">
+          <input class="form-input" id="attribute-unit" placeholder="см, кг, Br...">
         </div>
       </div>
 
@@ -192,7 +237,7 @@
 {% block scripts %}
 <script src="/static/js/utils.js"></script>
 <script src="/static/js/api.js"></script>
-<script src="/static/js/smart-table.js"></script>
+<script src="/static/js/smart-table.js?v=3"></script>
 <script>
 window.catalogPermissions = {
   canEditTaxonomy: {{ 'true' if has_perm('edit_taxonomy') else 'false' }},

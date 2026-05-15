@@ -1,0 +1,112 @@
+<form hx-put="/admin/settings/storage"
+      hx-target="this"
+      hx-swap="outerHTML"
+      class="form form--wide">
+
+  <section class="form-section">
+    <h3 class="form-section__title">Режим хранения</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Локально — файлы кладутся в каталог приложения (<code>media/products</code>) и отдаются Flask'ом.
+      S3 — заливаются в внешний бакет и отдаются по public URL.
+      Переключение применяется сразу. Старые файлы при смене режима не мигрируют автоматически.
+    </p>
+    <div class="form-row">
+      <label class="form-radio">
+        <input type="radio" name="backend" value="local"
+               {% if storage_settings.backend == 'local' %}checked{% endif %}>
+        <span>Локальная файловая система</span>
+      </label>
+      <label class="form-radio">
+        <input type="radio" name="backend" value="s3"
+               {% if storage_settings.backend == 's3' %}checked{% endif %}>
+        <span>S3-совместимый бакет</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="form-section">
+    <h3 class="form-section__title">S3 параметры</h3>
+    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
+      Бакет должен быть публично читаемым (<code>s3:GetObject</code> для всех).
+      Презайн в MVP не используется. Public URL прописывается в <code>Product.images</code> как есть.
+    </p>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="endpoint_url">Endpoint URL</label>
+        <input class="form-input" type="url" id="endpoint_url" name="endpoint_url"
+               placeholder="https://s3.amazonaws.com или https://storage.yandexcloud.net"
+               value="{{ storage_settings.endpoint_url }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="region">Регион</label>
+        <input class="form-input" type="text" id="region" name="region"
+               placeholder="ru-central1"
+               value="{{ storage_settings.region }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="bucket">Bucket</label>
+      <input class="form-input" type="text" id="bucket" name="bucket"
+             placeholder="my-shop-media"
+             value="{{ storage_settings.bucket }}">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="access_key_id">Access Key ID</label>
+        <input class="form-input" type="text" id="access_key_id" name="access_key_id"
+               autocomplete="off"
+               value="{{ storage_settings.access_key_id }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="secret_access_key">Secret Access Key</label>
+        <input class="form-input" type="password" id="secret_access_key" name="secret_access_key"
+               autocomplete="new-password"
+               placeholder="{% if storage_settings.secret_access_key_set %}секрет сохранён{% else %}не задан{% endif %}">
+        <p style="font-size:12px; color:var(--color-text-muted); margin-top:4px;">
+          Пустое поле — оставить текущий секрет. Сам секрет наружу не отдаётся.
+        </p>
+        <label class="form-checkbox" style="margin-top:6px;">
+          <input type="checkbox" name="clear_secret">
+          <span>Стереть сохранённый секрет</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="public_base_url">Public Base URL</label>
+      <input class="form-input" type="url" id="public_base_url" name="public_base_url"
+             placeholder="https://my-shop-media.s3.amazonaws.com"
+             value="{{ storage_settings.public_base_url }}">
+      <p style="font-size:12px; color:var(--color-text-muted); margin-top:4px;">
+        Префикс, к которому добавляется ключ объекта (<code>products/&lt;uuid&gt;.&lt;ext&gt;</code>).
+      </p>
+    </div>
+
+    <div class="form-row">
+      <label class="form-checkbox">
+        <input type="checkbox" name="force_path_style"
+               {% if storage_settings.force_path_style %}checked{% endif %}>
+        <span>Использовать path-style (<code>endpoint/bucket/key</code>)</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="form-section">
+    <h3 class="form-section__title">Перед сохранением</h3>
+    <label class="form-checkbox">
+      <input type="checkbox" name="test_connection" checked>
+      <span>Проверить соединение с S3 (проверка соединения)</span>
+    </label>
+    <p style="font-size:12px; color:var(--color-text-muted); margin-top:6px;">
+      Снимите галочку если вы переключаетесь обратно на локальный режим.
+      При активном S3 и неудачной проверке настройки не сохраняются.
+    </p>
+  </section>
+
+  <div class="form-actions" style="margin-bottom:48px;">
+    <button class="btn btn--primary" type="submit">Сохранить</button>
+  </div>
+</form>

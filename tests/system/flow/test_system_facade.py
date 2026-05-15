@@ -45,7 +45,9 @@ def test_send_login_code_uses_configured_ttl_in_telegram_message():
     facade = SystemFacade(
         _config=SystemConfig(),
         _get_query=_settings,
+        _get_storage_query=object(),
         _manage_uc=object(),
+        _manage_storage_uc=object(),
         _test_notify_uc=object(),
         _recover_password_uc=object(),
         _fetch_chat_id_uc=object(),
@@ -65,5 +67,5 @@ def test_send_login_code_uses_configured_ttl_in_telegram_message():
     assert result is True
     assert len(telegram_client.sent_messages) == 1
     text = telegram_client.sent_messages[0]["text"]
-    assert "Valid for 17 minutes." in text
-    assert "Valid for 5 minutes." not in text
+    assert "Действителен 17 минут." in text
+    assert "Действителен 5 минут." not in text

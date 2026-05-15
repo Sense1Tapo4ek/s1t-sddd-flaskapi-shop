@@ -189,11 +189,11 @@ def test_category_products_table_adds_selected_category_attribute_columns():
     assert "sort_by=attr." not in workspace
 
 
-def test_category_products_columns_reset_to_selected_category_own_attributes():
+def test_category_products_columns_reset_to_effective_category_attributes():
     """
     Given products are opened for a selected leaf category,
     When SmartTable is reused after browsing another category,
-    Then visible columns reset to base columns plus only the selected category's own attributes.
+    Then columns reset to base columns plus inherited and own category attributes.
     """
     # Arrange / Act
     workspace = _read("static/js/catalog-workspace.js")
@@ -202,6 +202,8 @@ def test_category_products_columns_reset_to_selected_category_own_attributes():
     # Assert
     assert "state.categoryProductsTableCategoryId" in workspace
     assert "const categoryChanged" in workspace
+    assert "data.inherited || []" in workspace
+    assert "visible: false" in workspace
     assert "data.own || []" in workspace
     assert "preserveVisibility: !categoryChanged" in workspace
     assert "resetInteractionState('created_at', 'desc')" in workspace

@@ -248,3 +248,152 @@ def test_admin_search_sorts_and_filters_by_attribute_columns(attribute_product_r
         "Light boot",
         "Heavy boot",
     ]
+
+
+@pytest.fixture
+def fts_product_repo():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(engine, expire_on_commit=False)
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            """
+            CREATE VIRTUAL TABLE products_fts USING fts5(
+                title, description,
+                content='products', content_rowid='id'
+            )
+            """
+        )
+        conn.exec_driver_sql(
+            """
+            CREATE TRIGGER products_fts_insert
+            AFTER INSERT ON products BEGIN
+                INSERT INTO products_fts(rowid, title, description)
+                VALUES (new.id, new.title, new.description);
+            END
+            """
+        )
+        conn.exec_driver_sql(
+            """
+            CREATE TRIGGER products_fts_delete
+            AFTER DELETE ON products BEGIN
+                INSERT INTO products_fts(products_fts, rowid, title, description)
+                VALUES ('delete', old.id, old.title, old.description);
+            END
+            """
+        )
+        conn.exec_driver_sql(
+            """
+            CREATE TRIGGER products_fts_update
+            AFTER UPDATE ON products BEGIN
+                INSERT INTO products_fts(products_fts, rowid, title, description)
+                VALUES ('delete', old.id, old.title, old.description);
+                INSERT INTO products_fts(rowid, title, description)
+                VALUES (new.id, new.title, new.description);
+            END
+            """
+        )
+
+    with session_factory() as session:
+        session.add_all(
+            [
+                ProductModel(
+                    title="Apple iPhone 14",
+                    price=999,
+                    description="Latest flagship smartphone from Apple",
+                ),
+                ProductModel(
+                    title="Samsung Galaxy S23",
+                    price=899,
+                    description="Android flagship with great camera",
+                ),
+                ProductModel(
+                    title="Apple Watch Series 8",
+                    price=399,
+                    description="Smart watch for fitness and health",
+                ),
+                ProductModel(
+                    title="Sony Headphones",
+                    price=199,
+                    description="Noise cancelling headphones for music",
+                ),
+            ]
+        )
+        session.commit()
+
+    return SqlProductRepo(_session_factory=session_factory)
+
+
+def test_fts_search_returns_ranked_results(fts_product_repo):
+    """
+    Given products have title/description indexed by FTS5,
+    When searching with a query term,
+    Then only matching products are returned sorted by relevance.
+    """
+    result = fts_product_repo.search(
+        "apple",
+        PaginationParams(page=1, limit=10),
+    )
+
+    assert result.total == 2
+    titles = [p.title for p in result.items]
+    assert "Apple iPhone 14" in titles
+    assert "Apple Watch Series 8" in titles
+
+
+def test_fts_search_with_custom_sort(fts_product_repo):
+    """
+    Given FTS search results,
+    When an explicit sort_by is provided,
+    Then results are filtered by FTS but ordered by the requested column.
+    """
+    result = fts_product_repo.search(
+        "apple",
+        PaginationParams(page=1, limit=10, sort_by="price", sort_dir="desc"),
+    )
+
+    assert result.total == 2
+    assert [p.title for p in result.items] == [
+        "Apple iPhone 14",
+        "Apple Watch Series 8",
+    ]
+
+
+def test_fts_search_pagination(fts_product_repo):
+    """
+    Given FTS search returns multiple results,
+    When paginating,
+    Then correct page slices are returned.
+    """
+    result = fts_product_repo.search(
+        "apple",
+        PaginationParams(page=1, limit=1),
+    )
+
+    assert result.total == 2
+    assert len(result.items) == 1
+
+
+def test_fts_index_syncs_on_update(fts_product_repo):
+    """
+    Given a product is updated,
+    When the FTS index is synced via triggers,
+    Then searching by the new description finds the updated product.
+    """
+    with fts_product_repo._session_factory() as session:
+        product = session.get(ProductModel, 3)  # Apple Watch Series 8
+        product.description = "Rugged smart watch for extreme sports"
+        session.commit()
+
+    result = fts_product_repo.search(
+        "extreme",
+        PaginationParams(page=1, limit=10),
+    )
+
+    assert result.total == 1
+    assert result.items[0].title == "Apple Watch Series 8"

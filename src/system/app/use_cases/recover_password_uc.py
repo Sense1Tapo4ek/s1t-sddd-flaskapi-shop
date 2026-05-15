@@ -10,7 +10,7 @@ from shared.adapters.driven.telegram_client import TelegramClient
 class TelegramNotConfiguredError(DomainError):
     def __init__(self) -> None:
         super().__init__(
-            message="Cannot recover password: Telegram is not configured",
+            message="Невозможно восстановить пароль: Telegram не настроен",
             code="TELEGRAM_NOT_CONFIGURED",
         )
         self.user_message = "Telegram-бот не настроен. Обратитесь к администратору."
@@ -44,11 +44,11 @@ class RecoverPasswordUseCase:
             raise TelegramNotConfiguredError()
 
         text = (
-            "<b>Login Code</b>\n\n"
-            f"Account: <code>{login}</code>\n"
-            "Your one-time code:\n"
+            "<b>Код для входа</b>\n\n"
+            f"Аккаунт: <code>{login}</code>\n"
+            "Ваш одноразовый код:\n"
             f"<code>{code}</code>\n\n"
-            "Valid for 5 minutes."
+            "Действителен 5 минут."
         )
         sent = self._client.send_message(
             token=settings.telegram_bot_token,

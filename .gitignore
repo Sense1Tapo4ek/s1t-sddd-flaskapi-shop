@@ -19,6 +19,7 @@ ENV/
 # Database
 data/*.db
 *.db
+*.db.backup
 *.sqlite
 *.sqlite3
 
@@ -48,3 +49,9 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local design / planning artefacts (brainstorming specs, plans)
+docs/superpowers/
+
+# Database dumps
+data/dumps/

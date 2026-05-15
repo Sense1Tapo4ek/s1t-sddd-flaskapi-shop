@@ -2,7 +2,14 @@ from shared.generics.errors import DomainError, ApplicationError
 
 class SettingsNotFoundError(ApplicationError):
     def __init__(self) -> None:
-        super().__init__(message="Site settings not found", code="SETTINGS_NOT_FOUND")
+        super().__init__(message="Настройки сайта не найдены", code="SETTINGS_NOT_FOUND")
+
+
+class StorageSettingsNotFoundError(ApplicationError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Настройки хранилища не найдены", code="STORAGE_SETTINGS_NOT_FOUND"
+        )
 
 class TelegramTokenInvalidError(ApplicationError):
     def __init__(self) -> None:

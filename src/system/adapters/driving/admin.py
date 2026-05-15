@@ -1,17 +1,18 @@
 import json
-import sqlite3
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from flask import after_this_request, request, render_template, make_response, redirect, send_file
+from flask import request, render_template, make_response, redirect, send_file
 from markupsafe import escape
 from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
-from sqlalchemy.engine import make_url
 
 from system.ports.driving.facade import SystemFacade
-from system.ports.driving.schemas import FetchChatIdIn, SettingsUpdateIn
+from system.ports.driving.schemas import (
+    FetchChatIdIn,
+    SettingsUpdateIn,
+    StorageSettingsUpdateIn,
+)
 from access.config import AccessConfig
 from access.ports.driving.facade import AccessFacade
 from access.ports.driving.schemas import ChangePasswordIn
@@ -21,7 +22,6 @@ from shared.adapters.driving.middleware import (
     permission_required,
     superadmin_required,
 )
-from shared.config import InfraConfig
 from shared.generics.errors import DrivingAdapterError
 from shared.generics.errors import DrivingPortError
 
@@ -29,7 +29,11 @@ system_admin_bp = APIBlueprint("system_admin", __name__, url_prefix="/admin/sett
 account_admin_bp = APIBlueprint("account_admin", __name__, url_prefix="/admin/account", enable_openapi=False)
 
 
-TAB_TITLES = {"store": "Магазин", "telegram": "Оповещения"}
+TAB_TITLES = {
+    "store": "Магазин",
+    "telegram": "Оповещения",
+    "storage": "Хранилище",
+}
 
 
 def _form_bool(name: str) -> bool:
@@ -46,80 +50,56 @@ def _form_float(name: str, default: float = 0.0) -> float:
         raise DrivingPortError(f"Некорректное числовое значение: {name}") from exc
 
 
-def _sqlite_database_path(database_url: str) -> Path:
-    url = make_url(database_url)
-    if url.get_backend_name() != "sqlite":
-        raise DrivingPortError("Дамп через UI пока поддержан только для SQLite")
-    if not url.database or url.database == ":memory:":
-        raise DrivingPortError("Дамп in-memory SQLite базы недоступен")
-    path = Path(url.database)
-    if not path.is_absolute():
-        path = Path.cwd() / path
-    if not path.exists():
-        raise DrivingPortError("Файл базы данных не найден")
-    return path
+_DUMPS_DIR = Path("data/dumps")
+
+
+def _latest_dump_file() -> Path | None:
+    if not _DUMPS_DIR.is_dir():
+        return None
+    candidates = sorted(
+        (p for p in _DUMPS_DIR.iterdir() if p.is_file()),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
 
 
 @system_admin_bp.route("/database-dump", methods=["GET"])
 @superadmin_required
 @inject
-def download_database_dump(
-    infra_config: FromDishka[InfraConfig],
-    access_facade: FromDishka[AccessFacade],
-):
+def download_database_dump(access_facade: FromDishka[AccessFacade]):
+    """Serve the most recent MySQL dump produced by scripts/db_dump.py.
+
+    Dumps are created out-of-process (cron in CPanel, manual on a workstation)
+    and stored under data/dumps/. The endpoint never shells out to mysqldump
+    itself — that's unreliable on shared Passenger venvs.
+    """
     current_user = access_facade.get_user(request.admin_payload.get("sub", 1))
     if current_user.role != "superadmin" or current_user.password_changed_at is None:
-        raise DrivingAdapterError("Password change required before database dump", "FORBIDDEN")
+        raise DrivingAdapterError(
+            "Смените пароль перед скачиванием дампа базы данных", "FORBIDDEN"
+        )
 
-    database_path = _sqlite_database_path(infra_config.database_url)
-    tmp_path = _backup_sqlite_database(database_path)
+    dump_path = _latest_dump_file()
+    if dump_path is None:
+        raise DrivingPortError(
+            "Нет доступных дампов. Запустите `python scripts/db_dump.py` "
+            "или настройте cron на хостинге."
+        )
 
-    @after_this_request
-    def cleanup(response):
-        try:
-            tmp_path.unlink(missing_ok=True)
-        finally:
-            return response
-
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.fromtimestamp(dump_path.stat().st_mtime).strftime(
+        "%Y%m%d-%H%M%S"
+    )
     response = send_file(
-        tmp_path,
+        dump_path,
         as_attachment=True,
-        download_name=f"shop-{timestamp}.sqlite",
-        mimetype="application/vnd.sqlite3",
+        download_name=f"shop-{timestamp}{''.join(dump_path.suffixes)}",
+        mimetype="application/gzip"
+        if dump_path.suffix == ".gz"
+        else "application/sql",
     )
     response.headers["Cache-Control"] = "no-store"
     return response
-
-
-def _backup_sqlite_database(database_path: Path) -> Path:
-    tmp = tempfile.NamedTemporaryFile(prefix="shop-", suffix=".sqlite", delete=False)
-    tmp.close()
-    tmp_path = Path(tmp.name)
-
-    source = None
-    target = None
-    error: sqlite3.Error | None = None
-    try:
-        source = sqlite3.connect(database_path)
-        target = sqlite3.connect(tmp_path)
-        source.backup(target)
-    except sqlite3.Error as exc:
-        error = exc
-    finally:
-        for connection in (target, source):
-            if connection is None:
-                continue
-            try:
-                connection.close()
-            except sqlite3.Error as exc:
-                if error is None:
-                    error = exc
-
-    if error is not None:
-        tmp_path.unlink(missing_ok=True)
-        raise DrivingPortError("Не удалось подготовить SQLite дамп") from error
-    return tmp_path
 
 
 @system_admin_bp.route("/")
@@ -135,13 +115,19 @@ def settings_page(
         return redirect("/admin/account")
     if tab not in TAB_TITLES:
         tab = "store"
-    if tab != "security" and not has_permission("manage_settings"):
-        raise DrivingAdapterError("Forbidden", "FORBIDDEN")
-    settings = facade.get_settings()
+    if not has_permission("manage_settings"):
+        raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
     current_user = access_facade.get_user(request.admin_payload.get("sub", 1))
+    if tab == "storage" and current_user.role != "superadmin":
+        raise DrivingAdapterError("Настройки хранилища доступны только суперадмину", "FORBIDDEN")
+    settings = facade.get_settings()
+    storage_settings = (
+        facade.get_storage_settings() if tab == "storage" else None
+    )
     return render_template(
         "system/pages/settings.html",
         settings=settings,
+        storage_settings=storage_settings,
         current_user=current_user,
         tab=tab,
         tab_title=TAB_TITLES[tab],
@@ -180,21 +166,58 @@ def update_store(facade: FromDishka[SystemFacade]):
             "lon": _form_float("coords_lon"),
         },
         socials={"instagram": f.get("instagram", "")},
-        catalog_access={
-            "owner_can_edit_taxonomy": _form_bool("owner_can_edit_taxonomy"),
-            "owner_can_view_products": _form_bool("owner_can_view_products"),
-            "owner_can_edit_products": _form_bool("owner_can_edit_products"),
-            "owner_can_create_demo_data": _form_bool("owner_can_create_demo_data"),
-        },
+        # catalog_access НЕ принимается через UI: владелец-права задаются в
+        # .env (ACCESS_OWNER_CAN_*) и применяются на старте процесса.
     )
     settings = facade.update_settings(schema)
     response = make_response(
         render_template("system/partials/store_form.html", settings=settings)
     )
     response.headers["HX-Trigger"] = json.dumps({
-        "showToast": {"message": "Settings saved", "type": "success"}
+        "showToast": {"message": "Настройки сохранены", "type": "success"}
     })
     response.headers["HX-Refresh"] = "true"
+    return response
+
+
+@system_admin_bp.route("/storage", methods=["PUT"])
+@superadmin_required
+@inject
+def update_storage(facade: FromDishka[SystemFacade]):
+    f = request.form
+    backend = f.get("backend") or None
+
+    secret_raw = f.get("secret_access_key", "")
+    # Empty input = "не менять текущий секрет". Use the explicit "clear" flag
+    # to wipe it. Sending a non-empty value replaces the stored secret.
+    if _form_bool("clear_secret"):
+        secret_value: str | None = ""
+    elif secret_raw:
+        secret_value = secret_raw
+    else:
+        secret_value = None
+
+    schema = StorageSettingsUpdateIn(
+        backend=backend,
+        endpoint_url=f.get("endpoint_url", "") or None,
+        region=f.get("region", "") or None,
+        bucket=f.get("bucket", "") or None,
+        access_key_id=f.get("access_key_id", "") or None,
+        secret_access_key=secret_value,
+        public_base_url=f.get("public_base_url", "") or None,
+        force_path_style=_form_bool("force_path_style"),
+        test_connection=_form_bool("test_connection"),
+    )
+    storage_settings = facade.update_storage_settings(schema)
+    response = make_response(
+        render_template(
+            "system/partials/storage_form.html",
+            storage_settings=storage_settings,
+        )
+    )
+    response.headers["HX-Trigger"] = json.dumps({
+        "showToast": {"message": "Настройки хранилища сохранены", "type": "success"}
+    })
     return response
 
 
@@ -213,7 +236,7 @@ def update_telegram(facade: FromDishka[SystemFacade]):
         render_template("system/partials/telegram_form.html", settings=settings)
     )
     response.headers["HX-Trigger"] = json.dumps({
-        "showToast": {"message": "Telegram settings saved", "type": "success"}
+        "showToast": {"message": "Настройки Telegram сохранены", "type": "success"}
     })
     return response
 
@@ -224,14 +247,14 @@ def update_telegram(facade: FromDishka[SystemFacade]):
 def fetch_chat_id(facade: FromDishka[SystemFacade]):
     bot_token = request.form.get("bot_token", "").strip()
     if not bot_token:
-        return '<input class="form-input" type="text" id="chat_id" name="chat_id" placeholder="Not connected" value="">'
+        return '<input class="form-input" type="text" id="chat_id" name="chat_id" placeholder="Не подключён" value="">'
     try:
         schema = FetchChatIdIn(bot_token=bot_token)
         chat_id = facade.fetch_telegram_chat_id(schema)
     except Exception as e:
         msg = getattr(e, "user_message", None) or getattr(e, "message", None) or "Ошибка получения Chat ID"
         response = make_response(
-            f'<input class="form-input" type="text" id="chat_id" name="chat_id" placeholder="Not connected" value="">'
+            f'<input class="form-input" type="text" id="chat_id" name="chat_id" placeholder="Не подключён" value="">'
         )
         response.headers["HX-Trigger"] = json.dumps({
             "showToast": {"message": msg, "type": "error"}
@@ -267,7 +290,7 @@ def change_password(access_facade: FromDishka[AccessFacade]):
     access_facade.change_password(admin_id, schema.model_dump())
     response = make_response("")
     response.headers["HX-Trigger"] = json.dumps({
-        "showToast": {"message": "Password changed", "type": "success"},
+        "showToast": {"message": "Пароль изменён", "type": "success"},
         "passwordChanged": True,
     })
     return response
@@ -287,7 +310,7 @@ def request_password_confirmation_code(
         chat_id=chat_id,
         login=login,
         code=code,
-        title="Password Change Code",
+        title="Код для смены пароля",
         ttl_minutes=access_config.recovery_code_ttl_minutes,
     )
     if not sent:
@@ -311,7 +334,7 @@ def fetch_current_user_chat_id(facade: FromDishka[SystemFacade]):
             'name="telegram_chat_id" placeholder="Сначала настройте токен бота" value="">'
         )
         response.headers["HX-Trigger"] = json.dumps({
-            "showToast": {"message": "Сначала настройте Telegram bot token", "type": "error"}
+            "showToast": {"message": "Сначала настройте токен бота Telegram", "type": "error"}
         })
         return response
     try:
@@ -347,6 +370,6 @@ def update_current_user_chat_id(
     access_facade.update_telegram_chat_id(admin_id, chat_id or None)
     response = make_response("")
     response.headers["HX-Trigger"] = json.dumps({
-        "showToast": {"message": "Telegram привязка сохранена", "type": "success"}
+        "showToast": {"message": "Привязка Telegram сохранена", "type": "success"}
     })
     return response

@@ -15,6 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.adapters.driven import Base
+from shared.adapters.driven.db.base import mysql_table_opts
 
 
 class CategoryModel(Base):
@@ -23,6 +24,7 @@ class CategoryModel(Base):
         UniqueConstraint("slug", name="uq_categories_slug"),
         Index("idx_categories_parent_id", "parent_id"),
         Index("idx_categories_active_sort", "is_active", "sort_order"),
+        mysql_table_opts(),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -58,6 +60,7 @@ class TagModel(Base):
     __table_args__ = (
         UniqueConstraint("slug", name="uq_tags_slug"),
         Index("idx_tags_active_sort", "is_active", "sort_order"),
+        mysql_table_opts(),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -78,6 +81,7 @@ class ProductTagModel(Base):
     __table_args__ = (
         UniqueConstraint("product_id", "tag_id", name="uq_product_tags_pair"),
         Index("idx_product_tags_tag_id", "tag_id"),
+        mysql_table_opts(),
     )
 
     product_id: Mapped[int] = mapped_column(
@@ -93,6 +97,7 @@ class CategoryAttributeModel(Base):
     __table_args__ = (
         UniqueConstraint("category_id", "code", name="uq_category_attributes_code"),
         Index("idx_category_attributes_category_id", "category_id"),
+        mysql_table_opts(),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -127,6 +132,7 @@ class AttributeOptionModel(Base):
     __tablename__ = "attribute_options"
     __table_args__ = (
         UniqueConstraint("attribute_id", "value", name="uq_attribute_options_value"),
+        mysql_table_opts(),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -147,6 +153,7 @@ class ProductModel(Base):
     __table_args__ = (
         Index("idx_products_category_id", "category_id"),
         Index("idx_products_active_id", "is_active", "id"),
+        mysql_table_opts(),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -177,6 +184,7 @@ class ProductModel(Base):
 
 class ProductImageModel(Base):
     __tablename__ = "product_images"
+    __table_args__ = (mysql_table_opts(),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id: Mapped[int] = mapped_column(
@@ -197,6 +205,7 @@ class ProductAttributeValueModel(Base):
         Index("idx_product_attribute_values_text", "attribute_id", "value_text"),
         Index("idx_product_attribute_values_number", "attribute_id", "value_number"),
         Index("idx_product_attribute_values_bool", "attribute_id", "value_bool"),
+        mysql_table_opts(),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

@@ -14,4 +14,9 @@ class InfraConfig(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "sqlite:///data/shop.db"
+    database_url: str = (
+        "mysql+pymysql://shop:shop@localhost:3306/shop?charset=utf8mb4"
+    )
+    db_pool_size: int = 5
+    db_pool_recycle: int = 3600
+    db_pool_pre_ping: bool = True

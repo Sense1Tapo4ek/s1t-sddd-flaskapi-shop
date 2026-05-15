@@ -23,10 +23,10 @@ def jwt_required(f):
                 token = auth.split(" ", 1)[1]
                 token_source = "bearer"
         if not token:
-            raise DrivingAdapterError("Authentication required", "AUTH_REQUIRED")
+            raise DrivingAdapterError("Требуется аутентификация", "AUTH_REQUIRED")
         payload = verify_jwt(token, current_app.config["JWT_SECRET"])
         if payload is None:
-            raise DrivingAdapterError("Invalid or expired token", "AUTH_INVALID")
+            raise DrivingAdapterError("Неверный или устаревший токен", "AUTH_INVALID")
         request.admin_payload = payload
         request.admin_token_source = token_source
         if token_source == "cookie":
@@ -53,12 +53,12 @@ def _validate_csrf(payload: dict) -> None:
     cookie_token = request.cookies.get("csrf_token", "")
     supplied = _request_csrf_token()
     if not expected or not cookie_token or not supplied:
-        raise DrivingAdapterError("Invalid CSRF token", "CSRF_INVALID")
+        raise DrivingAdapterError("Неверный CSRF-токен", "CSRF_INVALID")
     if not (
         hmac.compare_digest(expected, cookie_token)
         and hmac.compare_digest(expected, supplied)
     ):
-        raise DrivingAdapterError("Invalid CSRF token", "CSRF_INVALID")
+        raise DrivingAdapterError("Неверный CSRF-токен", "CSRF_INVALID")
 
 
 def current_admin_payload() -> dict:
@@ -93,7 +93,7 @@ def permission_required(permission: str):
         @jwt_required
         def decorated(*args, **kwargs):
             if not has_permission(permission):
-                raise DrivingAdapterError("Forbidden", "FORBIDDEN")
+                raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             return f(*args, **kwargs)
         return decorated
     return decorator
@@ -105,7 +105,7 @@ def any_permission_required(*permissions: str):
         @jwt_required
         def decorated(*args, **kwargs):
             if not any(has_permission(permission) for permission in permissions):
-                raise DrivingAdapterError("Forbidden", "FORBIDDEN")
+                raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             return f(*args, **kwargs)
         return decorated
     return decorator
@@ -116,6 +116,6 @@ def superadmin_required(f):
     @jwt_required
     def decorated(*args, **kwargs):
         if not is_superadmin():
-            raise DrivingAdapterError("Forbidden", "FORBIDDEN")
+            raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
         return f(*args, **kwargs)
     return decorated

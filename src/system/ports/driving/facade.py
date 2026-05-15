@@ -6,13 +6,22 @@ from system.app.interfaces.i_notification_channel import INotificationChannel
 from shared.adapters.driven.telegram_client import TelegramClient
 
 from ...app import (
-    GetSettingsQuery,
-    ManageSettingsUseCase,
-    TestNotificationUseCase,
-    RecoverPasswordUseCase,
     FetchTelegramChatIdUseCase,
+    GetSettingsQuery,
+    GetStorageSettingsQuery,
+    ManageSettingsUseCase,
+    ManageStorageSettingsUseCase,
+    RecoverPasswordUseCase,
+    TestNotificationUseCase,
 )
-from .schemas import FetchChatIdIn, SettingsOut, InfoOut, SettingsUpdateIn
+from .schemas import (
+    FetchChatIdIn,
+    InfoOut,
+    SettingsOut,
+    SettingsUpdateIn,
+    StorageSettingsOut,
+    StorageSettingsUpdateIn,
+)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24,7 +33,9 @@ class SystemFacade:
 
     _config: SystemConfig
     _get_query: GetSettingsQuery
+    _get_storage_query: GetStorageSettingsQuery
     _manage_uc: ManageSettingsUseCase
+    _manage_storage_uc: ManageStorageSettingsUseCase
     _test_notify_uc: TestNotificationUseCase
     _recover_password_uc: RecoverPasswordUseCase
     _fetch_chat_id_uc: FetchTelegramChatIdUseCase
@@ -49,6 +60,17 @@ class SystemFacade:
         cmd = schema.to_command()
         settings = self._manage_uc(cmd)
         return SettingsOut.from_domain(settings)
+
+    def get_storage_settings(self) -> StorageSettingsOut:
+        """Storage configuration view for admin (secret is masked)."""
+        return StorageSettingsOut.from_domain(self._get_storage_query())
+
+    def update_storage_settings(
+        self, schema: StorageSettingsUpdateIn
+    ) -> StorageSettingsOut:
+        """Update storage configuration. Cache is invalidated inside the use case."""
+        settings = self._manage_storage_uc(schema.to_command())
+        return StorageSettingsOut.from_domain(settings)
 
     def test_telegram(self) -> bool:
         """Trigger a test notification."""
@@ -91,7 +113,7 @@ class SystemFacade:
         chat_id: str,
         login: str,
         code: str,
-        title: str = "Login Code",
+        title: str = "Код для входа",
         ttl_minutes: int = 5,
     ) -> bool:
         settings = self._get_query()
@@ -99,9 +121,9 @@ class SystemFacade:
             return False
         text = (
             f"<b>{escape(title)}</b>\n\n"
-            f"Account: <code>{escape(login)}</code>\n"
-            f"Code: <code>{escape(code)}</code>\n\n"
-            f"Valid for {ttl_minutes} minutes."
+            f"Аккаунт: <code>{escape(login)}</code>\n"
+            f"Код: <code>{escape(code)}</code>\n\n"
+            f"Действителен {ttl_minutes} минут."
         )
         return self._telegram_client.send_message(
             token=settings.telegram_bot_token,

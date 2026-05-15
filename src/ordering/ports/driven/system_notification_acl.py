@@ -21,7 +21,7 @@ class SystemNotificationAcl(INotificationAcl):
             try:
                 self._system.send_notification_to_chat(
                     chat_id=user.telegram_chat_id,
-                    subject="New order",
+                    subject="Новый заказ",
                     body=f"{order.name}, {order.phone}",
                 )
             except Exception:

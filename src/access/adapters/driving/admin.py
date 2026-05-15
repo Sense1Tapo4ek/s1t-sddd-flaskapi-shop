@@ -1,4 +1,5 @@
 import secrets
+import json
 
 from flask import request, make_response, render_template
 from markupsafe import escape
@@ -6,6 +7,7 @@ from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
 from access.config import AccessConfig
+from access.domain import InvalidPasswordError
 from access.ports.driving.facade import AccessFacade
 from access.ports.driving.schemas import LoginIn
 from system.ports.driving.facade import SystemFacade
@@ -61,7 +63,17 @@ def login(facade: FromDishka[AccessFacade]):
         password=data.get("password", ""),
         remember_me=remember_me,
     )
-    result = facade.login(schema, csrf_token=csrf_token)
+    try:
+        result = facade.login(schema, csrf_token=csrf_token)
+    except InvalidPasswordError:
+        response = make_response("", 401)
+        response.headers["HX-Trigger"] = json.dumps({
+            "showToast": {
+                "message": "Неверный логин или пароль",
+                "type": "error",
+            }
+        })
+        return response
     response = make_response("")
     _set_auth_cookie(
         response,

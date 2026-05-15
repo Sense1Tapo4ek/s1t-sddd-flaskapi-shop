@@ -32,6 +32,7 @@ class SmartTable {
 
     this.columns = columns.map(c => ({ ...c, visible: c.visible !== false }));
     this.schema = null;
+    this.searchQuery = '';
 
     this.state = {
       page: 1, limit: 20, sort_by: defaultSortBy, sort_dir: defaultSortDir,
@@ -67,6 +68,7 @@ class SmartTable {
     const params = new URLSearchParams({ page: this.state.page, limit: this.state.limit });
     if (this.state.sort_by) params.set('sort_by', this.state.sort_by);
     if (this.state.sort_dir) params.set('sort_dir', this.state.sort_dir);
+    if (this.searchQuery) params.set('q', this.searchQuery);
 
     [...this.staticFilters, ...this.state.activeFilters].forEach(f => {
       const paramKey = f.op === 'eq' ? f.key : `${f.key}__${f.op}`;
@@ -130,6 +132,12 @@ class SmartTable {
     this.load();
   }
 
+  setSearchQuery(q) {
+    this.searchQuery = String(q || '');
+    this.state.page = 1;
+    this.load();
+  }
+
   setStaticFilters(filters) {
     this.staticFilters = filters || [];
     this.state.page = 1;
@@ -151,6 +159,7 @@ class SmartTable {
     this.state.sort_by = defaultSortBy;
     this.state.sort_dir = defaultSortDir;
     this.state.activeFilters = [];
+    this.searchQuery = '';
     this.openPopoverKey = null;
     this.configOpen = false;
   }
@@ -305,9 +314,18 @@ class SmartTable {
       </div>
     `;
 
+    const searchHTML = `
+      <input type="search" class="form-input form-input--sm"
+             style="width:240px;"
+             placeholder="Поиск по названию и описанию…"
+             value="${esc(this.searchQuery || '')}"
+             oninput="${tableRef}.setSearchQuery(this.value)">
+    `;
+
     const topControlsHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
-        <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          ${searchHTML}
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:13px; color:var(--color-text-muted);">Показывать:</span>
             <select class="form-input form-input--sm" style="width:auto;" onchange="${tableRef}.setLimit(this.value)">

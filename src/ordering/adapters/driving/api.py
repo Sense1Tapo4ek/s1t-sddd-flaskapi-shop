@@ -19,8 +19,8 @@ ordering_bp = APIBlueprint("ordering", __name__, url_prefix="/orders")
 @ordering_bp.post("")
 @ordering_bp.input(OrderIn)
 @ordering_bp.doc(
-    summary="Place new order (Public)",
-    description="Creates a new customer order. On success, sends notifications to active owner/superadmin Telegram chat IDs when the bot is configured.",
+    summary="Создать новый заказ (Public)",
+    description="Создаёт новый заказ покупателя. При успешном создании отправляет уведомления в Telegram активным владельцу/суперадмину, если бот настроен.",
 )
 @inject
 def place_order(json_data: OrderIn, facade: FromDishka[OrderingFacade]):
@@ -35,8 +35,8 @@ def place_order(json_data: OrderIn, facade: FromDishka[OrderingFacade]):
 @permission_required("view_orders")
 @ordering_bp.input(OrderSearchQuery, location="query")
 @ordering_bp.doc(
-    summary="List orders (ADMIN ONLY)",
-    description="Returns a paginated list of all orders with sorting and filtering.",
+    summary="Список заказов (ADMIN ONLY)",
+    description="Возвращает постраничный список всех заказов с сортировкой и фильтрацией.",
     security="JWTAuth",
 )
 @inject
@@ -59,8 +59,8 @@ def list_orders(query_data: OrderSearchQuery, facade: FromDishka[OrderingFacade]
 @ordering_bp.get("/search/schema")
 @permission_required("view_orders")
 @ordering_bp.doc(
-    summary="Order filter schema (ADMIN ONLY)",
-    description="Returns available field configs and status options for building order filters.",
+    summary="Схема фильтров заказов (ADMIN ONLY)",
+    description="Возвращает доступные конфигурации полей и варианты статусов для построения фильтров заказов.",
     security="JWTAuth",
 )
 @inject
@@ -91,8 +91,8 @@ def admin_search_schema(facade: FromDishka[OrderingFacade]):
 @permission_required("manage_orders")
 @ordering_bp.input(OrderStatusUpdateIn)
 @ordering_bp.doc(
-    summary="Update order status (ADMIN ONLY)",
-    description="Transitions an order to a new status with domain validation.",
+    summary="Обновить статус заказа (ADMIN ONLY)",
+    description="Переводит заказ в новый статус с доменной валидацией.",
     security="JWTAuth",
 )
 @inject
@@ -104,8 +104,8 @@ def update_status(order_id: int, json_data: OrderStatusUpdateIn, facade: FromDis
 @ordering_bp.delete("/<int:order_id>")
 @permission_required("manage_orders")
 @ordering_bp.doc(
-    summary="Delete order (ADMIN ONLY)",
-    description="Permanently removes an order from the system.",
+    summary="Удалить заказ (ADMIN ONLY)",
+    description="Безвозвратно удаляет заказ из системы.",
     security="JWTAuth",
 )
 @inject

@@ -46,7 +46,7 @@
   padding: 0 4px;
 }
 
-/* Horizontal layout: canvas left, panel right */
+/* Горизонтальный макет: холст слева, панель справа */
 .img-editor-body {
   flex: 1;
   display: flex;
@@ -70,7 +70,7 @@
   max-height: 100%;
 }
 
-/* Right sidebar panel */
+/* Правая боковая панель */
 .img-editor-panel {
   width: 260px;
   flex-shrink: 0;
@@ -128,7 +128,7 @@
   flex-shrink: 0;
 }
 
-/* Brighter crop box via Cropper.js overrides */
+/* Более яркая рамка обрезки через переопределения Cropper.js */
 .img-editor-canvas .cropper-view-box {
   outline: 2px solid rgba(255, 255, 255, 0.9);
   outline-offset: -2px;
@@ -154,7 +154,7 @@
   border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Responsive: stack vertically on narrow screens */
+/* Адаптивность: вертикальное расположение на узких экранах */
 @media (max-width: 700px) {
   .img-editor-body {
     flex-direction: column;

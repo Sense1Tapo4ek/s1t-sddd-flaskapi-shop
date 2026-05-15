@@ -29,6 +29,17 @@ class RandomQuery(BaseModel):
     limit: int = Field(4, ge=1, le=20)
 
 
+class PublicSearchQuery(BaseModel):
+    model_config = ConfigDict(extra="allow", frozen=True)
+    q: str = ""
+    page: int = Field(1, ge=1)
+    limit: int = Field(20, ge=1, le=100)
+    category: str | None = None
+    category_id: int | None = Field(None, ge=1)
+    include_descendants: bool = False
+    tags: str | None = None
+
+
 class DeleteImageIn(BaseModel):
     model_config = ConfigDict(frozen=True)
     image_path: str

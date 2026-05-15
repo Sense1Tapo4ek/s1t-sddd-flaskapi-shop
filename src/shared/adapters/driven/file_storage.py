@@ -2,10 +2,7 @@ import os
 import uuid
 from dataclasses import dataclass
 
-from shared.generics.errors import DrivingPortError
-
-_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
-_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+from shared.helpers.media_validation import validate_media_upload
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16,15 +13,7 @@ class LocalFileStorage:
         os.makedirs(self._upload_dir, exist_ok=True)
 
     def save(self, filename: str, data: bytes) -> str:
-        ext = os.path.splitext(filename)[1].lower() or ".jpg"
-        if ext not in _ALLOWED_EXTENSIONS:
-            raise DrivingPortError(
-                f"Недопустимый формат файла: {ext}. Разрешены: {', '.join(sorted(_ALLOWED_EXTENSIONS))}"
-            )
-        if len(data) > _MAX_FILE_SIZE:
-            raise DrivingPortError(
-                f"Файл слишком большой ({len(data) // 1024 // 1024} МБ). Максимум: {_MAX_FILE_SIZE // 1024 // 1024} МБ"
-            )
+        ext = validate_media_upload(filename, data)
         unique_name = f"{uuid.uuid4().hex}{ext}"
         file_path = os.path.join(self._upload_dir, unique_name)
         with open(file_path, "wb") as f:

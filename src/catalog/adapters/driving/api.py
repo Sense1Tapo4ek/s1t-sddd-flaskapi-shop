@@ -22,6 +22,7 @@ from catalog.ports.driving import (
     DeleteImageIn,
     ProductDetailOut,
     ProductSearchQuery,
+    PublicSearchQuery,
     SwapSortOrderIn,
     TagCreateIn,
     TagUpdateIn,
@@ -72,9 +73,9 @@ def _attribute_values_from_form() -> dict:
     try:
         attribute_values = json.loads(raw_attrs) if raw_attrs else {}
     except json.JSONDecodeError:
-        raise DrivingPortError("Invalid attribute_values JSON")
+        raise DrivingPortError("Некорректный JSON в attribute_values")
     if not isinstance(attribute_values, dict):
-        raise DrivingPortError("attribute_values must be an object")
+        raise DrivingPortError("attribute_values должен быть объектом")
     for key, value in request.form.items():
         if key.startswith("attr."):
             attribute_values[key.removeprefix("attr.")] = value
@@ -96,8 +97,8 @@ def _catalog_filters_from_args(reserved: set[str]) -> dict[str, str]:
 @catalog_bp.input(CatalogQuery, location="query")
 @catalog_bp.output(CatalogListOut)
 @catalog_bp.doc(
-    summary="Get product list (Public)",
-    description="Returns a paginated list of active products.",
+    summary="Список товаров (Public)",
+    description="Возвращает постраничный список активных товаров.",
 )
 @inject
 def get_catalog(query_data: CatalogQuery, facade: FromDishka[CatalogFacade]):
@@ -112,8 +113,8 @@ def get_catalog(query_data: CatalogQuery, facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.get("/categories/tree")
 @catalog_bp.doc(
-    summary="Get category tree (Public)",
-    description="Returns active categories as a nested tree.",
+    summary="Дерево категорий (Public)",
+    description="Возвращает активные категории в виде вложенного дерева.",
 )
 @inject
 def get_category_tree(facade: FromDishka[CatalogFacade]):
@@ -122,19 +123,43 @@ def get_category_tree(facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.get("/tags")
 @catalog_bp.doc(
-    summary="Get tags (Public)",
-    description="Returns active catalog tags.",
+    summary="Список тегов (Public)",
+    description="Возвращает активные теги каталога.",
 )
 @inject
 def get_tags(facade: FromDishka[CatalogFacade]):
     return [tag.model_dump() for tag in facade.list_public_tags()]
 
 
+@catalog_bp.get("/search")
+@catalog_bp.input(PublicSearchQuery, location="query")
+@catalog_bp.output(CatalogListOut)
+@catalog_bp.doc(
+    summary="Полнотекстовый поиск активных товаров (Public)",
+    description=(
+        "Возвращает постраничный список активных товаров, соответствующих полнотекстовому запросу `q` "
+        "(по названию и описанию). Поддерживает те же таксономические/атрибутные "
+        "фильтры, что и публичный список каталога."
+    ),
+)
+@inject
+def search_catalog(query_data: PublicSearchQuery, facade: FromDishka[CatalogFacade]):
+    reserved_keys = {"q", "page", "limit"}
+    filters = _catalog_filters_from_args(reserved_keys)
+    res = facade.search_public_products(
+        query=query_data.q,
+        page=query_data.page,
+        limit=query_data.limit,
+        filters=filters,
+    )
+    return res.model_dump()
+
+
 @catalog_bp.get("/random")
 @catalog_bp.input(RandomQuery, location="query")
 @catalog_bp.doc(
-    summary="Get random products (Public)",
-    description="Returns a given number of random active products.",
+    summary="Случайные товары (Public)",
+    description="Возвращает заданное количество случайных активных товаров.",
 )
 @inject
 def get_random(query_data: RandomQuery, facade: FromDishka[CatalogFacade]):
@@ -145,8 +170,8 @@ def get_random(query_data: RandomQuery, facade: FromDishka[CatalogFacade]):
 @catalog_bp.get("/<int:product_id>")
 @catalog_bp.output(ProductDetailOut)
 @catalog_bp.doc(
-    summary="Product detail (Public)",
-    description="Returns full information about a product by ID, including all uploaded images.",
+    summary="Детали товара (Public)",
+    description="Возвращает полную информацию о товаре по ID, включая все загруженные изображения.",
 )
 @inject
 def get_detail(product_id: int, facade: FromDishka[CatalogFacade]):
@@ -162,8 +187,8 @@ def get_detail(product_id: int, facade: FromDishka[CatalogFacade]):
 @catalog_bp.input(ProductSearchQuery, location="query")
 @catalog_bp.output(AdminProductListOut)
 @catalog_bp.doc(
-    summary="Search and filter products (ADMIN ONLY)",
-    description="Advanced catalog search with dynamic filters, sorting and pagination.",
+    summary="Поиск и фильтрация товаров (ADMIN ONLY)",
+    description="Расширенный поиск по каталогу с динамическими фильтрами, сортировкой и пагинацией.",
     security="JWTAuth",
 )
 @inject
@@ -189,8 +214,8 @@ def admin_search(query_data: ProductSearchQuery, facade: FromDishka[CatalogFacad
 @catalog_bp.get("/admin/search/schema")
 @permission_required("view_products")
 @catalog_bp.doc(
-    summary="Filter schema for smart table (ADMIN ONLY)",
-    description="Returns available field configs for building dynamic filters on the frontend.",
+    summary="Схема фильтров для SmartTable (ADMIN ONLY)",
+    description="Возвращает доступные конфигурации полей для построения динамических фильтров на фронтенде.",
     security="JWTAuth",
 )
 @inject
@@ -286,8 +311,8 @@ def admin_search_schema(facade: FromDishka[CatalogFacade]):
 @permission_required("edit_products")
 @catalog_bp.output(ProductDetailOut, status_code=201)
 @catalog_bp.doc(
-    summary="Create product (ADMIN ONLY)",
-    description="Creates a new product. Supports multipart/form-data image upload.",
+    summary="Создать товар (ADMIN ONLY)",
+    description="Создаёт новый товар. Поддерживает загрузку изображений через multipart/form-data.",
     security="JWTAuth",
 )
 @inject
@@ -314,8 +339,8 @@ def admin_create(facade: FromDishka[CatalogFacade]):
 @permission_required("view_products")
 @catalog_bp.output(ProductDetailOut)
 @catalog_bp.doc(
-    summary="Product detail (ADMIN ONLY)",
-    description="Returns product information for admin editing, including inactive products.",
+    summary="Детали товара (ADMIN ONLY)",
+    description="Возвращает информацию о товаре для редактирования администратором, включая неактивные товары.",
     security="JWTAuth",
 )
 @inject
@@ -328,8 +353,8 @@ def admin_get_product(product_id: int, facade: FromDishka[CatalogFacade]):
 @permission_required("edit_products")
 @catalog_bp.output(ProductDetailOut)
 @catalog_bp.doc(
-    summary="Update product (ADMIN ONLY)",
-    description="Updates product fields. Supports adding new images and deleting old ones.",
+    summary="Обновить товар (ADMIN ONLY)",
+    description="Обновляет поля товара. Поддерживает добавление новых изображений и удаление старых.",
     security="JWTAuth",
 )
 @inject
@@ -362,8 +387,8 @@ def admin_update(product_id: int, facade: FromDishka[CatalogFacade]):
 @permission_required("edit_products")
 @catalog_bp.output(SuccessResponse)
 @catalog_bp.doc(
-    summary="Delete product (ADMIN ONLY)",
-    description="Permanently deletes a product and all associated images.",
+    summary="Удалить товар (ADMIN ONLY)",
+    description="Безвозвратно удаляет товар и все связанные с ним изображения.",
     security="JWTAuth",
 )
 @inject
@@ -377,8 +402,8 @@ def admin_delete(product_id: int, facade: FromDishka[CatalogFacade]):
 @catalog_bp.input(DeleteImageIn)
 @catalog_bp.output(ProductDetailOut)
 @catalog_bp.doc(
-    summary="Delete product image (ADMIN ONLY)",
-    description="Deletes a specific product image by path.",
+    summary="Удалить изображение товара (ADMIN ONLY)",
+    description="Удаляет конкретное изображение товара по пути.",
     security="JWTAuth",
 )
 @inject
@@ -391,7 +416,7 @@ def admin_delete_image(product_id: int, json_data: DeleteImageIn, facade: FromDi
 @permission_required("edit_products")
 @catalog_bp.input(SwapSortOrderIn)
 @catalog_bp.output(SuccessResponse)
-@catalog_bp.doc(summary="Swap sort order of two products (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Поменять порядок сортировки двух товаров (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_swap(json_data: SwapSortOrderIn, facade: FromDishka[CatalogFacade]):
     facade.swap_ids(json_data.id_a, json_data.id_b)
@@ -400,7 +425,7 @@ def admin_swap(json_data: SwapSortOrderIn, facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.post("/admin/demo-data")
 @permission_required("create_demo_data")
-@catalog_bp.doc(summary="Create demo catalog data (SUPERADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Создать демо-данные каталога (SUPERADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_create_demo_data(facade: FromDishka[CatalogFacade]):
     return facade.create_demo_data()
@@ -408,7 +433,7 @@ def admin_create_demo_data(facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.get("/admin/categories/tree")
 @permission_required("view_category_tree")
-@catalog_bp.doc(summary="Category tree (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Дерево категорий (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_category_tree(facade: FromDishka[CatalogFacade]):
     return [
@@ -419,7 +444,7 @@ def admin_category_tree(facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.get("/admin/categories/<int:category_id>")
 @permission_required("view_category_tree")
-@catalog_bp.doc(summary="Category detail (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Детали категории (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_get_category(category_id: int, facade: FromDishka[CatalogFacade]):
     return facade.get_category(category_id).model_dump()
@@ -428,7 +453,7 @@ def admin_get_category(category_id: int, facade: FromDishka[CatalogFacade]):
 @catalog_bp.post("/admin/categories")
 @permission_required("edit_taxonomy")
 @catalog_bp.input(CategoryCreateIn)
-@catalog_bp.doc(summary="Create category (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Создать категорию (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_create_category(json_data: CategoryCreateIn, facade: FromDishka[CatalogFacade]):
     return facade.create_category(json_data).model_dump(), 201
@@ -437,7 +462,7 @@ def admin_create_category(json_data: CategoryCreateIn, facade: FromDishka[Catalo
 @catalog_bp.put("/admin/categories/<int:category_id>")
 @permission_required("edit_taxonomy")
 @catalog_bp.input(CategoryUpdateIn)
-@catalog_bp.doc(summary="Update category (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Обновить категорию (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_update_category(
     category_id: int,
@@ -450,7 +475,7 @@ def admin_update_category(
 @catalog_bp.post("/admin/categories/<int:category_id>/move")
 @permission_required("edit_taxonomy")
 @catalog_bp.input(CategoryMoveIn)
-@catalog_bp.doc(summary="Move category (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Переместить категорию (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_move_category(
     category_id: int,
@@ -463,7 +488,7 @@ def admin_move_category(
 @catalog_bp.delete("/admin/categories/<int:category_id>")
 @permission_required("edit_taxonomy")
 @catalog_bp.output(SuccessResponse)
-@catalog_bp.doc(summary="Delete category (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Удалить категорию (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_delete_category(category_id: int, facade: FromDishka[CatalogFacade]):
     facade.delete_category(category_id)
@@ -472,7 +497,7 @@ def admin_delete_category(category_id: int, facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.get("/admin/categories/<int:category_id>/products")
 @permission_required("view_products")
-@catalog_bp.doc(summary="Products by category (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Товары по категории (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_category_products(category_id: int, facade: FromDishka[CatalogFacade]):
     filters = _catalog_filters_from_args(
@@ -493,7 +518,7 @@ def admin_category_products(category_id: int, facade: FromDishka[CatalogFacade])
 
 @catalog_bp.get("/admin/categories/<int:category_id>/attributes")
 @permission_required("view_category_tree")
-@catalog_bp.doc(summary="Effective category attributes (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Эффективные атрибуты категории (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_category_attributes(category_id: int, facade: FromDishka[CatalogFacade]):
     return facade.get_category_attributes(category_id).model_dump()
@@ -502,7 +527,7 @@ def admin_category_attributes(category_id: int, facade: FromDishka[CatalogFacade
 @catalog_bp.post("/admin/categories/<int:category_id>/attributes")
 @permission_required("edit_taxonomy")
 @catalog_bp.input(CategoryAttributeCreateIn)
-@catalog_bp.doc(summary="Create category attribute (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Создать атрибут категории (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_create_category_attribute(
     category_id: int,
@@ -515,7 +540,7 @@ def admin_create_category_attribute(
 @catalog_bp.put("/admin/categories/<int:category_id>/attributes/<int:attribute_id>")
 @permission_required("edit_taxonomy")
 @catalog_bp.input(CategoryAttributeUpdateIn)
-@catalog_bp.doc(summary="Update category attribute (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Обновить атрибут категории (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_update_category_attribute(
     category_id: int,
@@ -530,7 +555,7 @@ def admin_update_category_attribute(
 @catalog_bp.delete("/admin/categories/<int:category_id>/attributes/<int:attribute_id>")
 @permission_required("edit_taxonomy")
 @catalog_bp.output(SuccessResponse)
-@catalog_bp.doc(summary="Delete category attribute (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Удалить атрибут категории (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_delete_category_attribute(
     category_id: int,
@@ -544,7 +569,7 @@ def admin_delete_category_attribute(
 
 @catalog_bp.get("/admin/tags")
 @permission_required("view_category_tree")
-@catalog_bp.doc(summary="List tags (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Список тегов (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_list_tags(facade: FromDishka[CatalogFacade]):
     tags = facade.list_tags(include_inactive=True)
@@ -576,7 +601,7 @@ def admin_list_tags(facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.get("/admin/tags/search/schema")
 @permission_required("view_category_tree")
-@catalog_bp.doc(summary="Tag filter schema (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Схема фильтров тегов (ADMIN ONLY)", security="JWTAuth")
 def admin_tags_schema():
     return {
         "fields": [
@@ -600,7 +625,7 @@ def admin_tags_schema():
 @catalog_bp.post("/admin/tags")
 @permission_required("edit_taxonomy")
 @catalog_bp.input(TagCreateIn)
-@catalog_bp.doc(summary="Create tag (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Создать тег (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_create_tag(json_data: TagCreateIn, facade: FromDishka[CatalogFacade]):
     return facade.create_tag(json_data).model_dump(), 201
@@ -609,7 +634,7 @@ def admin_create_tag(json_data: TagCreateIn, facade: FromDishka[CatalogFacade]):
 @catalog_bp.put("/admin/tags/<int:tag_id>")
 @permission_required("edit_taxonomy")
 @catalog_bp.input(TagUpdateIn)
-@catalog_bp.doc(summary="Update tag (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Обновить тег (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_update_tag(tag_id: int, json_data: TagUpdateIn, facade: FromDishka[CatalogFacade]):
     return facade.update_tag(tag_id, json_data).model_dump()
@@ -618,7 +643,7 @@ def admin_update_tag(tag_id: int, json_data: TagUpdateIn, facade: FromDishka[Cat
 @catalog_bp.delete("/admin/tags/<int:tag_id>")
 @permission_required("edit_taxonomy")
 @catalog_bp.output(SuccessResponse)
-@catalog_bp.doc(summary="Delete tag (ADMIN ONLY)", security="JWTAuth")
+@catalog_bp.doc(summary="Удалить тег (ADMIN ONLY)", security="JWTAuth")
 @inject
 def admin_delete_tag(tag_id: int, facade: FromDishka[CatalogFacade]):
     facade.delete_tag(tag_id)

@@ -13,3 +13,7 @@ flask-cors>=4.0.0
 flask-limiter>=3.5.0
 pyyaml>=6.0
 faker>=24.0
+pymysql>=1.1
+yoyo-migrations>=8.2
+cryptography>=42.0
+boto3>=1.34

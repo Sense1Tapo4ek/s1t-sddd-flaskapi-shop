@@ -80,7 +80,7 @@
 
   function formatSize(bytes) {
     const kb = bytes / 1024;
-    return kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : Math.round(kb) + ' KB';
+    return kb > 1024 ? (kb / 1024).toFixed(1) + ' МБ' : Math.round(kb) + ' КБ';
   }
 
   function ensureModal() {
@@ -121,7 +121,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'image_' + Date.now() + '.jpg';
+      a.download = 'изображение_' + Date.now() + '.jpg';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

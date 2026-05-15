@@ -50,14 +50,14 @@ def update_status(order_id: int, facade: FromDishka[OrderingFacade]):
 def create_test_order(facade: FromDishka[OrderingFacade]):
     from ordering.ports.driving.schemas import OrderIn
 
-    schema = OrderIn(name="Test Customer", phone="+375291234567", comment="Test order")
+    schema = OrderIn(name="Тестовый клиент", phone="+375291234567", comment="Тестовый заказ")
     facade.place_order(schema)
     params = parse_table_params(request.args)
     result = facade.list_orders(**params)
     return render_template(
         "ordering/partials/table.html",
         orders=result,
-    ), 200, {"HX-Trigger": '{"showToast":{"message":"Test order created","type":"success"}}'}
+    ), 200, {"HX-Trigger": '{"showToast":{"message":"Тестовый заказ создан","type":"success"}}'}
 
 
 @ordering_admin_bp.route("/badge")

@@ -93,7 +93,7 @@ def create_product(facade: FromDishka[CatalogFacade]):
         render_template("catalog/partials/table.html", products=table_result)
     )
     response.headers["HX-Trigger"] = json.dumps({
-        "showToast": {"message": "Product created", "type": "success"},
+        "showToast": {"message": "Товар создан", "type": "success"},
         "closeModal": True,
     })
     return response
@@ -124,7 +124,7 @@ def update_product(product_id: int, facade: FromDishka[CatalogFacade]):
         render_template("catalog/partials/form.html", product=result)
     )
     response.headers["HX-Trigger"] = json.dumps({
-        "showToast": {"message": "Product updated", "type": "success"},
+        "showToast": {"message": "Товар обновлён", "type": "success"},
     })
     return response
 

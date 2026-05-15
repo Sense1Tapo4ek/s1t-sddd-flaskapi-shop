@@ -1,199 +1,159 @@
 # s1t-sddd-flaskapi-shop
 
-Universal forkable e-commerce boilerplate. Flask/APIFlask + SQLAlchemy + Dishka DI, following S-DDD (hexagonal architecture). Python 3.11+, SQLite by default.
+Forkable e-commerce backend/admin template built with Flask/APIFlask,
+SQLAlchemy, Dishka DI, HTMX admin pages, and S-DDD/hexagonal
+boundaries. Python 3.11+, MySQL 5.7+/MariaDB 10.3+ storage,
+deployable on CPanel shared hosting, Docker, or any WSGI server.
 
-Built for quick deployment on **CPanel** shared hosting, Docker, or any WSGI server.
+## What Is Included
 
----
-
-## Features
-
-- Admin panel with HTMX + SmartTable (dynamic filters, sorting, pagination)
-- Catalog taxonomy: category tree, tags, inherited category attributes
-- Telegram integration (order notifications to per-user chat IDs, per-user login codes)
-- Role-aware JWT authentication (httpOnly cookie + Bearer header)
-- Swagger/OpenAPI docs at `/api/docs`
-- Superadmin demo-data generator from the admin UI
-- CPanel-ready (`passenger_wsgi.py` included)
-
----
+- Public catalog and order API with Swagger/OpenAPI at `/api/docs` in
+  dev mode.
+- Admin UI with HTMX, SmartTable filtering, role-aware JWT auth, CSRF
+  for cookie-auth mutations, and per-user permissions.
+- Catalog taxonomy: categories, tags, inherited attributes, product
+  images, demo-data generation from the admin UI.
+- Telegram support for order notifications, login codes, password
+  confirmation, and recovery.
+- MySQL via `PyMySQL`, schema managed by `yoyo-migrations`, CPanel-
+  ready scripts in `scripts/` (apply / status / rollback / dump /
+  restore / shell / bootstrap).
+- `passenger_wsgi.py` for CPanel and Docker Compose (MySQL bundled)
+  for local/container use.
 
 ## Quick Start
 
 ```bash
-# 1. Clone and configure
-git clone <repo-url>
-cd s1t-sddd-flaskapi-shop
-cp .env.example .env       # edit secrets!
+cp .env.example .env                  # MySQL URL inside points at docker-compose `db`
+docker compose up --build             # starts MySQL + API, applies migrations, seeds
+```
 
-# 2. Install dependencies
-pip install -r requirements.txt
-# or with uv:
-uv sync
+Or run the API natively against the bundled MySQL:
 
-# 3. Run
+```bash
+docker compose up -d db               # MySQL only
+cp .env.example .env
+uv sync                               # or: pip install -r requirements.txt
+python scripts/db_apply.py            # apply yoyo migrations
 PYTHONPATH=src FLASK_DEBUG=1 uv run src/root/entrypoints/api.py
 ```
 
-Open http://localhost:5000:
+Open http://localhost:5000.
 
 - Owner login: `admin` / `changeme`
 - Dev superadmin login: `superadmin` / `superadmin`
+- Swagger UI: http://localhost:5000/api/docs
 
-The dev superadmin can sign in with the fallback password, but cannot download a database dump until that password is changed.
+The fallback dev superadmin can sign in, but cannot download a
+database dump until its password is changed.
 
-Swagger docs: http://localhost:5000/api/docs
-
----
-
-## Docker
+## Common Commands
 
 ```bash
+# Run locally (MySQL must be up first)
+PYTHONPATH=src FLASK_DEBUG=1 uv run src/root/entrypoints/api.py
+
+# Run Docker on port 5000 (MySQL + API)
 docker compose up --build
+
+# Database operations
+python scripts/db_apply.py     # apply yoyo migrations
+python scripts/db_status.py    # show applied + pending
+python scripts/db_rollback.py  # rollback last migration
+python scripts/db_dump.py      # write data/dumps/<ts>.sql.gz
+bash   scripts/db_shell.sh     # mysql CLI with creds from .env
+
+# Run tests (unit + flow are stdlib-only)
+PYTHONDONTWRITEBYTECODE=1 uv run --extra dev pytest -q -m "unit or flow"
+
+# App factory smoke (assumes migrations applied)
+PYTHONPATH=src uv run python3 -c "from root.entrypoints.api import create_app; app = create_app(); print('OK', len(app.url_map._rules))"
 ```
 
-Runs on port 5000. Database is persisted in `./data/shop.db`, uploads in `./media/`.
+Docker persists the MySQL data in a named volume `mysql_data` and
+uploads in `./media/`. SQL dumps land in `./data/dumps/`.
 
----
+## Documentation Map
 
-## Environment Variables
+Start here when changing code:
 
-| Variable                | Default                 | Description                              |
-|-------------------------|-------------------------|------------------------------------------|
-| `ROOT_APP_NAME`         | `Shop Admin`            | App name (shown in UI and Swagger)       |
-| `ROOT_APP_ENV`          | `dev`                   | `dev` or `prod`                          |
-| `INFRA_DATABASE_URL`    | `sqlite:///data/shop.db`| SQLAlchemy database URL                  |
-| `ACCESS_JWT_SECRET`     | `change-me-in-production`| JWT signing secret                      |
-| `ACCESS_DEFAULT_LOGIN`  | `admin`                 | Default admin username                   |
-| `ACCESS_DEFAULT_PASSWORD`| `changeme`             | Default admin password                   |
-| `ACCESS_DEFAULT_TELEGRAM_CHAT_ID`| ``          | Initial per-user Telegram chat for default owner |
-| `ACCESS_SUPERADMIN_LOGIN`| `superadmin`           | Developer superadmin login               |
-| `ACCESS_SUPERADMIN_PASSWORD`| dev fallback only     | Superadmin password; required in prod    |
-| `ACCESS_SUPERADMIN_TELEGRAM_CHAT_ID`| ``       | Initial per-user Telegram chat for superadmin |
-| `ACCESS_RECOVERY_CODE_TTL_MINUTES`| `5`        | Telegram code lifetime                    |
-| `ACCESS_RECOVERY_CODE_COOLDOWN_SECONDS`| `60`  | Minimum seconds between code sends        |
-| `ACCESS_RECOVERY_CODE_MAX_ATTEMPTS`| `5`       | Wrong code attempts before lockout        |
-| `ACCESS_RECOVERY_CODE_LOCKOUT_MINUTES`| `15`   | Lockout duration after too many failures  |
-| `ACCESS_OWNER_CAN_VIEW_CATEGORY_TREE`| `true`  | Legacy flag; category structure read is always allowed for authenticated admins |
-| `ACCESS_OWNER_CAN_EDIT_TAXONOMY`| `false`      | Owner can edit categories/tags/attributes|
-| `ACCESS_OWNER_CAN_VIEW_PRODUCTS`| `false`      | Owner can view product admin             |
-| `ACCESS_OWNER_CAN_EDIT_PRODUCTS`| `false`      | Owner can mutate products                |
-| `ACCESS_OWNER_CAN_VIEW_ORDERS`| `false`        | Owner can view orders                    |
-| `ACCESS_OWNER_CAN_MANAGE_ORDERS`| `false`      | Owner can update/delete orders           |
-| `ACCESS_OWNER_CAN_MANAGE_SETTINGS`| `false`    | Owner can edit store/system settings     |
-| `ACCESS_OWNER_CAN_CREATE_DEMO_DATA`| `false`   | Owner can run demo-data generator        |
-| `CATALOG_UPLOAD_DIR`    | `media/products`        | Directory for product image uploads      |
-| `SYSTEM_RECOVERY_TOKEN` | `change-me-in-production`| Secret token for password recovery URL  |
-| `PORT`                  | `5000`                  | Server port                              |
+- [CLAUDE.md](CLAUDE.md) — operational guide for human contributors
+  and Claude Code: change rules, S-DDD workflow, fast navigation.
+- [docs/architecture.md](docs/architecture.md) — bounded contexts,
+  layers, how to add a context.
+- [docs/contexts/](docs/contexts/) — one page per context (catalog,
+  ordering, access, system, shared).
+- [docs/subsystems/](docs/subsystems/) — auth & permissions, admin UI,
+  smart filters, notifications.
+- [docs/infra/](docs/infra/) — Flask, MySQL, yoyo migrations, Dishka,
+  HTMX, CPanel deployment.
+- [docs/dev/connecting-to-the-database.md](docs/dev/connecting-to-the-database.md)
+  — step-by-step: get MySQL credentials, point your shell/IDE/app at
+  the DB, run migrations.
+- [docs/contract/](docs/contract/) — wire-level public and admin API.
+- [docs/adr/](docs/adr/) — architectural decisions.
 
-> Telegram bot token is global and configured by superadmin in Settings → Оповещения. Each user binds their own Telegram Chat ID on the account page. New-order notifications are sent to active owners and superadmins with a bound chat ID.
+## Configuration
 
----
+Copy `.env.example` to `.env` for local work. Important variables:
 
-## Architecture
+| Variable | Default | Purpose |
+|---|---|---|
+| `ROOT_APP_NAME` | `Shop Admin` | UI and Swagger name |
+| `ROOT_APP_ENV` | `dev` | `dev` enables Swagger and dev defaults; use `prod` for deployment |
+| `INFRA_DATABASE_URL` | `mysql+pymysql://shop:shop@localhost:3306/shop?charset=utf8mb4` | SQLAlchemy URL (PyMySQL driver, utf8mb4) |
+| `INFRA_DB_POOL_SIZE` / `INFRA_DB_POOL_RECYCLE` / `INFRA_DB_POOL_PRE_PING` | `5` / `3600` / `true` | Pool tuning — leave `pre_ping=true` on CPanel |
+| `ACCESS_JWT_SECRET` | `change-me-in-production` | JWT signing secret |
+| `ACCESS_DEFAULT_LOGIN` / `ACCESS_DEFAULT_PASSWORD` | `admin` / `changeme` | Bootstrap owner credentials |
+| `ACCESS_SUPERADMIN_LOGIN` / `ACCESS_SUPERADMIN_PASSWORD` | `superadmin` / dev fallback | Superadmin credentials |
+| `ACCESS_OWNER_CAN_*` | mostly `false` | Owner permission flags |
+| `ACCESS_RECOVERY_CODE_*` | code defaults | Telegram code TTL / cooldown / attempts / lockout |
+| `CATALOG_UPLOAD_DIR` | `media/products` | Product image upload directory |
+| `SYSTEM_RECOVERY_TOKEN` | `change-me-in-production` | URL token for Telegram password recovery |
+| `ROOT_PUBLIC_CORS_ORIGINS` / `ROOT_ADMIN_CORS_ORIGINS` | unset | CORS allow-lists |
+| `ROOT_RATE_LIMIT_*` | code defaults | Default / login / order / recovery rate limits |
+| `PORT` | `5000` | Local server port |
 
-S-DDD hexagonal architecture with 4 bounded contexts:
+Telegram bot token is stored in admin settings. Notification and login
+targets are per-user `admins.telegram_chat_id` values.
 
-```
-src/
-├── catalog/     Products, images, search
-├── ordering/    Orders, status transitions, Telegram notifications
-├── access/      Admin authentication, JWT, password management
-├── system/      Store settings, Telegram config, password recovery
-├── shared/      DB base, middleware, error handling, file storage
-└── root/        App factory, DI container, blueprints registration
-```
+## API
 
-Each context follows the same layer structure:
-
-```
-src/{context}/
-├── domain/           Pure business logic (aggregates, value objects, errors)
-├── app/              Use cases + abstract interfaces
-├── ports/
-│   ├── driving/      Facade + Pydantic schemas
-│   └── driven/       Repository implementations
-├── adapters/
-│   ├── driving/      Flask blueprints (api.py, admin.py)
-│   └── driven/       ORM models, external clients
-├── config.py         Pydantic Settings
-└── provider.py       Dishka DI Provider
-```
-
----
+- Public API: [docs/contract/public.md](docs/contract/public.md)
+- Admin API: [docs/contract/admin.md](docs/contract/admin.md)
+- Common conventions: [docs/contract/common.md](docs/contract/common.md)
+- Swagger UI: `/api/docs` in dev mode only.
 
 ## Database
 
-SQLite by default. All tables are auto-created on app startup, and SQLite compatibility patches add supported missing columns for existing template databases.
+MySQL 5.7+/MariaDB 10.3+ via the `PyMySQL` driver, `utf8mb4` everywhere.
+Schema is owned by `migrations/*.sql` and applied with
+`yoyo-migrations` — the Flask app never issues DDL. See
+[docs/infra/mysql.md](docs/infra/mysql.md) and
+[docs/infra/migrations.md](docs/infra/migrations.md).
 
-**Tables:** `products`, `product_images`, `categories`, `tags`, `product_tags`,
-`category_attributes`, `attribute_options`, `product_attribute_values`,
-`orders`, `admins`, `settings`
-
-The admin UI database dump is SQLite-only and requires a superadmin account whose password has been changed after bootstrap. The fallback `superadmin/superadmin` dev account is intentionally blocked from this action.
-
-See [docs/database.md](docs/database.md) for the full schema reference.
-
----
-
-## Smart Filter System
-
-Each entity exposes a `/search/schema` endpoint that describes its filterable fields. The admin SmartTable JS class fetches this schema and renders filter UI automatically.
-
-See [docs/filters.md](docs/filters.md) for details.
-
----
-
-## Adding New Entities
-
-For every new table you need: ORM model, schema endpoint, search endpoint, SmartTable instance, admin UI route, and docs.
-
-See [docs/adding_new_table.md](docs/adding_new_table.md) for the full 12-step guide.
-
-For broader engineering rules, see [docs/development_guidelines.md](docs/development_guidelines.md). The current review and remediation priorities are in [docs/code_review.md](docs/code_review.md).
-
----
-
-## Demo Data
-
-CLI seeding was removed. Superadmin can create demo catalog data from `/admin/categories/` with the “Создать демо-данные” button. It idempotently creates missing demo categories, tags, attributes, and a small product set for every active leaf category.
-
-For existing SQLite databases created before taxonomy support, run:
-
-```bash
-PYTHONPATH=src uv run data/migrate_taxonomy.py
-```
-
----
-
-## API Documentation
-
-- [Public API](docs/api_public.md) — catalog, orders, public info
-- [Admin API](docs/api_admin.md) — management, settings, auth
-
-Swagger UI: `/api/docs` (dev mode only)
-
----
+For developers who need to connect (shell, IDE, scripts) — including
+how to obtain the username/password — see
+[docs/dev/connecting-to-the-database.md](docs/dev/connecting-to-the-database.md).
 
 ## Deployment
 
-### Docker
+Docker:
 
 ```bash
 docker compose up --build
 ```
 
-### CPanel (Shared Hosting)
-
-The project includes `passenger_wsgi.py` for Phusion Passenger. See [docs/cpanel.md](docs/cpanel.md) for the full deployment guide.
-
-### Gunicorn (VPS)
+Gunicorn:
 
 ```bash
 PYTHONPATH=src gunicorn --bind 0.0.0.0:5000 --workers 2 'root.entrypoints.api:create_app()'
 ```
 
----
+CPanel shared hosting uses `passenger_wsgi.py` and Phusion Passenger;
+see [docs/infra/cpanel.md](docs/infra/cpanel.md). Set
+`ROOT_APP_ENV=prod` and replace all default secrets before exposing
+the app.
 
 ## License
 

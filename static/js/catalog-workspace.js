@@ -82,6 +82,22 @@
       </div>
 
       <section id="tab-settings" class="tab-panel tab-panel--active">
+        <div class="catalog-table-toolbar">
+          <div class="catalog-section-title">
+            Свойства категории
+            <details class="block-help">
+              <summary class="help-badge help-badge--inline" title="Что здесь редактируется">?</summary>
+              <div class="block-help__body">
+                <p><strong>Настройки категории</strong> — те же поля, что и в модалке создания, плюс удаление.</p>
+                <ul>
+                  <li><strong>Slug</strong> и <strong>родителя</strong> можно менять — это пересоберёт URL и положение в дереве.</li>
+                  <li><strong>Активна</strong> — снятая галка прячет категорию и её товары на витрине, но в БД они сохраняются.</li>
+                  <li><strong>Удалить</strong> — только если у категории нет дочерних узлов и нет товаров. Иначе сервер вернёт ошибку.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
         ${renderCategorySettings(category)}
       </section>
 
@@ -92,6 +108,21 @@
       ${perms.canViewProducts ? `
         <section id="tab-products" class="tab-panel">
           <div class="catalog-table-toolbar">
+            <div class="catalog-section-title">
+              Товары категории
+              <details class="block-help">
+                <summary class="help-badge help-badge--inline" title="Что показывает таблица товаров">?</summary>
+                <div class="block-help__body">
+                  <p><strong>Товары категории.</strong> Карточки, привязанные к выбранному узлу.</p>
+                  <ul>
+                    <li><strong>Только эта</strong> — только товары, прикреплённые непосредственно к этому узлу.</li>
+                    <li><strong>С подкатегориями</strong> — плюс товары всех потомков (полезно для нелистовых узлов).</li>
+                    <li>Новый товар можно создать только под <strong>листовой</strong> категорией. У узлов с подкатегориями кнопка «+ Новый товар» доступна, но в форме сначала выберется лист.</li>
+                    <li>Фильтры/сортировка таблицы — через заголовки колонок (SmartTable).</li>
+                  </ul>
+                </div>
+              </details>
+            </div>
             <div class="taxonomy-toggle">
               <button class="taxonomy-toggle__btn ${state.productsIncludeDescendants ? '' : 'taxonomy-toggle__btn--active'}" id="catProductsDirect" type="button" onclick="setProductsMode(false)">Только эта</button>
               <button class="taxonomy-toggle__btn ${state.productsIncludeDescendants ? 'taxonomy-toggle__btn--active' : ''}" id="catProductsDesc" type="button" onclick="setProductsMode(true)">С подкатегориями</button>
@@ -326,7 +357,22 @@
     document.getElementById('attributesContainer').innerHTML = `
       <div class="catalog-table-toolbar">
         <div>
-          <div class="catalog-section-title">Атрибуты категории</div>
+          <div class="catalog-section-title">
+            Атрибуты категории
+            <details class="block-help">
+              <summary class="help-badge help-badge--inline" title="Как работают атрибуты">?</summary>
+              <div class="block-help__body">
+                <p><strong>Атрибуты</strong> — это поля, по которым описываются и фильтруются товары в данной категории.</p>
+                <ul>
+                  <li><strong>Наследуемые</strong> — пришли от категорий-родителей. Здесь только для чтения; редактируй их у того узла, где они объявлены.</li>
+                  <li><strong>Свои</strong> — добавлены на этой категории. Видны во всех её потомках.</li>
+                  <li><strong>Тип</strong> атрибута определяет вид ввода у товара: текст, число (с единицей), да/нет, один/несколько вариантов, дата, ссылка, файл, изображение.</li>
+                  <li><strong>Обязательный</strong> — товар нельзя сохранить без значения.</li>
+                  <li><strong>Код</strong> атрибута уникален в пределах эффективной цепочки наследования и менять его после публикации опасно (поломает фильтры на витрине).</li>
+                </ul>
+              </div>
+            </details>
+          </div>
           <div class="catalog-section-hint">Наследуемые читаются сверху, собственные можно редактировать здесь.</div>
         </div>
         ${perms.canEditTaxonomy ? '<button class="btn btn--primary btn--sm" type="button" onclick="openAttributeForm()">+ Атрибут</button>' : ''}
@@ -402,8 +448,8 @@
     const row = document.createElement('div');
     row.className = 'attribute-options__row';
     row.innerHTML = `
-      <input class="form-input form-input--sm" data-option-value placeholder="value" value="${esc(option && option.value ? option.value : '')}">
-      <input class="form-input form-input--sm" data-option-label placeholder="label" value="${esc(option && option.label ? option.label : '')}">
+      <input class="form-input form-input--sm" data-option-value placeholder="Значение" value="${esc(option && option.value ? option.value : '')}">
+      <input class="form-input form-input--sm" data-option-label placeholder="Подпись" value="${esc(option && option.label ? option.label : '')}">
       <span class="attribute-options__actions">
         <button class="btn btn--ghost btn--sm" type="button" onclick="moveAttributeOption(this, -1)">↑</button>
         <button class="btn btn--ghost btn--sm" type="button" onclick="moveAttributeOption(this, 1)">↓</button>
@@ -498,6 +544,7 @@
     return {
       key: `attr.${attr.code}`,
       label: attr.title,
+      visible: attr.visible !== false,
       sortable: true,
       render: product => renderAttributeValue(attr, product)
     };
@@ -513,7 +560,7 @@
           : '<span class="empty-text">-</span>'
       },
       { key: 'title', label: 'Название', sortable: true },
-      { key: 'price', label: 'Цена', sortable: true, render: p => parseFloat(p.price || 0).toFixed(2) + ' BYN' },
+      { key: 'price', label: 'Цена', sortable: true, render: p => parseFloat(p.price || 0).toFixed(2) + ' Br' },
       { key: 'category', label: 'Категория', sortable: true, render: p => p.category_path && p.category_path.length ? esc(p.category_path.join(' / ')) : (p.category ? esc(p.category.title) : '-') },
       { key: 'tags', label: 'Теги', sortable: true, render: p => (p.tags || []).map(t => `<span class="badge">${esc(t.title)}</span>`).join(' ') || '-' },
       ...attributes.map(attributeColumn),
@@ -531,7 +578,11 @@
     if (!state.selectedCategoryId) return [];
     const data = await api.get(`/catalog/admin/categories/${state.selectedCategoryId}/attributes`);
     if (data._failed) return [];
-    state.categoryProductAttributes = data.own || [];
+    const inherited = (data.inherited || []).map(attr => ({ ...attr, visible: false }));
+    state.categoryProductAttributes = [
+      ...inherited,
+      ...(data.own || [])
+    ];
     return state.categoryProductAttributes;
   }
 

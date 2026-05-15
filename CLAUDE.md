@@ -1,134 +1,229 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Canonical operational guide for Claude Code and human contributors.
+This file is the single source of operating rules — there is no
+separate AGENTS.md. Detailed contracts live in `docs/`.
 
-## Project
+## First Links
 
-s1t-sddd-flaskapi-shop — universal forkable e-commerce boilerplate. Flask/APIFlask + SQLAlchemy + Dishka DI, following S-DDD (hexagonal architecture). Python 3.11+, SQLite by default.
+| Need | Read |
+|---|---|
+| Product overview, run/deploy commands | [README.md](README.md) |
+| Architecture, contexts, layer rules, release checklist | [docs/architecture.md](docs/architecture.md) |
+| One bounded context (catalog / ordering / access / system / shared) | [docs/contexts/](docs/contexts/) |
+| Auth & permissions (JWT, CSRF, runtime vs snapshot perms) | [docs/subsystems/auth-permissions.md](docs/subsystems/auth-permissions.md) |
+| Admin UI conventions (HTMX, partials, CSRF on mutations) | [docs/subsystems/admin-ui.md](docs/subsystems/admin-ui.md) |
+| SmartTable filter schema and operators | [docs/subsystems/smart-filters.md](docs/subsystems/smart-filters.md) |
+| Telegram flows (orders, login codes, recovery) | [docs/subsystems/notifications.md](docs/subsystems/notifications.md) |
+| Public storefront contract | [docs/contract/public.md](docs/contract/public.md) |
+| Admin API contract | [docs/contract/admin.md](docs/contract/admin.md) |
+| Common wire conventions (auth, errors, pagination) | [docs/contract/common.md](docs/contract/common.md) |
+| MySQL backend (driver, charset, pool, tables) | [docs/infra/mysql.md](docs/infra/mysql.md) |
+| Schema migrations (yoyo: add / apply / rollback) | [docs/infra/migrations.md](docs/infra/migrations.md) |
+| How to connect to the DB (creds, IDE, CPanel) | [docs/dev/connecting-to-the-database.md](docs/dev/connecting-to-the-database.md) |
+| Flask/APIFlask app factory and OpenAPI rules | [docs/infra/flask.md](docs/infra/flask.md) |
+| Dishka providers and DI conventions | [docs/infra/dishka.md](docs/infra/dishka.md) |
+| HTMX conventions | [docs/infra/htmx.md](docs/infra/htmx.md) |
+| CPanel/Passenger deployment | [docs/infra/cpanel.md](docs/infra/cpanel.md) |
+| Architectural decisions | [docs/adr/](docs/adr/) |
 
-## Commands
+## Project Shape
+
+Flask/APIFlask shop template with SQLAlchemy, Dishka DI, HTMX admin
+pages, S-DDD/hexagonal boundaries.
+
+Bounded contexts under `src/`:
+
+| Context | Owns |
+|---|---|
+| `catalog` | Products, images, categories, tags, attributes, public catalog reads |
+| `ordering` | Orders, status transitions, notifications |
+| `access` | Admin users, login, JWT/session, permissions, password flows |
+| `system` | Store settings (singleton), Telegram bot token, public store info |
+| `shared` | Generic infrastructure (DB/session, middleware, errors, file storage) |
+| `root` | App factory, bootstrap, container, blueprint registration |
+
+Each business context follows the S-DDD layer shape (see
+[docs/architecture.md](docs/architecture.md) for the full description):
+
+```
+src/<context>/
+├── domain/            Aggregates, value objects, invariants. Pure Python.
+├── app/               Use cases + interfaces. No Flask, no ORM.
+├── ports/
+│   ├── driving/       Facade (single per context) + Pydantic schemas.
+│   └── driven/        SQL repos, external clients, cross-context ACLs.
+├── adapters/
+│   ├── driving/       APIFlask blueprints (api.py) + HTMX admin (admin.py).
+│   └── driven/        ORM models, raw clients.
+├── config.py          Pydantic Settings (env prefix matches context).
+└── provider.py        Dishka provider.
+```
+
+Layer direction is strict — enforced by import discipline:
+
+```
+adapters/driving -> ports/driving -> app -> domain
+app -> app/interfaces <- ports/driven <- adapters/driven
+```
+
+`domain/` and `app/` MUST NOT import Flask, request/session objects,
+SQLAlchemy models, Jinja templates, or static assets. Cross-context
+imports are allowed ONLY through ACLs in `ports/driven/<target>_acl.py`
+(see `ordering/ports/driven/system_notification_acl.py`).
+
+## Common Commands
 
 ```bash
-# Setup
-cp .env.example .env
-pip install -r requirements.txt
+# Install
 uv sync
+# or: pip install -r requirements.txt
 
+# Start MySQL (compose ships mysql:5.7) and apply migrations
+docker compose up -d db
+python scripts/db_apply.py
+
+# Run local app (MySQL must be up + migrated)
 PYTHONPATH=src FLASK_DEBUG=1 uv run src/root/entrypoints/api.py
 
-# Seed admin user + system settings
-PYTHONPATH=src uv run data/seed.py
+# Full stack via Docker
+docker compose up --build
 
-# Docker
-docker compose up --build    # runs on port 5000
+# DB operations
+python scripts/db_apply.py     # yoyo apply (idempotent)
+python scripts/db_status.py    # applied + pending
+python scripts/db_rollback.py  # rollback last migration
+python scripts/db_dump.py      # data/dumps/<ts>.sql.gz
+bash   scripts/db_shell.sh     # mysql CLI from .env
 
-# Swagger docs available at /api/docs when running
+# Unit + flow tests (fast, no DB)
+PYTHONDONTWRITEBYTECODE=1 uv run --extra dev pytest -q -m "unit or flow"
+
+# App-factory smoke (assumes migrations applied + DB reachable)
+PYTHONPATH=src uv run python3 -c "from root.entrypoints.api import create_app; app = create_app(); print('OK', len(app.url_map._rules))"
+
+# Diff hygiene
+git diff --check
 ```
 
-No test suite exists yet. No linter/formatter is configured in project files.
+## Change Rules
 
-## Architecture
+- Prefer existing context and layer patterns over new abstractions.
+- Routes stay thin: parse input, check auth/permissions, call facade,
+  format response. Business decisions belong in use cases/domain.
+- Expose driving operations through the context facade with Pydantic
+  schemas. Facades return primitives or Pydantic, not domain objects.
+- Every protected route declares `permission_required(...)`,
+  `any_permission_required(...)`, or `jwt_required`. UI hiding is not
+  authorization.
+- Cookie-auth unsafe requests require CSRF; bearer-token clients are
+  exempt (enforced in `shared/adapters/driving/middleware.py`).
+- Public endpoints must never expose inactive catalog data, admin
+  data, bot tokens, recovery state, or internal settings.
+- Cross-context calls go through ACLs in `ports/driven/`. Never import
+  another context's `app/` or `adapters/` directly.
+- Test markers: `unit`, `flow`, `integration`, `e2e` (configured in
+  `pyproject.toml`).
+- Update the matching doc page in the same change when API routes,
+  schemas, env vars, DB schema, permissions, or deployment steps
+  change. Doc drift is treated as a bug.
 
-S-DDD hexagonal architecture with 4 bounded contexts under `src/`:
+## Feature Workflow (S-DDD order)
 
-```
-src/{context}/
-├── domain/          # Aggregates, value objects, domain errors (pure Python, no imports from outer layers)
-├── app/             # Use cases + interfaces (abstract repos/gateways)
-│   ├── interfaces/  # ABC definitions: IProductRepo, IFileStorage, etc.
-│   └── use_cases/   # Business logic orchestration
-├── ports/
-│   ├── driving/     # Facade (entry point) + Pydantic schemas (DTOs)
-│   └── driven/      # Concrete repo/gateway implementations (SqlProductRepo, etc.)
-├── adapters/
-│   ├── driving/     # Flask blueprints (api.py) — call Facade methods
-│   └── driven/      # ORM models (db/models.py), external API clients
-├── config.py        # Pydantic Settings with context-specific env prefix
-└── provider.py      # Dishka DI Provider — wires interfaces to implementations
-```
+For any non-trivial behaviour, work in this sequence:
 
-### Bounded Contexts
+1. **Domain.** Add aggregate/VO/invariants in `<ctx>/domain/`. Errors
+   in `<ctx>/domain/errors.py`.
+2. **App interface.** Declare a Protocol in `<ctx>/app/interfaces/`
+   for every persistence/external IO need.
+3. **Use case.** `<ctx>/app/use_cases/<verb>_<noun>_uc.py`. Depends on
+   interfaces; accepts primitives or Pydantic commands.
+4. **Driven port.** `<ctx>/ports/driven/sql_<noun>_repo.py` (or
+   `<target>_acl.py`). Translates domain ↔ ORM/wire.
+5. **Facade method + schema.** `<ctx>/ports/driving/facade.py` and
+   `<ctx>/ports/driving/schemas.py`.
+6. **Driving adapter.** Route in `<ctx>/adapters/driving/api.py` or
+   `admin.py` with explicit auth/permission decorators.
+7. **DI wiring.** Add `provide(...)` in `<ctx>/provider.py`. The
+   provider is the ONLY place mapping concrete → interface.
+8. **Tests + docs.** Add `unit`/`flow` tests; update the relevant
+   `docs/contexts/<name>.md` or `docs/contract/*.md` in the same PR.
 
-| Context    | Prefix    | Domain Aggregates       | Key Facade          |
-|------------|-----------|-------------------------|---------------------|
-| `catalog`  | CATALOG_  | Product, ProductImage   | CatalogFacade       |
-| `ordering` | ORDERING_ | Order, OrderStatus      | OrderingFacade      |
-| `access`   | ACCESS_   | User                    | AccessFacade        |
-| `system`   | SYSTEM_   | SiteSettings (singleton)| SystemFacade        |
+For a new entity in an existing context, skip the DI wiring step (the
+provider already exists) and add only the new repo/use case/facade
+method/route/template.
 
-### Shared kernel (`src/shared/`)
+## Permissions
 
-- `config.py` — `InfraConfig` (INFRA_ prefix, provides `database_url`)
-- `provider.py` — `InfraProvider` (DB session factory)
-- `helpers/parsing.py` — `safe_float`, `safe_int`, `parse_table_params`
-- `helpers/db.py` — `@handle_db_errors` decorator for repos
-- `generics/errors.py` — Error hierarchy: `LayerError` → `DomainError`, `ApplicationError`, `DrivingPortError`, `DrivenPortError`, `DrivingAdapterError`, `DrivenAdapterError`
-- `generics/pagination.py` — Pagination helper
-- `helpers/security.py` — JWT create/verify
-- `adapters/driving/middleware.py` — `@jwt_required` decorator (cookie-first, then Authorization header; stores payload in `request.admin_payload`)
-- `adapters/driving/error_handlers.py` — Maps error types to HTTP status codes; HTMX-aware (sends `HX-Trigger` / `HX-Redirect` headers for HTMX requests)
-- `adapters/driving/htmx.py` — `is_htmx()`, `render_partial_or_full()` helpers
-- `adapters/driven/db/` — SQLAlchemy session factory + `SqlBaseRepo`
-- `adapters/driven/file_storage.py` — `LocalFileStorage` (implements `IFileStorage`)
-- `adapters/driven/telegram_client.py` — `TelegramClient` (sync httpx, stateless)
+The eight server-side permissions:
 
-### Composition Root (`src/root/`)
+`view_category_tree`, `edit_taxonomy`, `view_products`,
+`edit_products`, `view_orders`, `manage_orders`, `manage_settings`,
+`create_demo_data`.
 
-- `container.py` — Builds Dishka container from all 5 providers (InfraProvider + 4 context providers)
-- `entrypoints/api.py` — `create_app()` factory: loads .env, creates tables, registers blueprints, serves admin UI via Jinja2 + HTMX
+`superadmin` has every permission. Owner permissions are constrained
+by runtime settings (catalog scope) and `ACCESS_OWNER_CAN_*` env flags
+(other scopes). Implication rules and runtime-vs-snapshot semantics:
+[docs/subsystems/auth-permissions.md](docs/subsystems/auth-permissions.md).
 
-### Dependency flow (strict)
+## Errors
 
-`adapters/driving` → `ports/driving` (Facade) → `app` (use cases) → `domain`
-`app` → `app/interfaces` (abstractions) ← `ports/driven` (implementations) ← `adapters/driven` (ORM/infra)
+Each context defines its own error hierarchy. Adapters catch them in
+`shared/adapters/driving/error_handlers.py`:
 
-Domain and app layers must NEVER import from adapters, ports, or Flask.
+| Error type | HTTP | Log level |
+|---|---|---|
+| `DomainError` (invariant violation) | 409 / 422 | warning |
+| `AppError` (missing entity, orchestration) | 404 / 422 | warning |
+| `PortError` (infra failure) | 503 | error + traceback |
+| Unknown `Exception` | 500 | exception + traceback |
 
-### Adding a new bounded context
+5xx responses NEVER expose SQL errors, tracebacks, or internal field
+names. Domain code never logs; only adapters do.
 
-1. Create `src/{context}/` with the layer structure above
-2. Add `config.py` with Pydantic Settings (unique env prefix)
-3. Add `provider.py` with Dishka Provider
-4. Register the provider in `src/root/container.py`
-5. Create blueprint in `adapters/driving/api.py`, register in `src/root/entrypoints/api.py`
-6. Create ORM models in `adapters/driven/db/models.py`, add `Base.metadata.create_all()` in `create_app()`
+## Documentation Hygiene
 
-### Key conventions
+Eight kinds of docs, eight homes. Do not mix kinds.
 
-- Each context has exactly one **Facade** (frozen dataclass) as the sole entry point for driving adapters
-- Facades accept/return **Pydantic schemas** (defined in `ports/driving/schemas.py`), never domain objects
-- Use cases live in `app/use_cases/` and depend on abstract interfaces from `app/interfaces/`
-- ORM models share a single SQLAlchemy `Base` from `shared/adapters/driven/db/base.py`
-- Config classes use `pydantic-settings` with env prefix matching context name (CATALOG_, ORDERING_, etc.)
-- All DI is APP-scoped via Dishka providers; use `@inject` + `FromDishka[T]` in blueprint route handlers
-- JWT is stored in an httpOnly cookie (`token`) for admin UI; API clients may use Authorization Bearer header
-- JWT secret is stored on `flask.current_app.config["JWT_SECRET"]` via `init_middleware(app, jwt_secret)` at startup; `@jwt_required` reads it from there
-- **Swagger/OpenAPI rule:** Only JSON API endpoints appear in `/api/docs`. Admin HTMX blueprints use `enable_openapi=False`. Utility routes (`/`, `/admin/`, `/media/`) use `@app.doc(hide=True)`. Never expose template-rendering or HTMX routes in the OpenAPI spec.
+| Change | Update |
+|---|---|
+| Architecture / context boundary / cross-context flow | `docs/architecture.md`, `docs/contexts/<name>.md` |
+| Cross-cutting capability (auth, UI, filters, Telegram) | `docs/subsystems/<name>.md` |
+| External library/tool usage | `docs/infra/<tool>.md` |
+| Wire protocol (HTTP route/schema/status code) | `docs/contract/{public,admin,common}.md` |
+| Architectural decision | New `docs/adr/NNNN-<kebab>.md` (≤40 lines) |
+| Run/install/deploy commands and env vars | `README.md` |
 
-### DI pattern (Dishka Flask integration)
+Line budgets (hard caps):
 
-```python
-from dishka.integrations.flask import inject, FromDishka
-from catalog.ports.driving.facade import CatalogFacade
+| Page | Max lines |
+|---|---|
+| README | 200 |
+| `architecture.md` | 300 |
+| `contexts/*.md` | 250 |
+| `subsystems/*.md` | 200 |
+| `infra/*.md` | 150 |
+| `contract/*.md` | 300 |
+| ADR | 40 |
 
-@catalog_bp.get("/catalog")
-@inject
-def list_products(facade: FromDishka[CatalogFacade]):
-    return facade.list_products(...)
-```
+Anti-patterns (always wrong):
 
-## API Routes
+- Restating code in prose; documenting field types that the schema
+  already encodes.
+- Tutorials inside reference pages.
+- Implementation diaries ("we tried X but…"); use ADRs or commits.
+- Marketing voice ("powerful, flexible").
+- Stale TODOs / "coming soon"; land it or delete the line.
 
-- Public: `GET /catalog`, `GET /catalog/random`, `GET /catalog/<id>`, `GET /system/info`, `POST /orders`
-- Admin (JWT): `GET/POST/PUT/DELETE /catalog/...`, `GET/PATCH /orders/...`, `GET/PUT /system/settings`, `POST /auth/login`, `POST /auth/change-password`
-- Admin UI (HTMX): `/admin/` — Jinja2 templates with HTMX partial rendering; auth via httpOnly cookie
-- Swagger: `/api/docs` (only JSON API; admin HTMX routes are hidden via `enable_openapi=False`)
+## Claude-Specific Notes
 
-## Docs
-
-- `docs/api_public.md` — Public API contract
-- `docs/api_admin.md` — Admin API contract
-- `docs/database.md` — Database schema reference
-- `docs/filters.md` — Smart filter system (schemas, SmartTable, operators)
-- `docs/adding_new_table.md` — Step-by-step guide for adding new entities
-- `docs/cpanel.md` — CPanel deployment guide
+- Keep edits scoped to the user's requested area. This repo may have
+  unrelated local changes; do not revert them.
+- Prefer the existing bounded-context and layer patterns before adding
+  abstractions.
+- For code changes, run the narrowest relevant tests first
+  (`pytest -m "unit or flow"`), then broader checks if the change
+  crosses contexts.
+- For documentation-only changes, verify links and run `git diff --check`.
+- Do not duplicate architecture / API / database reference here;
+  update `docs/<area>/<page>.md` instead.

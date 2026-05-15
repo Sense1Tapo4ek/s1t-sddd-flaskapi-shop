@@ -28,8 +28,8 @@ DEMO_CATEGORIES: list[dict[str, Any]] = [
                 "slug": "dresses",
                 "sort_order": 10,
                 "attributes": [
-                    {"title": "Длина", "code": "length", "type": "select", "options": ["mini", "midi", "maxi"]},
-                    {"title": "Сезон", "code": "season", "type": "multiselect", "options": ["spring", "summer", "autumn", "winter"]},
+                    {"title": "Длина", "code": "length", "type": "select", "options": ["мини", "миди", "макси"]},
+                    {"title": "Сезон", "code": "season", "type": "multiselect", "options": ["весна", "лето", "осень", "зима"]},
                 ],
             },
             {"title": "Юбки", "slug": "skirts", "sort_order": 20},
@@ -60,15 +60,15 @@ DEMO_CATEGORIES: list[dict[str, Any]] = [
 
 DEMO_TAGS = [
     {"title": "Новинка", "slug": "new", "color": "#7c8c6e"},
-    {"title": "Sale", "slug": "sale", "color": "#c4654a"},
+    {"title": "Распродажа", "slug": "sale", "color": "#c4654a"},
     {"title": "Хит", "slug": "featured", "color": "#d4a853"},
 ]
 
 ATTRIBUTE_VALUES = {
     "size": ["XS", "S", "M", "L", "XL"],
     "material": ["хлопок", "лен", "шерсть", "полиэстер"],
-    "length": ["mini", "midi", "maxi"],
-    "season": ["spring", "summer", "autumn", "winter"],
+    "length": ["мини", "миди", "макси"],
+    "season": ["весна", "лето", "осень", "зима"],
     "upper_material": ["кожа", "замша", "текстиль"],
     "brand": ["S1T", "Northline", "Forma"],
 }
@@ -199,7 +199,7 @@ class CreateDemoDataUseCase:
     ) -> None:
         attributes = self._taxonomy_repo.get_effective_attributes(category.id)
         for index in range(1, count + 1):
-            title = f"Demo {category.title} #{index}"
+            title = f"Демо {category.title} #{index}"
             existing = self._products.search(
                 "",
                 PaginationParams(

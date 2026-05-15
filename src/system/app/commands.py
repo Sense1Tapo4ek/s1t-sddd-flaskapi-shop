@@ -2,6 +2,25 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class UpdateStorageSettingsCommand:
+    """
+    Command to update storage settings.
+    All fields are optional; only provided fields will be applied.
+    `secret_access_key=None` means "do not change". Pass empty string to clear.
+    """
+
+    backend: str | None = None
+    endpoint_url: str | None = None
+    region: str | None = None
+    bucket: str | None = None
+    access_key_id: str | None = None
+    secret_access_key: str | None = None
+    public_base_url: str | None = None
+    force_path_style: bool | None = None
+    test_connection: bool = False
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class UpdateSettingsCommand:
     """
     Command to update system settings.

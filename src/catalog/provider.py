@@ -1,20 +1,27 @@
 from dishka import Provider, Scope, provide
 
-from catalog.config import CatalogConfig
 from catalog.app import (
     CreateDemoDataUseCase,
     ManageCatalogUseCase,
     ManageTaxonomyUseCase,
     ViewCatalogUseCase,
 )
-from catalog.app.interfaces import IFileStorage, IProductRepo, ITaxonomyRepo
+from catalog.app.interfaces import IProductRepo, ITaxonomyRepo
+from catalog.config import CatalogConfig
 from catalog.ports.driven.sql_product_repo import SqlProductRepo
 from catalog.ports.driven.sql_taxonomy_repo import SqlTaxonomyRepo
 from catalog.ports.driving import CatalogFacade
-from shared.adapters.driven.file_storage import LocalFileStorage
 
 
 class CatalogProvider(Provider):
+    """
+    Catalog context wiring.
+
+    NOTE: `IFileStorage` is bound at the composition root by `StorageProvider`,
+    not here — it requires a cross-context adapter (`system.adapters.driven.StorageRouter`)
+    which a context provider must not import directly per S-DDD rules.
+    """
+
     scope = Scope.APP
 
     @provide
@@ -28,10 +35,6 @@ class CatalogProvider(Provider):
     @provide
     def taxonomy_repo(self, impl: SqlTaxonomyRepo) -> ITaxonomyRepo:
         return impl
-
-    @provide
-    def storage(self, config: CatalogConfig) -> IFileStorage:
-        return LocalFileStorage(_upload_dir=config.upload_dir)
 
     # Concretions
     sql_repo = provide(SqlProductRepo)

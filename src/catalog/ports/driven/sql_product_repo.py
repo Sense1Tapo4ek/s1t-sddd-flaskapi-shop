@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from typing import Any, ClassVar
-from sqlalchemy import String, asc, cast, desc, func, select, text
+from sqlalchemy import (
+    Float, String, Text,
+    asc, cast, desc, func, literal_column, select, text,
+)
 from sqlalchemy.orm import aliased, selectinload
 
 from shared.generics.errors import DrivenPortError
@@ -19,7 +22,6 @@ from catalog.adapters.driven.db.models import (
     ProductTagModel,
     TagModel,
 )
-
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SqlProductRepo(SqlBaseRepo[Product, ProductModel], IProductRepo):
@@ -119,18 +121,59 @@ class SqlProductRepo(SqlBaseRepo[Product, ProductModel], IProductRepo):
                 select(ProductModel)
                 .where(ProductModel.is_active)
                 .options(*self._load_options())
-                .order_by(func.random())
+                .order_by(func.rand())
                 .limit(limit)
             ).scalars().all()
             return [self._to_domain(r) for r in rows]
 
     def search(self, query: str, params: PaginationParams) -> PaginatedResult[Product]:
         with self._session_factory() as session:
-            stmt = select(ProductModel)
-            if query:
-                stmt = stmt.where(func.lower(ProductModel.title).contains(func.lower(query)))
             attribute_category_id = self._attribute_filter_category_id(params.filters)
-            stmt, direct_filters = self._apply_taxonomy_filters(session, stmt, params.filters)
+
+            if query:
+                # MySQL FULLTEXT search on products(title, description).
+                # FULLTEXT index `ft_products_title_desc` lives in
+                # migrations/0001_init.sql. Boolean mode tolerates short
+                # / unmatched terms gracefully.
+                fts_expr = text(
+                    "MATCH (products.title, products.description) "
+                    "AGAINST (:fts_query IN BOOLEAN MODE)"
+                )
+                stmt = (
+                    select(ProductModel)
+                    .add_columns(fts_expr.label("rank"))
+                    .where(fts_expr)
+                    .params(fts_query=query)
+                )
+
+                stmt, direct_filters = self._apply_taxonomy_filters(
+                    session, stmt, params.filters
+                )
+
+                # Default to relevance sorting when a query is present
+                # and no explicit sort_by is requested.
+                if not params.sort_by or params.sort_by == "relevance":
+                    stmt = stmt.order_by(text("rank DESC"))
+                    safe_params = PaginationParams(
+                        page=params.page,
+                        limit=params.limit,
+                        sort_by=None,  # disable _paginate default sorting
+                        sort_dir=params.sort_dir,
+                        filters=direct_filters,
+                    )
+                    return self._paginate(
+                        session=session,
+                        stmt=stmt,
+                        params=safe_params,
+                        default_sort="id",
+                        load_options=self._load_options(),
+                    )
+            else:
+                stmt = select(ProductModel)
+                stmt, direct_filters = self._apply_taxonomy_filters(
+                    session, stmt, params.filters
+                )
+
             stmt, sort_by = self._apply_catalog_sort(
                 session, stmt, params.sort_by, params.sort_dir, attribute_category_id
             )

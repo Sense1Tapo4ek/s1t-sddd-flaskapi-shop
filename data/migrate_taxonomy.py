@@ -81,6 +81,8 @@ class MigrationResult:
     catalog_id: int | None = None
     uncategorized_id: int | None = None
     products_backfilled: int = 0
+    fts_table_created: bool = False
+    fts_backfilled: int = 0
 
 
 def _ensure_sqlite_parent_dir(db_url: str) -> None:
@@ -249,6 +251,64 @@ def _backfill_products(conn: Connection, category_id: int) -> int:
     return max(result.rowcount or 0, 0)
 
 
+def _ensure_fts5_table(conn: Connection) -> bool:
+    tables = _table_names(conn)
+    if "products_fts" in tables:
+        return False
+    conn.exec_driver_sql(
+        """
+        CREATE VIRTUAL TABLE products_fts USING fts5(
+            title, description,
+            content='products', content_rowid='id'
+        )
+        """
+    )
+    return True
+
+
+def _ensure_fts5_triggers(conn: Connection) -> None:
+    conn.exec_driver_sql(
+        """
+        CREATE TRIGGER IF NOT EXISTS products_fts_insert
+        AFTER INSERT ON products BEGIN
+            INSERT INTO products_fts(rowid, title, description)
+            VALUES (new.id, new.title, new.description);
+        END
+        """
+    )
+    conn.exec_driver_sql(
+        """
+        CREATE TRIGGER IF NOT EXISTS products_fts_delete
+        AFTER DELETE ON products BEGIN
+            INSERT INTO products_fts(products_fts, rowid, title, description)
+            VALUES ('delete', old.id, old.title, old.description);
+        END
+        """
+    )
+    conn.exec_driver_sql(
+        """
+        CREATE TRIGGER IF NOT EXISTS products_fts_update
+        AFTER UPDATE ON products BEGIN
+            INSERT INTO products_fts(products_fts, rowid, title, description)
+            VALUES ('delete', old.id, old.title, old.description);
+            INSERT INTO products_fts(rowid, title, description)
+            VALUES (new.id, new.title, new.description);
+        END
+        """
+    )
+
+
+def _backfill_fts5(conn: Connection) -> int:
+    result = conn.exec_driver_sql(
+        """
+        INSERT INTO products_fts(rowid, title, description)
+        SELECT id, title, description FROM products
+        WHERE id NOT IN (SELECT rowid FROM products_fts)
+        """
+    )
+    return max(result.rowcount or 0, 0)
+
+
 def migrate(db_url: str | None = None, *, quiet: bool = False) -> MigrationResult:
     database_url = db_url or os.environ.get("INFRA_DATABASE_URL", DEFAULT_DB_URL)
     _ensure_sqlite_parent_dir(database_url)
@@ -277,6 +337,9 @@ def migrate(db_url: str | None = None, *, quiet: bool = False) -> MigrationResul
         result.indexes_created = _ensure_indexes(conn)
         result.catalog_id, result.uncategorized_id = _ensure_default_categories(conn)
         result.products_backfilled = _backfill_products(conn, result.uncategorized_id)
+        result.fts_table_created = _ensure_fts5_table(conn)
+        _ensure_fts5_triggers(conn)
+        result.fts_backfilled = _backfill_fts5(conn)
 
     if not quiet:
         print("Catalog taxonomy migration complete.")
@@ -294,6 +357,10 @@ def migrate(db_url: str | None = None, *, quiet: bool = False) -> MigrationResul
         print(f"  Catalog category id: {result.catalog_id}")
         print(f"  Uncategorized category id: {result.uncategorized_id}")
         print(f"  products backfilled: {result.products_backfilled}")
+        print(
+            f"  FTS5 table: {'created' if result.fts_table_created else 'already exists'}"
+        )
+        print(f"  FTS5 backfilled: {result.fts_backfilled}")
 
     inspect(engine).clear_cache()
     return result

@@ -75,6 +75,26 @@ class CatalogFacade:
         )
         return CatalogListOut.from_domain(res)
 
+    def search_public_products(
+        self,
+        query: str = "",
+        page: int = 1,
+        limit: int = 20,
+        filters: dict[str, Any] | None = None,
+    ) -> CatalogListOut:
+        safe_filters = dict(filters) if filters else {}
+        safe_filters["is_active"] = True
+
+        res = self._manage_uc.search(
+            query=query,
+            page=page,
+            limit=limit,
+            sort_by="relevance" if query else None,
+            sort_dir="asc",
+            filters=safe_filters,
+        )
+        return CatalogListOut.from_domain(res)
+
     def get_random(self, limit: int = 4) -> list[ProductOut]:
         res = self._view_uc.get_random(limit=limit)
         return [ProductOut.from_domain(p) for p in res]

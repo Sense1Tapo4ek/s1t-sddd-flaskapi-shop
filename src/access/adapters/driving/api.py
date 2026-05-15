@@ -10,6 +10,7 @@ from access.ports.driving import (
     LoginOut,
 )
 from shared.adapters.driving.middleware import jwt_required
+from shared.generics.errors import DrivingAdapterError
 
 access_bp = APIBlueprint("access", __name__, url_prefix="/auth")
 
@@ -17,21 +18,21 @@ access_bp = APIBlueprint("access", __name__, url_prefix="/auth")
 @access_bp.post("/login")
 @access_bp.input(LoginIn)
 @access_bp.output(LoginOut)
-@access_bp.doc(summary="Staff Login")
+@access_bp.doc(summary="Вход для персонала")
 @inject
 def login(json_data: LoginIn, facade: FromDishka[AccessFacade]):
     try:
         return facade.login(json_data)
     except InvalidPasswordError:
-        return {"error": "Invalid login or password"}, 401
+        raise DrivingAdapterError("Неверный логин или пароль", "INVALID_CREDENTIALS")
 
 
 @access_bp.post("/password")
 @jwt_required
 @access_bp.input(ChangePasswordIn)
 @access_bp.doc(
-    summary="Change admin password (ADMIN ONLY)",
-    description="Changes the password for the currently authenticated admin user.",
+    summary="Смена пароля администратора (ADMIN ONLY)",
+    description="Изменяет пароль текущего авторизованного администратора.",
     security="JWTAuth",
 )
 @inject

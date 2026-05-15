@@ -2,6 +2,8 @@ from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
 from shared.adapters.driving.middleware import permission_required
+from shared.generics.errors import ApplicationError
+from shared.adapters.driving.error_handlers import json_error_response
 from shared.ports.driving.schemas import SuccessResponse
 from system.ports.driving import (
     SystemFacade,
@@ -22,8 +24,8 @@ system_bp = APIBlueprint("system", __name__, url_prefix="/system", tag="System")
 @permission_required("manage_settings")
 @system_bp.output(SettingsOut)
 @system_bp.doc(
-    summary="Get all settings (ADMIN ONLY)",
-    description="Returns all system settings including sensitive data.",
+    summary="Получить все настройки (ADMIN ONLY)",
+    description="Возвращает все системные настройки, включая конфиденциальные данные.",
     security="JWTAuth",
 )
 @inject
@@ -36,8 +38,8 @@ def get_settings(facade: FromDishka[SystemFacade]):
 @system_bp.input(SettingsUpdateIn)
 @system_bp.output(SettingsOut)
 @system_bp.doc(
-    summary="Update settings (ADMIN ONLY)",
-    description="Partially or fully updates system settings.",
+    summary="Обновить настройки (ADMIN ONLY)",
+    description="Частично или полностью обновляет системные настройки.",
     security="JWTAuth",
 )
 @inject
@@ -49,8 +51,8 @@ def update_settings(json_data: SettingsUpdateIn, facade: FromDishka[SystemFacade
 @permission_required("manage_settings")
 @system_bp.output(SuccessResponse)
 @system_bp.doc(
-    summary="Send test Telegram message (ADMIN ONLY)",
-    description="Sends a test notification to verify the Telegram token and chat ID.",
+    summary="Отправить тестовое сообщение в Telegram (ADMIN ONLY)",
+    description="Отправляет тестовое уведомление для проверки токена и chat ID Telegram.",
     security="JWTAuth",
 )
 @inject
@@ -64,8 +66,8 @@ def test_telegram(facade: FromDishka[SystemFacade]):
 @system_bp.input(FetchChatIdIn)
 @system_bp.output(TelegramChatIdOut)
 @system_bp.doc(
-    summary="Fetch Telegram chat ID (ADMIN ONLY)",
-    description="Polls Telegram API to get the chat_id. Requires /start sent to the bot.",
+    summary="Получить Chat ID Telegram (ADMIN ONLY)",
+    description="Опрашивает API Telegram для получения chat_id. Требуется отправить боту /start.",
     security="JWTAuth",
 )
 @inject
@@ -80,8 +82,8 @@ def fetch_chat_id(json_data: FetchChatIdIn, facade: FromDishka[SystemFacade]):
 @system_bp.get("/info")
 @system_bp.output(InfoOut)
 @system_bp.doc(
-    summary="Get public info (Public)",
-    description="Returns safe contact information for display in the site footer and header.",
+    summary="Публичная информация (Public)",
+    description="Возвращает безопасную контактную информацию для отображения в шапке и подвале сайта.",
 )
 @inject
 def get_public_info(facade: FromDishka[SystemFacade]):
@@ -91,15 +93,19 @@ def get_public_info(facade: FromDishka[SystemFacade]):
 @system_bp.post("/settings/recover-password/<token>")
 @system_bp.output(SuccessResponse)
 @system_bp.doc(
-    summary="Recover password via Telegram (Public)",
-    description="Generates a recovery code and sends it to the target admin user's Telegram chat. Requires matching the secret recovery token.",
+    summary="Восстановить пароль через Telegram (Public)",
+    description="Генерирует код восстановления и отправляет его в Telegram чат целевого администратора. Требуется совпадение секретного токена восстановления.",
 )
 @inject
 def recover_password(token: str, facade: FromDishka[SystemFacade]):
     if token != facade.get_config().recovery_token:
-        return {"error": "NOT_FOUND", "message": "Invalid recovery path"}, 404
+        raise ApplicationError("Неверный путь восстановления", "NOT_FOUND")
 
     success = facade.recover_password()
     if not success:
-        return {"error": "RECOVERY_FAILED", "message": "Failed to send message"}, 500
+        return json_error_response(
+            code="RECOVERY_FAILED",
+            message="Не удалось отправить сообщение",
+            status=500,
+        )
     return {"success": True}

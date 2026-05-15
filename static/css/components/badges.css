@@ -53,7 +53,7 @@
   background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
 }
 
-/* Sidebar nav badges */
+/* Бейджи навигации боковой панели */
 .nav-badge {
   display: inline-flex;
   align-items: center;

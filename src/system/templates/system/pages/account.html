@@ -63,7 +63,13 @@
 
 <div class="page-header">
   <div class="page-header__left">
-    <h2 class="page-title">Аккаунт</h2>
+    <div>
+      <h2 class="page-title">Аккаунт</h2>
+      <p style="font-size:13px; color:var(--color-text-muted); margin-top:4px;">Управление Telegram для входа и смена пароля.</p>
+    </div>
+  </div>
+  <div class="page-header__right">
+    <button class="help-badge" onclick="document.getElementById('account-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
 </div>
 
@@ -71,7 +77,11 @@
   <div class="account-card account-card--profile">
     <div class="account-card__eyebrow">Текущий пользователь</div>
     <div class="account-card__title">{{ current_user.login }}</div>
-    <div class="account-card__meta">{{ current_user.role }}</div>
+    <div class="account-card__meta">
+      {% if current_user.role == 'owner' %}Владелец
+      {% elif current_user.role == 'superadmin' %}Главный администратор
+      {% else %}{{ current_user.role }}{% endif %}
+    </div>
   </div>
 
   <div class="account-card">
@@ -181,6 +191,19 @@
     </div>
   </form>
 </section>
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="account-help-modal" role="dialog" aria-modal="true" aria-label="Справка по аккаунту" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Аккаунт — Справка
+      <button class="modal__close" onclick="document.getElementById('account-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <p style="margin-top:0;">Управление Telegram для входа в систему и смена пароля.</p>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

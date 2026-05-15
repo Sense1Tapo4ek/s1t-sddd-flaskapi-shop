@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, CheckConstraint, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from shared.adapters.driven import Base
+from shared.adapters.driven.db.base import mysql_table_opts
 
 
 class SettingsModel(Base):
@@ -26,4 +27,27 @@ class SettingsModel(Base):
     owner_can_create_demo_data: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Singleton enforcement
-    __table_args__ = (CheckConstraint("id = 1", name="single_settings_row"),)
+    __table_args__ = (
+        CheckConstraint("id = 1", name="single_settings_row"),
+        mysql_table_opts(),
+    )
+
+
+class StorageSettingsModel(Base):
+    __tablename__ = "storage_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    backend: Mapped[str] = mapped_column(String(16), default="local", nullable=False)
+    endpoint_url: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    region: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    bucket: Mapped[str] = mapped_column(String(128), default="", nullable=False)
+    access_key_id: Mapped[str] = mapped_column(String(128), default="", nullable=False)
+    # Encrypted Fernet token (URL-safe base64). Empty when not set.
+    secret_access_key_enc: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    public_base_url: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    force_path_style: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("id = 1", name="single_storage_settings_row"),
+        mysql_table_opts(),
+    )

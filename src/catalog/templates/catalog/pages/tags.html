@@ -7,8 +7,23 @@
 <div class="page-header">
   <div class="page-header__left">
     <h2 class="page-title">Теги</h2>
+    <button class="help-badge" onclick="document.getElementById('tags-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
   </div>
   <button class="btn btn--primary btn--sm" onclick="openTagForm()">+ Новый тег</button>
+</div>
+
+<p style="font-size:13px; color:var(--color-text-muted); margin-top:-12px; margin-bottom:16px;">Создание и управление метками товаров.</p>
+
+<div class="modal-overlay" id="tags-help-modal" role="dialog" aria-modal="true" aria-label="Справка по тегам" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Теги — Справка
+      <button class="modal__close" onclick="document.getElementById('tags-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <p style="margin-top:0;">Теги — это метки для быстрой группировки товаров. Активные теги видны в каталоге. Теги можно назначать товарам в карточке товара. Символьный код (slug) формируется автоматически.</p>
+    </div>
+  </div>
 </div>
 
 <div id="tags-container"></div>
@@ -51,7 +66,7 @@
 {% block scripts %}
 <script src="/static/js/utils.js"></script>
 <script src="/static/js/api.js"></script>
-<script src="/static/js/smart-table.js"></script>
+<script src="/static/js/smart-table.js?v=3"></script>
 <script>
 let editingTagId = null;
 

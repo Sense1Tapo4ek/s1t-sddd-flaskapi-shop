@@ -47,5 +47,5 @@ def test_order_notification_uses_user_level_recipients_and_continues_on_failure(
     acl.notify_new_order(order)
 
     assert [item["chat_id"] for item in system.sent] == ["owner-chat", "super-chat"]
-    assert all(item["subject"] == "New order" for item in system.sent)
+    assert all(item["subject"] == "Новый заказ" for item in system.sent)
     assert all("Alice" in item["body"] for item in system.sent)

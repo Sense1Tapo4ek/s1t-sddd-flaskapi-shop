@@ -8,7 +8,13 @@
   </td>
   <td>{{ order.created_at }}</td>
   <td>
-    <span class="badge badge--{{ order.status }}">{{ order.status }}</span>
+    <span class="badge badge--{{ order.status }}">
+      {% if order.status == 'new' %}Новый
+      {% elif order.status == 'processing' %}В обработке
+      {% elif order.status == 'done' %}Выполнен
+      {% elif order.status == 'canceled' %}Отменён
+      {% else %}{{ order.status }}{% endif %}
+    </span>
   </td>
   <td>
     {% if has_perm('manage_orders') %}

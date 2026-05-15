@@ -23,7 +23,10 @@ from access.config import AccessConfig
 from access.app.runtime_permissions import RuntimePermissionProvider
 from access.permissions import RUNTIME_CATALOG_PERMISSIONS
 from access.ports.driven.bootstrap import bootstrap_access_defaults
-from system.ports.driven.bootstrap import bootstrap_system_defaults
+from system.ports.driven.bootstrap import (
+    bootstrap_storage_defaults,
+    bootstrap_system_defaults,
+)
 from system.ports.driving.facade import SystemFacade
 from system.ports.driving.runtime_template import runtime_template_settings
 
@@ -42,7 +45,7 @@ import ordering.adapters.driven.db.models  # noqa: F401
 import system.adapters.driven.db.models  # noqa: F401
 
 from shared.adapters.driven.db.base import Base
-from shared.adapters.driven.db.compat import ensure_sqlite_compatibility
+from shared.adapters.driven.db.schema_guard import ensure_schema_present
 
 
 def _first_admin_path() -> str:
@@ -109,10 +112,11 @@ def create_app() -> APIFlask:
     system_facade = container.get(SystemFacade)
 
     os.makedirs("media", exist_ok=True)
+    os.makedirs("data/dumps", exist_ok=True)
 
-    # All models share one Base — a single create_all covers everything
-    Base.metadata.create_all(engine)
-    ensure_sqlite_compatibility(engine)
+    # Schema is migration-managed. Verify it exists; do NOT issue DDL here.
+    # Run `python scripts/db_apply.py` (or `yoyo apply`) before starting the app.
+    ensure_schema_present(engine)
     bootstrap_access_defaults(
         session_factory,
         access_config=access_config,
@@ -123,6 +127,7 @@ def create_app() -> APIFlask:
         access_config=access_config,
         root_config=root_config,
     )
+    bootstrap_storage_defaults(session_factory)
 
     app.jinja_env.globals["app_name"] = root_config.app_name
     app.jinja_env.globals["admin_panel_title"] = "Админ панель"
@@ -219,6 +224,9 @@ def create_app() -> APIFlask:
     @app.route("/media/products/<path:filename>")
     @app.doc(hide=True)
     def serve_upload(filename: str):
+        # Serves only the LOCAL storage backend. When `storage_settings.backend`
+        # is `s3`, `Product.images[]` already holds absolute public URLs that
+        # bypass this route and are fetched by the browser directly from S3.
         upload_dir = str(base_dir / catalog_config.upload_dir)
         return send_from_directory(upload_dir, filename)
 
