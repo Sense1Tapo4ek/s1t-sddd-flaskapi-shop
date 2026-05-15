@@ -30,6 +30,62 @@
   background: var(--color-primary);
 }
 
+/* Warning variant — белый фон + жёлтая полоса слева, текст тёмный.
+   Используется для partial-success в bulk-операциях. */
+.toast--warning {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-warning);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px 10px 12px;
+  max-width: 360px;
+}
+
+.toast--warning .toast__icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--color-warning);
+  margin-top: 1px;
+}
+
+.toast--warning .toast__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.toast--warning .toast__title {
+  font-weight: 500;
+}
+
+.toast--warning .toast__sub {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.toast--warning .toast__action {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.toast--warning .toast__action:hover {
+  color: var(--color-primary-hover);
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

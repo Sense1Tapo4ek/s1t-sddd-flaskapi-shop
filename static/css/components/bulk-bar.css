@@ -1,0 +1,340 @@
+/* Bulk Action Bar — floating capsule, slide-up, master-dropdown.
+   spec: docs/superpowers/specs/2026-05-15-bulk-actions-design.md §10 */
+
+/* ─── Lucide icon defaults ─────────────────────────────────────────── */
+
+.lucide {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+
+.lucide--lg { width: 20px; height: 20px; }
+.lucide--xl { width: 24px; height: 24px; }
+
+
+/* ─── Floating capsule ─────────────────────────────────────────────── */
+
+.bulk-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 8px 16px;
+  max-width: 720px;
+  min-width: 320px;
+  background: var(--color-sidebar);
+  color: var(--color-text-inverse);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  transform: translate(-50%, 120%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 120ms ease-out;
+}
+
+.bulk-bar.is-visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bulk-bar[aria-hidden="true"] {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* ─── Counter chip ─────────────────────────────────────────────────── */
+
+.bulk-bar__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 8px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk-bar__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.bulk-bar__count-num {
+  font-weight: 500;
+  transition: transform 200ms ease-out;
+}
+
+.bulk-bar__count-num.is-pulse {
+  animation: bulk-count-pulse 200ms ease-out;
+}
+
+@keyframes bulk-count-pulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* ─── Action buttons inside the bar ────────────────────────────────── */
+
+.bulk-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bulk-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: var(--color-text-inverse);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease-out, border-color 120ms ease-out;
+}
+
+.bulk-bar__btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.bulk-bar__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.bulk-bar__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulk-bar__btn--danger:hover:not(:disabled) {
+  background: rgba(196, 101, 74, 0.25);
+  border-color: rgba(196, 101, 74, 0.5);
+}
+
+.bulk-bar__btn--soft-armed {
+  background: rgba(212, 168, 83, 0.3);
+  border-color: rgba(212, 168, 83, 0.6);
+}
+
+.bulk-bar__btn-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.bulk-bar__btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--color-text-inverse);
+  border-radius: 50%;
+  animation: bulk-spin 0.7s linear infinite;
+}
+
+@keyframes bulk-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Group separator before destructive actions ───────────────────── */
+
+.bulk-bar__divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+}
+
+/* ─── Close button ─────────────────────────────────────────────────── */
+
+.bulk-bar__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-inverse);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: background 120ms ease-out, opacity 120ms ease-out;
+}
+
+.bulk-bar__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+
+/* ─── Master-checkbox dropdown ─────────────────────────────────────── */
+
+.bulk-master {
+  position: relative;
+  display: inline-block;
+}
+
+.bulk-master__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 120ms ease-out, background 120ms ease-out;
+}
+
+.bulk-master__trigger:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.bulk-master__trigger[aria-checked="true"],
+.bulk-master__trigger[aria-checked="mixed"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.bulk-master__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -2px;
+  min-width: 240px;
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  transform-origin: top left;
+  animation: bulk-master-pop 120ms ease-out;
+}
+
+@keyframes bulk-master-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.bulk-master__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  font: inherit;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 100ms ease-out;
+}
+
+.bulk-master__item:hover {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.bulk-master__item-count {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.bulk-master__sep {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+/* ─── Type-to-confirm modal addition ───────────────────────────────── */
+
+.bulk-confirm__input {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.bulk-confirm__hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.bulk-confirm__expected {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+/* ─── Failures-detail modal ────────────────────────────────────────── */
+
+.bulk-failures-table {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.bulk-failures-table th,
+.bulk-failures-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.bulk-failures-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.bulk-failures-table td.bulk-failures-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.bulk-failures-table td.bulk-failures-reason {
+  color: var(--color-danger);
+}
+
+/* ─── Body padding when bar visible ────────────────────────────────── */
+
+body.has-bulk-bar {
+  padding-bottom: 72px;
+}
