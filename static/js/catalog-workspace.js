@@ -704,6 +704,9 @@
       defaultSortBy: 'sort_order',
       defaultSortDir: 'asc',
       wide: true,
+      selectable: Boolean(perms.canEditTaxonomy),
+      rowIdKey: 'id',
+      getRowName: t => t.title,
       columns: [
         { key: 'id', label: '#', sortable: true },
         { key: 'title', label: 'Название', sortable: true },
@@ -715,6 +718,9 @@
       ]
     });
     window.tagsTable = state.tagsTable;
+    if (perms.canEditTaxonomy && typeof window.mountTagsBulkBar === 'function') {
+      window.tagsBulkBar = window.mountTagsBulkBar(state.tagsTable);
+    }
     return state.tagsTable;
   }
 
