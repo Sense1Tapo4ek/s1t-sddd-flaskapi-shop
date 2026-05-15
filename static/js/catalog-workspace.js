@@ -609,11 +609,17 @@
       defaultSortBy: 'created_at',
       defaultSortDir: 'desc',
       wide: true,
+      selectable: Boolean(perms.canEditProducts),
+      rowIdKey: 'id',
+      getRowName: p => p.title,
       columns
     });
     state.categoryProductsTable.schemaEndpoint = `/catalog/admin/search/schema?category_id=${state.selectedCategoryId}`;
     state.categoryProductsTableCategoryId = state.selectedCategoryId;
     window.categoryProductsTable = state.categoryProductsTable;
+    if (perms.canEditProducts && typeof window.mountProductsBulkBar === 'function') {
+      window.categoryProductsBulkBar = window.mountProductsBulkBar(state.categoryProductsTable);
+    }
     return state.categoryProductsTable;
   }
 

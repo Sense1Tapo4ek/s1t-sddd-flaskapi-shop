@@ -76,6 +76,9 @@ window.productsTable = new SmartTable({
   containerId: 'products-container',
   defaultSortBy: 'id',
   defaultSortDir: 'desc',
+  selectable: CAN_EDIT_PRODUCTS,
+  rowIdKey: 'id',
+  getRowName: p => p.title,
   columns: [
     { key: 'id', label: '#', sortable: true },
     {
@@ -99,5 +102,9 @@ window.productsTable = new SmartTable({
 });
 
 window.productsTable.load();
+
+if (CAN_EDIT_PRODUCTS && typeof mountProductsBulkBar === 'function') {
+  window.productsBulkBar = mountProductsBulkBar(window.productsTable);
+}
 </script>
 {% endblock %}

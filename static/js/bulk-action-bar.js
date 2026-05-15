@@ -323,6 +323,7 @@
       try {
         const payload = this._buildPayload(sel);
         const result = await action.handler(payload, sel);
+        if (result && result.cancelled) return;  // handler-side cancellation (custom picker modal)
         this._afterAction(action, sel, result);
       } catch (err) {
         console.error("bulk action failed", err);
