@@ -135,7 +135,10 @@ class SqlProductRepo(SqlBaseRepo[Product, ProductModel], IProductRepo):
                 # FULLTEXT index `ft_products_title_desc` lives in
                 # migrations/0001_init.sql. Boolean mode tolerates short
                 # / unmatched terms gracefully.
-                fts_expr = text(
+                # ``literal_column`` is used (not ``text``) because the
+                # column form supports ``.label()`` and can sit in both
+                # SELECT and WHERE positions.
+                fts_expr = literal_column(
                     "MATCH (products.title, products.description) "
                     "AGAINST (:fts_query IN BOOLEAN MODE)"
                 )

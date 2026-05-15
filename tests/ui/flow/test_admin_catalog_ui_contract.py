@@ -93,11 +93,13 @@ def test_category_settings_use_single_category_creation_flow():
     assert "Расширенное редактирование" not in workspace
 
 
-def test_store_settings_expose_template_and_catalog_access_controls():
+def test_store_settings_expose_app_identity_and_dump_only():
     """
-    Given the store settings page is the template control center,
-    When the form is rendered,
-    Then it exposes app identity, owner mutation/product permissions, and DB dump controls.
+    Given owner permissions moved to .env (source of truth) in the
+    admin restructure,
+    When the store settings form is rendered,
+    Then it exposes app identity + DB dump link only — and never
+    surfaces owner_can_* fields or sensitive infra config.
     """
     # Arrange / Act
     form = _read("src/system/templates/system/partials/store_form.html")
@@ -105,13 +107,18 @@ def test_store_settings_expose_template_and_catalog_access_controls():
     # Assert
     assert 'name="app_name"' in form
     assert 'name="admin_panel_title"' in form
-    assert 'name="owner_can_view_category_tree"' not in form
-    assert "Просмотр дерева категорий" in form
-    assert 'name="owner_can_edit_taxonomy"' in form
-    assert 'name="owner_can_view_products"' in form
-    assert 'name="owner_can_edit_products"' in form
-    assert 'name="owner_can_create_demo_data"' in form
     assert 'href="/admin/settings/database-dump"' in form
+
+    # Owner permissions live in .env now (ACCESS_OWNER_CAN_*). The
+    # form must not expose them — the bootstrap re-asserts them from
+    # config on every boot.
+    assert 'owner_can_view_category_tree' not in form
+    assert 'owner_can_edit_taxonomy' not in form
+    assert 'owner_can_view_products' not in form
+    assert 'owner_can_edit_products' not in form
+    assert 'owner_can_create_demo_data' not in form
+
+    # Sensitive infra never goes through the admin form.
     assert "jwt_secret" not in form.lower()
     assert "database_url" not in form.lower()
     assert "root_app_env" not in form.lower()

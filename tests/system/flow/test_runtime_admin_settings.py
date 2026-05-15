@@ -100,38 +100,102 @@ def test_default_dev_superadmin_cannot_download_sqlite_database_dump(monkeypatch
     assert response.status_code == 403
 
 
-def test_superadmin_can_download_sqlite_database_dump_after_password_change(monkeypatch, tmp_path):
+def test_superadmin_can_download_latest_database_dump_after_password_change(monkeypatch, tmp_path):
     """
-    Given superadmin changed the bootstrap password,
+    Given superadmin changed the bootstrap password AND a MySQL dump
+    file exists in data/dumps/,
     When superadmin requests a database dump,
-    Then the current database file is returned as a no-store downloadable attachment.
+    Then the newest dump file is returned as a no-store attachment.
+
+    The endpoint no longer dumps live — scripts/db_dump.py runs out
+    of process (cron on CPanel, manual on a workstation) and writes
+    into data/dumps/.
     """
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
-    monkeypatch.setenv("ROOT_APP_ENV", "dev")
+    import os
+    from pathlib import Path
 
-    from root.entrypoints.api import create_app
+    # Place a dump in the CWD-relative data/dumps/ — same location the
+    # endpoint reads from.
+    dumps_dir = Path(os.getcwd()) / "data" / "dumps"
+    dumps_dir.mkdir(parents=True, exist_ok=True)
+    dump_file = dumps_dir / "shop-test-20260515-120000.sql.gz"
+    dump_file.write_bytes(b"\x1f\x8b\x08\x00fake gzip payload")
 
-    app = create_app()
-    client = app.test_client()
-    superadmin_token = _login(client, "superadmin", "superadmin")
-    change_response = client.put(
-        "/admin/settings/password",
-        headers=_auth(superadmin_token),
-        data={"old_password": "superadmin", "new_password": "changed-password"},
-    )
-    assert change_response.status_code == 200
+    try:
+        monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
+        monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
-    response = client.get(
-        "/admin/settings/database-dump",
-        headers=_auth(superadmin_token),
-    )
+        from root.entrypoints.api import create_app
 
-    assert response.status_code == 200
-    assert response.data.startswith(b"SQLite format 3")
-    assert response.headers["Cache-Control"] == "no-store"
-    assert "attachment;" in response.headers["Content-Disposition"]
-    assert "shop-" in response.headers["Content-Disposition"]
-    assert ".sqlite" in response.headers["Content-Disposition"]
+        app = create_app()
+        client = app.test_client()
+        superadmin_token = _login(client, "superadmin", "superadmin")
+        change_response = client.put(
+            "/admin/settings/password",
+            headers=_auth(superadmin_token),
+            data={"old_password": "superadmin", "new_password": "changed-password"},
+        )
+        assert change_response.status_code == 200
+
+        response = client.get(
+            "/admin/settings/database-dump",
+            headers=_auth(superadmin_token),
+        )
+
+        assert response.status_code == 200
+        assert response.data.startswith(b"\x1f\x8b")  # gzip magic
+        assert response.headers["Cache-Control"] == "no-store"
+        assert "attachment;" in response.headers["Content-Disposition"]
+        assert "shop-" in response.headers["Content-Disposition"]
+    finally:
+        dump_file.unlink(missing_ok=True)
+
+
+def test_database_dump_returns_clear_error_when_no_dumps_available(monkeypatch, tmp_path):
+    """
+    Given no dumps in data/dumps/,
+    When superadmin requests a database dump,
+    Then the endpoint returns 400 with a guidance message,
+    instead of returning a stale or fabricated file.
+    """
+    import os
+    import shutil
+    from pathlib import Path
+
+    dumps_dir = Path(os.getcwd()) / "data" / "dumps"
+    # Snapshot existing dumps, clear the dir, restore at the end.
+    backup = tmp_path / "dumps_backup"
+    if dumps_dir.exists():
+        shutil.move(str(dumps_dir), str(backup))
+    dumps_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
+        monkeypatch.setenv("ROOT_APP_ENV", "dev")
+
+        from root.entrypoints.api import create_app
+
+        app = create_app()
+        client = app.test_client()
+        superadmin_token = _login(client, "superadmin", "superadmin")
+        client.put(
+            "/admin/settings/password",
+            headers=_auth(superadmin_token),
+            data={"old_password": "superadmin", "new_password": "changed-password"},
+        )
+
+        response = client.get(
+            "/admin/settings/database-dump",
+            headers=_auth(superadmin_token),
+        )
+
+        assert response.status_code == 400
+        assert "scripts/db_dump.py" in response.get_json()["message"]
+    finally:
+        # Restore prior dumps if any.
+        shutil.rmtree(dumps_dir, ignore_errors=True)
+        if backup.exists():
+            shutil.move(str(backup), str(dumps_dir))
 
 
 def test_owner_and_unauthenticated_users_cannot_download_sqlite_database_dump(monkeypatch, tmp_path):
@@ -193,38 +257,7 @@ def test_owner_account_telegram_update_does_not_change_global_settings(monkeypat
     assert settings.telegram_chat_id == "legacy-global"
 
 
-def test_legacy_sqlite_superadmin_non_default_password_is_marked_changed(monkeypatch, tmp_path):
-    db_path = tmp_path / "legacy.db"
-    with sqlite3.connect(db_path) as conn:
-        conn.execute(
-            """
-            CREATE TABLE admins (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                login VARCHAR(100) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                recovery_code_hash VARCHAR(255),
-                recovery_code_expires DATETIME
-            )
-            """
-        )
-        conn.execute(
-            "INSERT INTO admins (login, password_hash) VALUES (?, ?)",
-            ("superadmin", hash_password("already-changed")),
-        )
-        conn.commit()
-
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{db_path}")
-    monkeypatch.setenv("ROOT_APP_ENV", "dev")
-
-    from sqlalchemy.orm import Session
-    from root.entrypoints.api import create_app
-
-    create_app()
-
-    engine = create_db_engine(f"sqlite:///{db_path}")
-    with Session(engine) as session:
-        superadmin = session.execute(
-            select(UserModel).where(UserModel.login == "superadmin")
-        ).scalar_one()
-
-    assert superadmin.password_changed_at is not None
+# Removed: test_legacy_sqlite_superadmin_non_default_password_is_marked_changed
+# It exercised SQLite-as-production schema evolution at app boot. The
+# project switched to MySQL + yoyo-migrations; legacy schemas are
+# upgraded through migration files now, not by boot-time DDL.

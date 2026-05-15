@@ -50,7 +50,12 @@ def _form_float(name: str, default: float = 0.0) -> float:
         raise DrivingPortError(f"Некорректное числовое значение: {name}") from exc
 
 
-_DUMPS_DIR = Path("data/dumps")
+# Project root: src/system/adapters/driving/admin.py → parents[4]. The
+# dumps directory must be an absolute path because ``send_file`` resolves
+# relative paths against ``app.root_path`` (the blueprint module dir),
+# not the CWD.
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+_DUMPS_DIR = _PROJECT_ROOT / "data" / "dumps"
 
 
 def _latest_dump_file() -> Path | None:
