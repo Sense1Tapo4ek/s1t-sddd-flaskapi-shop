@@ -100,6 +100,9 @@ window.ordersTable = new SmartTable({
   containerId: 'orders-container',
   defaultSortBy: 'created_at',
   defaultSortDir: 'desc',
+  selectable: CAN_MANAGE_ORDERS,
+  rowIdKey: 'id',
+  getRowName: o => 'Заказ #' + o.id,
   columns: [
     { key: 'id',         label: '#',           sortable: true  },
     { key: 'name',       label: 'Имя',         sortable: true  },
@@ -115,5 +118,9 @@ window.ordersTable.state.activeFilters = [
   { key: 'status', op: 'eq', val: 'new', label: 'Статус' }
 ];
 window.ordersTable.load();
+
+if (CAN_MANAGE_ORDERS && typeof mountOrdersBulkBar === 'function') {
+  window.ordersBulkBar = mountOrdersBulkBar(window.ordersTable);
+}
 </script>
 {% endblock %}
