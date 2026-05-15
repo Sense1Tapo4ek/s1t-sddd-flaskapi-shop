@@ -676,3 +676,8 @@ class SmartTable {
     `;
   }
 }
+
+// Explicit export so tests (and any other consumer that prefers window.X over
+// the lexical global) can pick it up. Browser behaviour for bare `new SmartTable(...)`
+// is unchanged — class declarations at script top level remain lexical globals.
+if (typeof window !== 'undefined') window.SmartTable = SmartTable;

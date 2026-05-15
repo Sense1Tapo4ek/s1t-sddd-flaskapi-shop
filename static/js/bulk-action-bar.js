@@ -6,6 +6,7 @@
   "use strict";
 
   const SOFT_CONFIRM_TIMEOUT = 3000;
+  const FOCUS_DELAY_MS = 30;        // one paint cycle before focusing a freshly mounted modal input
 
   function bulkText(key, params) {
     return (typeof global.bulkT === "function") ? global.bulkT(key, params) : key;
@@ -156,7 +157,9 @@
 
     _hide() {
       this.el.classList.remove("is-visible");
-      this.el.setAttribute("aria-hidden", "false");
+      // aria-hidden is managed exclusively by _setAriaHiddenWhileModal —
+      // do not overwrite it here, otherwise we may lift pointer-events
+      // off the bar while a confirm modal is still open above it.
       document.body.classList.remove("has-bulk-bar");
       this._resetSoftArmed();
     }
@@ -164,7 +167,7 @@
     _resetSoftArmed() {
       if (!this.softArmed) return;
       clearTimeout(this.softArmed.timer);
-      const btn = this.el.querySelector(`[data-action="${this.softArmed.actionId}"]`);
+      const btn = this.el.querySelector(`[data-action="${CSS.escape(this.softArmed.actionId)}"]`);
       const action = this.actions.find(a => a.id === this.softArmed.actionId);
       if (btn && action) {
         btn.classList.remove("bulk-bar__btn--soft-armed");
@@ -203,7 +206,7 @@
 
     _armSoft(action) {
       this._resetSoftArmed();
-      const btn = this.el.querySelector(`[data-action="${action.id}"]`);
+      const btn = this.el.querySelector(`[data-action="${CSS.escape(action.id)}"]`);
       if (!btn) return;
       btn.classList.add("bulk-bar__btn--soft-armed");
       const labelEl = btn.querySelector('[data-role="label"]');
@@ -216,6 +219,8 @@
 
     _modalConfirm(action, sel) {
       const title = action.confirmTitle || bulkText("bulk.confirm.modalTitle");
+      // text is plain string — showConfirmModal uses textContent (see modal.js),
+      // so HTML in confirmText would be displayed literally, not interpreted.
       const text = (action.confirmText && action.confirmText(sel)) ||
         `${action.label}: ${fmtNum(sel.total)}.`;
       global.showConfirmModal({
@@ -295,11 +300,11 @@
       document.addEventListener("keydown", onKey);
 
       this.el.setAttribute("aria-hidden", "true");
-      setTimeout(() => input.focus(), 30);
+      setTimeout(() => input.focus(), FOCUS_DELAY_MS);
     }
 
     async _runAction(action, sel) {
-      const btn = this.el.querySelector(`[data-action="${action.id}"]`);
+      const btn = this.el.querySelector(`[data-action="${CSS.escape(action.id)}"]`);
       const originalLabel = action.label;
       this.busy = true;
       this._setAllButtonsDisabled(true);
@@ -445,10 +450,13 @@
       const overlay = host.firstElementChild;
       document.body.appendChild(overlay);
 
-      const close = () => overlay.remove();
+      const onKey = (e) => { if (e.key === "Escape") close(); };
+      const close = () => {
+        overlay.remove();
+        document.removeEventListener("keydown", onKey);
+      };
       overlay.querySelector("#bulkFailuresClose").addEventListener("click", close);
       overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
-      const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
       document.addEventListener("keydown", onKey);
     }
   }

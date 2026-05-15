@@ -1,5 +1,6 @@
 # Bulk actions
 
+
 **Audience:** contributor adding a bulk-action surface (SmartTable page).
 **Spec:** `docs/superpowers/specs/2026-05-15-bulk-actions-design.md`.
 
@@ -155,6 +156,19 @@ Schemas/runner live in `src/shared/ports/driving/bulk_schemas.py` and
   failed row is not on the current page, the cell shows `—`.
 
 ## 6. Where to look
+
+## 7. Running tests
+
+```bash
+bash scripts/test_js.sh                       # vanilla node:test, no deps
+PYTHONDONTWRITEBYTECODE=1 uv run --extra dev pytest -q -m "unit or flow"
+```
+
+FE tests live in `tests/static/js/*.test.js` and use a vm-sandbox harness
+(`_harness.js`). They exercise pure-functional helpers and the
+`SmartTable.selection` state machine without booting jsdom.
+
+## 8. Where to look
 
 | Concern | File |
 |---|---|
