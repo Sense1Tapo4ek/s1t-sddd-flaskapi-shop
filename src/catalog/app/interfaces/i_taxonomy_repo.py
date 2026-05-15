@@ -52,6 +52,19 @@ class ITaxonomyRepo(Protocol):
 
     def delete_tag(self, tag_id: int) -> None: ...
 
+    # ─── Bulk operations on tags ────────────────────────────────────
+    def iter_tag_ids_by_filter(
+        self,
+        filter_payload: dict,
+        *,
+        cursor: str | None,
+        limit: int,
+    ) -> tuple[list[int], str | None]: ...
+
+    def set_tag_active(self, tag_id: int, active: bool) -> None: ...
+
+    def bulk_delete_tag_one(self, tag_id: int) -> None: ...
+
     def get_effective_attributes(self, category_id: int) -> list[CategoryAttribute]: ...
     def get_attribute(self, attribute_id: int) -> CategoryAttribute | None: ...
 

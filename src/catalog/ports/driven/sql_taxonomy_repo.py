@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import asc, func, or_, select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import selectinload
 
@@ -11,9 +11,17 @@ from catalog.adapters.driven.db.models import (
     CategoryAttributeModel,
     CategoryModel,
     ProductModel,
+    ProductTagModel,
     TagModel,
 )
-from catalog.domain import AttributeOption, Category, CategoryAttribute, Tag
+from catalog.domain import (
+    AttributeOption,
+    Category,
+    CategoryAttribute,
+    Tag,
+    TagInUseError,
+    TagNotFoundError,
+)
 from shared.helpers.db import handle_db_errors
 
 
@@ -406,5 +414,77 @@ class SqlTaxonomyRepo(ITaxonomyRepo):
             model = session.get(CategoryAttributeModel, attribute_id)
             if model is None:
                 raise LookupError(attribute_id)
+            session.delete(model)
+            session.commit()
+
+    # ─── Bulk operations on tags ────────────────────────────────────
+
+    def iter_tag_ids_by_filter(
+        self,
+        filter_payload: dict,
+        *,
+        cursor: str | None,
+        limit: int,
+    ) -> tuple[list[int], str | None]:
+        """Cursor-paginated tag-id loader. Supports forward-compat fields:
+        ``q`` (substring on title) and ``is_active`` (bool). Unknown keys
+        are ignored so callers can pass UI filters as-is. Orders by
+        ``tags.id`` ascending so ``cursor`` is the last id of the prev page.
+        """
+        payload = filter_payload or {}
+        with self._session_factory() as session:
+            stmt = select(TagModel.id)
+
+            q = payload.get("q")
+            if q:
+                stmt = stmt.where(
+                    func.lower(TagModel.title).contains(func.lower(str(q)))
+                )
+
+            is_active = payload.get("is_active")
+            if isinstance(is_active, bool):
+                stmt = stmt.where(TagModel.is_active.is_(is_active))
+            elif isinstance(is_active, str) and is_active != "":
+                truthy = is_active.lower() in ("1", "true", "yes", "on", "да")
+                stmt = stmt.where(TagModel.is_active.is_(truthy))
+
+            if cursor is not None:
+                try:
+                    cursor_id = int(cursor)
+                except (TypeError, ValueError):
+                    cursor_id = 0
+                stmt = stmt.where(TagModel.id > cursor_id)
+
+            stmt = stmt.order_by(asc(TagModel.id)).limit(limit)
+            rows = session.execute(stmt).scalars().all()
+            ids = list(rows)
+            next_cursor = str(ids[-1]) if len(ids) == limit else None
+            return ids, next_cursor
+
+    @handle_db_errors("bulk set tag active")
+    def set_tag_active(self, tag_id: int, active: bool) -> None:
+        with self._session_factory() as session:
+            result = session.execute(
+                update(TagModel)
+                .where(TagModel.id == tag_id)
+                .values(is_active=bool(active))
+            )
+            if result.rowcount == 0:
+                raise TagNotFoundError(tag_id)
+            session.commit()
+
+    @handle_db_errors("bulk delete tag")
+    def bulk_delete_tag_one(self, tag_id: int) -> None:
+        with self._session_factory() as session:
+            model = session.get(TagModel, tag_id)
+            if model is None:
+                raise TagNotFoundError(tag_id)
+            in_use = session.scalar(
+                select(ProductTagModel.product_id)
+                .where(ProductTagModel.tag_id == tag_id)
+                .limit(1)
+            )
+            if in_use is not None:
+                raise TagInUseError(tag_id)
             session.delete(model)
             session.commit()

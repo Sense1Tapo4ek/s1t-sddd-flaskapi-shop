@@ -8,6 +8,8 @@ from catalog.ports.driving import (
     BulkProductsCategoryIn,
     BulkProductsDeleteIn,
     BulkProductsTagsIn,
+    BulkTagsActivateIn,
+    BulkTagsDeleteIn,
 )
 from catalog.ports.driving.facade import CatalogFacade
 from shared.adapters.driving.middleware import any_permission_required, permission_required
@@ -198,3 +200,24 @@ def tags_page():
 @any_permission_required("view_category_tree", "view_products", "edit_taxonomy")
 def catalog_page():
     return render_template("catalog/pages/catalog.html")
+
+
+# ─── Tags bulk actions ──────────────────────────────────────────────
+
+
+@taxonomy_admin_bp.route("/tags/bulk/activate", methods=["POST"])
+@permission_required("edit_taxonomy")
+@inject
+def tags_bulk_activate(facade: FromDishka[CatalogFacade]):
+    payload = BulkTagsActivateIn.model_validate(request.get_json(silent=True) or {})
+    result = facade.bulk_set_tags_active(payload)
+    return jsonify(result.model_dump(mode="json")), 200
+
+
+@taxonomy_admin_bp.route("/tags/bulk/delete", methods=["POST"])
+@permission_required("edit_taxonomy")
+@inject
+def tags_bulk_delete(facade: FromDishka[CatalogFacade]):
+    payload = BulkTagsDeleteIn.model_validate(request.get_json(silent=True) or {})
+    result = facade.bulk_delete_tags(payload)
+    return jsonify(result.model_dump(mode="json")), 200

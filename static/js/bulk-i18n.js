@@ -44,6 +44,9 @@
     "illegal_transition":           "Недопустимый переход статуса",
     "order_already_terminal":       "Заказ в финальном статусе",
     "not_found":                    "Не найдено",
+    "PRODUCT_NOT_FOUND":            "Товар не найден",
+    "TAG_NOT_FOUND":                "Тег не найден",
+    "CATEGORY_NOT_FOUND":           "Категория не найдена",
     "forbidden":                    "Запрещено",
     "validation_error":             "Ошибка валидации",
   };

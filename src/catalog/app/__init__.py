@@ -10,9 +10,17 @@ from .use_cases.bulk_delete_products_uc import (
     BulkDeleteProductsCommand,
     BulkDeleteProductsUseCase,
 )
+from .use_cases.bulk_delete_tags_uc import (
+    BulkDeleteTagsCommand,
+    BulkDeleteTagsUseCase,
+)
 from .use_cases.bulk_set_products_active_uc import (
     BulkSetProductsActiveCommand,
     BulkSetProductsActiveUseCase,
+)
+from .use_cases.bulk_set_tags_active_uc import (
+    BulkSetTagsActiveCommand,
+    BulkSetTagsActiveUseCase,
 )
 from .use_cases.create_demo_data_uc import CreateDemoDataUseCase
 from .use_cases.manage_catalog_uc import ManageCatalogUseCase
@@ -26,8 +34,12 @@ __all__ = [
     "BulkAssignProductsTagsUseCase",
     "BulkDeleteProductsCommand",
     "BulkDeleteProductsUseCase",
+    "BulkDeleteTagsCommand",
+    "BulkDeleteTagsUseCase",
     "BulkSetProductsActiveCommand",
     "BulkSetProductsActiveUseCase",
+    "BulkSetTagsActiveCommand",
+    "BulkSetTagsActiveUseCase",
     "CreateDemoDataUseCase",
     "ManageCatalogUseCase",
     "ManageTaxonomyUseCase",

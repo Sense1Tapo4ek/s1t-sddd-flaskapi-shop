@@ -460,3 +460,14 @@ class BulkProductsTagsIn(BaseModel):
 class BulkProductsDeleteIn(BaseModel):
     model_config = ConfigDict(frozen=True)
     target: BulkTarget
+
+
+class BulkTagsActivateIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget
+    active: bool
+
+
+class BulkTagsDeleteIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget

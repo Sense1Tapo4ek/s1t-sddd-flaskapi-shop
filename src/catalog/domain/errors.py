@@ -29,6 +29,16 @@ class TagNotFoundError(ApplicationError):
         )
 
 
+class TagInUseError(DomainError):
+    """Bulk delete blocked because the tag is still referenced by products."""
+
+    def __init__(self, tag_id: int) -> None:
+        super().__init__(
+            message=f"Тег {tag_id} используется в товарах",
+            code="tag_in_use",
+        )
+
+
 class AttributeNotFoundError(ApplicationError):
     def __init__(self, attribute_id: int) -> None:
         super().__init__(

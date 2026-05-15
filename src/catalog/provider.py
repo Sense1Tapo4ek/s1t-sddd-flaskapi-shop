@@ -4,7 +4,9 @@ from catalog.app import (
     BulkAssignProductsCategoryUseCase,
     BulkAssignProductsTagsUseCase,
     BulkDeleteProductsUseCase,
+    BulkDeleteTagsUseCase,
     BulkSetProductsActiveUseCase,
+    BulkSetTagsActiveUseCase,
     CreateDemoDataUseCase,
     ManageCatalogUseCase,
     ManageTaxonomyUseCase,
@@ -53,6 +55,8 @@ class CatalogProvider(Provider):
     bulk_assign_category_uc = provide(BulkAssignProductsCategoryUseCase)
     bulk_assign_tags_uc = provide(BulkAssignProductsTagsUseCase)
     bulk_delete_uc = provide(BulkDeleteProductsUseCase)
+    bulk_set_tags_active_uc = provide(BulkSetTagsActiveUseCase)
+    bulk_delete_tags_uc = provide(BulkDeleteTagsUseCase)
 
     # Facade
     facade = provide(CatalogFacade)

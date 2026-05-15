@@ -17,6 +17,7 @@ from .errors import (
     InvalidProductError,
     ProductInUseByActiveOrderError,
     ProductNotFoundError,
+    TagInUseError,
     TagNotFoundError,
 )
 
@@ -37,5 +38,6 @@ __all__ = [
     "ProductInUseByActiveOrderError",
     "ProductNotFoundError",
     "Tag",
+    "TagInUseError",
     "TagNotFoundError",
 ]

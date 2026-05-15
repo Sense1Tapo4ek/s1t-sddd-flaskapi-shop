@@ -11,8 +11,12 @@ from ...app import (
     BulkAssignProductsTagsUseCase,
     BulkDeleteProductsCommand,
     BulkDeleteProductsUseCase,
+    BulkDeleteTagsCommand,
+    BulkDeleteTagsUseCase,
     BulkSetProductsActiveCommand,
     BulkSetProductsActiveUseCase,
+    BulkSetTagsActiveCommand,
+    BulkSetTagsActiveUseCase,
     CreateDemoDataUseCase,
     ManageCatalogUseCase,
     ManageTaxonomyUseCase,
@@ -24,6 +28,8 @@ from .schemas import (
     BulkProductsCategoryIn,
     BulkProductsDeleteIn,
     BulkProductsTagsIn,
+    BulkTagsActivateIn,
+    BulkTagsDeleteIn,
     CatalogListOut,
     CategoryAttributeCreateIn,
     CategoryAttributeOut,
@@ -56,6 +62,8 @@ class CatalogFacade:
     _bulk_assign_category_uc: BulkAssignProductsCategoryUseCase
     _bulk_assign_tags_uc: BulkAssignProductsTagsUseCase
     _bulk_delete_uc: BulkDeleteProductsUseCase
+    _bulk_set_tags_active_uc: BulkSetTagsActiveUseCase
+    _bulk_delete_tags_uc: BulkDeleteTagsUseCase
 
     def _taxonomy(self) -> ManageTaxonomyUseCase:
         return self._taxonomy_uc
@@ -182,6 +190,16 @@ class CatalogFacade:
     def bulk_delete_products(self, payload: BulkProductsDeleteIn) -> BulkResultSchema:
         return self._bulk_delete_uc(
             BulkDeleteProductsCommand(target=payload.target)
+        )
+
+    def bulk_set_tags_active(self, payload: BulkTagsActivateIn) -> BulkResultSchema:
+        return self._bulk_set_tags_active_uc(
+            BulkSetTagsActiveCommand(target=payload.target, active=payload.active)
+        )
+
+    def bulk_delete_tags(self, payload: BulkTagsDeleteIn) -> BulkResultSchema:
+        return self._bulk_delete_tags_uc(
+            BulkDeleteTagsCommand(target=payload.target)
         )
 
     def create_product(
