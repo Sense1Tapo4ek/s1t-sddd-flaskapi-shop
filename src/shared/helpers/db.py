@@ -3,19 +3,28 @@ import logging
 
 from sqlalchemy.exc import IntegrityError
 
-from shared.generics.errors import DrivenPortError
+from shared.generics.errors import (
+    ApplicationError,
+    DomainError,
+    DrivenPortError,
+)
 
 logger = logging.getLogger("db")
 
 
 def handle_db_errors(operation: str = ""):
-    """Decorator that wraps DB exceptions into DrivenPortError."""
+    """Decorator that wraps DB exceptions into DrivenPortError.
+
+    Semantic LayerError subtypes (DomainError, ApplicationError) and
+    raw LookupError are re-raised unchanged — the bulk runner and
+    other callers rely on per-row business errors propagating intact.
+    """
     def decorator(fn):
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             try:
                 return fn(*args, **kwargs)
-            except (DrivenPortError, LookupError):
+            except (DrivenPortError, DomainError, ApplicationError, LookupError):
                 raise
             except IntegrityError:
                 label = operation or fn.__name__

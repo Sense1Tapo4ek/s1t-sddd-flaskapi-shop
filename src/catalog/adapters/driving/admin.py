@@ -12,6 +12,7 @@ from catalog.ports.driving import (
     BulkTagsDeleteIn,
 )
 from catalog.ports.driving.facade import CatalogFacade
+from shared.adapters.driving.bulk import bulk_action_log, bulk_rate_limited
 from shared.adapters.driving.middleware import any_permission_required, permission_required
 from shared.adapters.driving.htmx import render_partial_or_full
 from shared.helpers.parsing import parse_optional_int, safe_float, parse_table_params
@@ -150,6 +151,8 @@ def delete_product(product_id: int, facade: FromDishka[CatalogFacade]):
 
 @catalog_admin_bp.route("/bulk/activate", methods=["POST"])
 @permission_required("edit_products")
+@bulk_rate_limited("products.bulk_activate")
+@bulk_action_log("products.bulk_activate")
 @inject
 def products_bulk_activate(facade: FromDishka[CatalogFacade]):
     payload = BulkProductsActivateIn.model_validate(request.get_json(silent=True) or {})
@@ -159,6 +162,8 @@ def products_bulk_activate(facade: FromDishka[CatalogFacade]):
 
 @catalog_admin_bp.route("/bulk/category", methods=["POST"])
 @permission_required("edit_products")
+@bulk_rate_limited("products.bulk_assign_category")
+@bulk_action_log("products.bulk_assign_category")
 @inject
 def products_bulk_category(facade: FromDishka[CatalogFacade]):
     payload = BulkProductsCategoryIn.model_validate(request.get_json(silent=True) or {})
@@ -168,6 +173,8 @@ def products_bulk_category(facade: FromDishka[CatalogFacade]):
 
 @catalog_admin_bp.route("/bulk/tags", methods=["POST"])
 @permission_required("edit_products")
+@bulk_rate_limited("products.bulk_assign_tags")
+@bulk_action_log("products.bulk_assign_tags")
 @inject
 def products_bulk_tags(facade: FromDishka[CatalogFacade]):
     payload = BulkProductsTagsIn.model_validate(request.get_json(silent=True) or {})
@@ -177,6 +184,8 @@ def products_bulk_tags(facade: FromDishka[CatalogFacade]):
 
 @catalog_admin_bp.route("/bulk/delete", methods=["POST"])
 @permission_required("edit_products")
+@bulk_rate_limited("products.bulk_delete")
+@bulk_action_log("products.bulk_delete")
 @inject
 def products_bulk_delete(facade: FromDishka[CatalogFacade]):
     payload = BulkProductsDeleteIn.model_validate(request.get_json(silent=True) or {})
@@ -207,6 +216,8 @@ def catalog_page():
 
 @taxonomy_admin_bp.route("/tags/bulk/activate", methods=["POST"])
 @permission_required("edit_taxonomy")
+@bulk_rate_limited("tags.bulk_activate")
+@bulk_action_log("tags.bulk_activate")
 @inject
 def tags_bulk_activate(facade: FromDishka[CatalogFacade]):
     payload = BulkTagsActivateIn.model_validate(request.get_json(silent=True) or {})
@@ -216,6 +227,8 @@ def tags_bulk_activate(facade: FromDishka[CatalogFacade]):
 
 @taxonomy_admin_bp.route("/tags/bulk/delete", methods=["POST"])
 @permission_required("edit_taxonomy")
+@bulk_rate_limited("tags.bulk_delete")
+@bulk_action_log("tags.bulk_delete")
 @inject
 def tags_bulk_delete(facade: FromDishka[CatalogFacade]):
     payload = BulkTagsDeleteIn.model_validate(request.get_json(silent=True) or {})

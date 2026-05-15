@@ -4,6 +4,7 @@ from dishka.integrations.flask import inject, FromDishka
 
 from ordering.ports.driving.facade import OrderingFacade
 from ordering.ports.driving.schemas import BulkOrdersStatusIn, OrderStatusUpdateIn
+from shared.adapters.driving.bulk import bulk_action_log, bulk_rate_limited
 from shared.adapters.driving.middleware import permission_required
 from shared.adapters.driving.htmx import render_partial_or_full
 from shared.helpers.parsing import parse_table_params
@@ -76,6 +77,8 @@ def orders_badge(facade: FromDishka[OrderingFacade]):
 
 @ordering_admin_bp.route("/bulk/status", methods=["POST"])
 @permission_required("manage_orders")
+@bulk_rate_limited("orders.bulk_change_status")
+@bulk_action_log("orders.bulk_change_status")
 @inject
 def orders_bulk_status(facade: FromDishka[OrderingFacade]):
     payload = BulkOrdersStatusIn.model_validate(request.get_json(silent=True) or {})

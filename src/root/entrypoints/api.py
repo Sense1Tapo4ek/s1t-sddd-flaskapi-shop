@@ -93,6 +93,9 @@ def create_app() -> APIFlask:
         docs_path=docs_path,
     )
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+    app.config["BULK_RATE_LIMIT_ENABLED"] = os.environ.get(
+        "BULK_RATE_LIMIT_ENABLED", ""
+    ).lower() in ("1", "true", "yes", "on")
 
     app.security_schemes = {
         "JWTAuth": {
