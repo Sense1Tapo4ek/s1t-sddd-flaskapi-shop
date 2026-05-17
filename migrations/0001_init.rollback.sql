@@ -1,5 +1,6 @@
 -- Rollback for 0001_init. Drop in reverse FK order.
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS customers;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS product_images;
 DROP TABLE IF EXISTS product_attribute_values;

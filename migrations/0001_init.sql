@@ -16,8 +16,27 @@ CREATE TABLE admins (
     recovery_code_attempts INT NOT NULL DEFAULT 0,
     recovery_code_last_sent_at DATETIME NULL,
     recovery_code_locked_until DATETIME NULL,
+    token_version INT NOT NULL DEFAULT 0,
+    last_login_at DATETIME NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_admins_login (login)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE customers (
+    id INT NOT NULL AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    token_version INT NOT NULL DEFAULT 0,
+    last_login_at DATETIME NULL,
+    recovery_code_hash VARCHAR(255) NULL,
+    recovery_code_expires DATETIME NULL,
+    recovery_code_attempts INT NOT NULL DEFAULT 0,
+    recovery_code_last_sent_at DATETIME NULL,
+    recovery_code_locked_until DATETIME NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_customers_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE settings (

@@ -18,6 +18,7 @@ from sqlalchemy.engine import Engine
 
 REQUIRED_TABLES: tuple[str, ...] = (
     "admins",
+    "customers",
     "settings",
     "storage_settings",
     "categories",
