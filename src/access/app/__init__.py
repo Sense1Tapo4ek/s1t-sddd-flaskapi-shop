@@ -1,4 +1,4 @@
-from .interfaces import IAdminRepo
+from .interfaces import IAdminRepo, ICustomerRepo, IEmailSender
 
 from .commands import LoginCommand, ChangePasswordCommand
 
@@ -9,6 +9,8 @@ from .use_cases.verify_recovery_code_uc import VerifyRecoveryCodeUseCase
 
 __all__ = [
     "IAdminRepo",
+    "ICustomerRepo",
+    "IEmailSender",
     "LoginCommand",
     "ChangePasswordCommand",
     "LoginUseCase",
