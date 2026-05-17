@@ -39,10 +39,18 @@ services:
       ACCESS_JWT_SECRET: ${ACCESS_JWT_SECRET:-change-me-in-production}
       ACCESS_DEFAULT_LOGIN: ${ACCESS_DEFAULT_LOGIN:-admin}
       ACCESS_DEFAULT_PASSWORD: ${ACCESS_DEFAULT_PASSWORD:-changeme}
+      ACCESS_PROMOTE_TO_SUPERADMIN: ${ACCESS_PROMOTE_TO_SUPERADMIN:-true}
       CATALOG_UPLOAD_DIR: media/products
       SYSTEM_RECOVERY_TOKEN: ${SYSTEM_RECOVERY_TOKEN:-change-me-in-production}
       ROOT_APP_ENV: ${ROOT_APP_ENV:-dev}
       FLASK_DEBUG: "0"
+      # SMTP — empty SMTP_HOST switches to LoggingEmailSender (recovery code lands in container logs).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
     restart: unless-stopped
 
 volumes:
