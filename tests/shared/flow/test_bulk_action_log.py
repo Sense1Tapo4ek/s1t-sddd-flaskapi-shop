@@ -37,6 +37,9 @@ def _auth(token: str) -> dict[str, str]:
 def _make_app(monkeypatch, tmp_path):
     monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
+    monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
+    monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
+    monkeypatch.setenv("ACCESS_PROMOTE_TO_SUPERADMIN", "true")
     from root.entrypoints.api import create_app
     return create_app()
 

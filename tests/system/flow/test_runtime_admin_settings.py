@@ -35,17 +35,40 @@ def test_runtime_app_identity_and_owner_catalog_access_apply_without_restart(
     Given an owner token created before settings are changed,
     When superadmin enables catalog edit access and changes app identity in settings,
     Then owner catalog access and rendered app identity update without restarting Flask.
+
+    Phase-1 note: dual-user bootstrap was removed. The superadmin user is the
+    bootstrapped user (superadmin/superadmin). A separate owner-role user
+    (admin/changeme) is inserted via direct DB write after app creation.
     """
     # Arrange
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
+    db_path = tmp_path / "shop.db"
+    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
+    monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
+    monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
+    monkeypatch.setenv("ACCESS_PROMOTE_TO_SUPERADMIN", "true")
     monkeypatch.setenv("ACCESS_OWNER_CAN_VIEW_CATEGORY_TREE", "false")
     monkeypatch.setenv("ACCESS_OWNER_CAN_VIEW_PRODUCTS", "false")
     monkeypatch.setenv("ACCESS_OWNER_CAN_EDIT_PRODUCTS", "false")
 
+    from sqlalchemy.orm import Session
     from root.entrypoints.api import create_app
 
     app = create_app()
+
+    # Insert a second owner-role user directly so we can test two distinct actors.
+    engine = create_db_engine(f"sqlite:///{db_path}")
+    with Session(engine) as session:
+        owner_user = UserModel(
+            login="admin",
+            password_hash=hash_password("changeme"),
+            role="owner",
+            is_active=True,
+            password_changed_at=None,
+        )
+        session.add(owner_user)
+        session.commit()
+
     client = app.test_client()
     owner_token = _login(client, "admin", "changeme")
     superadmin_token = _login(client, "superadmin", "superadmin")
@@ -85,6 +108,9 @@ def test_default_dev_superadmin_cannot_download_sqlite_database_dump(monkeypatch
     # Arrange
     monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
+    monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
+    monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
+    monkeypatch.setenv("ACCESS_PROMOTE_TO_SUPERADMIN", "true")
 
     from root.entrypoints.api import create_app
 
@@ -124,6 +150,9 @@ def test_superadmin_can_download_latest_database_dump_after_password_change(monk
     try:
         monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
         monkeypatch.setenv("ROOT_APP_ENV", "dev")
+        monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
+        monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
+        monkeypatch.setenv("ACCESS_PROMOTE_TO_SUPERADMIN", "true")
 
         from root.entrypoints.api import create_app
 
@@ -172,6 +201,9 @@ def test_database_dump_returns_clear_error_when_no_dumps_available(monkeypatch, 
     try:
         monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
         monkeypatch.setenv("ROOT_APP_ENV", "dev")
+        monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
+        monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
+        monkeypatch.setenv("ACCESS_PROMOTE_TO_SUPERADMIN", "true")
 
         from root.entrypoints.api import create_app
 
