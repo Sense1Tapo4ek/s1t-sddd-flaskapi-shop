@@ -222,6 +222,16 @@ def create_app() -> APIFlask:
         limiter.limit(root_config.rate_limit_recovery)(
             app.view_functions["system.recover_password"]
         )
+    # Customer register / recover are abuse-prone — rate-limit in every env,
+    # not just prod. Dev still keeps its high default (10000/min) for tests.
+    if "access.register_customer" in app.view_functions:
+        limiter.limit(root_config.rate_limit_customer_register)(
+            app.view_functions["access.register_customer"]
+        )
+    if "access.recover_customer" in app.view_functions:
+        limiter.limit(root_config.rate_limit_customer_recover)(
+            app.view_functions["access.recover_customer"]
+        )
 
     @app.route("/media/products/<path:filename>")
     @app.doc(hide=True)

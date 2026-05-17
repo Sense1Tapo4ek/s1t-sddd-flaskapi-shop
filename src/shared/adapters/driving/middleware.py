@@ -29,6 +29,7 @@ def jwt_required(f):
             raise DrivingAdapterError("Неверный или устаревший токен", "AUTH_INVALID")
         request.admin_payload = payload
         request.admin_token_source = token_source
+        request.account_type = payload.get("account_type", "admin")
         if token_source == "cookie":
             _validate_csrf(payload)
         return f(*args, **kwargs)
@@ -87,11 +88,33 @@ def has_permission(permission: str) -> bool:
     return bool(permissions.get(permission))
 
 
+def admin_required(f):
+    @wraps(f)
+    @jwt_required
+    def decorated(*args, **kwargs):
+        if getattr(request, "account_type", "admin") != "admin":
+            raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+        return f(*args, **kwargs)
+    return decorated
+
+
+def customer_required(f):
+    @wraps(f)
+    @jwt_required
+    def decorated(*args, **kwargs):
+        if getattr(request, "account_type", "admin") != "customer":
+            raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+        return f(*args, **kwargs)
+    return decorated
+
+
 def permission_required(permission: str):
     def decorator(f):
         @wraps(f)
         @jwt_required
         def decorated(*args, **kwargs):
+            if getattr(request, "account_type", "admin") != "admin":
+                raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             if not has_permission(permission):
                 raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             return f(*args, **kwargs)
@@ -104,6 +127,8 @@ def any_permission_required(*permissions: str):
         @wraps(f)
         @jwt_required
         def decorated(*args, **kwargs):
+            if getattr(request, "account_type", "admin") != "admin":
+                raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             if not any(has_permission(permission) for permission in permissions):
                 raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             return f(*args, **kwargs)
@@ -115,6 +140,8 @@ def superadmin_required(f):
     @wraps(f)
     @jwt_required
     def decorated(*args, **kwargs):
+        if getattr(request, "account_type", "admin") != "admin":
+            raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
         if not is_superadmin():
             raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
         return f(*args, **kwargs)

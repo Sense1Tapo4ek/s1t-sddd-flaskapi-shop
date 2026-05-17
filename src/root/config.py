@@ -31,3 +31,5 @@ class RootConfig(BaseSettings):
     rate_limit_login: str = "5 per minute"
     rate_limit_order: str = "10 per minute"
     rate_limit_recovery: str = "3 per minute"
+    rate_limit_customer_register: str = "5 per hour"
+    rate_limit_customer_recover: str = "3 per hour"
