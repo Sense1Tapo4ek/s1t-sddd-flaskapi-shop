@@ -2,24 +2,24 @@
    Used by:
    - static/js/catalog-workspace.js (state.tagsTable)
    Spec: docs/superpowers/specs/2026-05-15-bulk-actions-design.md §4.
+
+   Every action uses the unified modal flow — no soft-arm, no
+   type-to-confirm. Destructive Delete gets a red primary button via
+   `variant: "danger"`.
 */
 
 (function (global) {
   "use strict";
 
-  function fmtNum(n) {
-    return (typeof global.bulkFmtNumber === "function") ? global.bulkFmtNumber(n) : String(n);
+  function bulkT(key, params) {
+    return (typeof global.bulkT === "function") ? global.bulkT(key, params) : key;
   }
 
-  // Wraps an api.post call: api.js already shows an error toast on failure,
-  // so a failed call should NOT trigger BulkActionBar's "success" path.
   async function postBulk(url, body) {
     const res = await global.api.post(url, body);
     if (res && res._failed) return { cancelled: true };
     return res;
   }
-
-  // ─── Mount BulkActionBar on a SmartTable ────────────────────────────
 
   function mountTagsBulkBar(table) {
     if (!table) return null;
@@ -29,29 +29,29 @@
       actions: [
         {
           id: "activate",
-          label: "Активировать",
+          label: bulkT("bulk.btn.activate"),
           icon: "check-circle",
-          confirm: "soft",
+          confirm: "modal",
+          explain: () => bulkT("bulk.tags.explain.activate"),
           handler: payload => postBulk("/admin/tags/bulk/activate",
             { ...payload, active: true })
         },
         {
           id: "deactivate",
-          label: "Деактивировать",
+          label: bulkT("bulk.btn.deactivate"),
           icon: "circle-off",
-          confirm: "soft",
+          confirm: "modal",
+          explain: () => bulkT("bulk.tags.explain.deactivate"),
           handler: payload => postBulk("/admin/tags/bulk/activate",
             { ...payload, active: false })
         },
         {
           id: "delete",
-          label: "Удалить",
+          label: bulkT("bulk.btn.delete"),
           icon: "trash-2",
           variant: "danger",
-          confirm: "type-to-confirm",
-          typeWord: "удалить",
-          confirmTitle: "Удалить выбранные теги?",
-          confirmText: sel => `Будет удалено: ${fmtNum(sel.total)}. Действие необратимо.`,
+          confirm: "modal",
+          explain: sel => bulkT("bulk.tags.confirm.deleteText", { n: sel.total }),
           handler: payload => postBulk("/admin/tags/bulk/delete", payload)
         }
       ]

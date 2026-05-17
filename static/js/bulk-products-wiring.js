@@ -3,6 +3,11 @@
    - static/templates/catalog/pages/products.html (window.productsTable)
    - static/js/catalog-workspace.js (state.categoryProductsTable)
    Spec: docs/superpowers/specs/2026-05-15-bulk-actions-design.md §4.
+
+   Every action uses the unified modal flow (see BulkActionBar
+   `_openActionModal`): each action descriptor supplies `explain(sel)`
+   plain text and, when an extra choice is needed (category/tags),
+   `customControls(sel)` mounting a picker inside the same modal.
 */
 
 (function (global) {
@@ -15,13 +20,11 @@
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
-  function fmtNum(n) {
-    return (typeof global.bulkFmtNumber === "function") ? global.bulkFmtNumber(n) : String(n);
+  function bulkT(key, params) {
+    return (typeof global.bulkT === "function") ? global.bulkT(key, params) : key;
   }
 
-  // ─── Category picker modal ──────────────────────────────────────────
-  // Returns a Promise resolving to a leaf category_id (number) or null
-  // if the user cancelled.
+  // ─── Category picker controls (mounted into the unified modal) ──────
 
   function flattenLeafCategories(nodes, depth, out) {
     if (!Array.isArray(nodes)) return;
@@ -32,155 +35,105 @@
     });
   }
 
-  async function pickCategoryModal() {
-    const tree = await global.api.get("/catalog/admin/categories/tree");
-    if (!tree || tree._failed) return null;
-
-    const flat = [];
-    flattenLeafCategories(tree, 0, flat);
-
-    return new Promise(resolve => {
-      const html = `
-        <div class="modal-overlay modal-overlay--active" id="bulkCategoryOverlay" role="dialog" aria-modal="true">
-          <div class="modal">
-            <div class="modal__header">
-              Назначить категорию
-              <button class="modal__close" type="button" data-role="close">&times;</button>
+  function categoryControls() {
+    const state = { selectedId: null, flat: [] };
+    const html = `
+      <input type="text" class="form-input" data-role="cat-search"
+             placeholder="${escapeHTML(bulkT("bulk.products.modal.category.search"))}"
+             autocomplete="off" style="margin-bottom:8px;">
+      <div data-role="cat-list" class="bulk-cat-list"
+           style="max-height:40vh; overflow-y:auto; border:1px solid var(--color-border); border-radius:var(--radius); padding:4px;">
+        <p class="empty-text" style="margin:8px;">${escapeHTML(bulkT("bulk.products.modal.category.help"))}</p>
+      </div>
+    `;
+    function renderList(overlay) {
+      const listEl = overlay.querySelector('[data-role="cat-list"]');
+      const searchEl = overlay.querySelector('[data-role="cat-search"]');
+      const q = (searchEl.value || "").trim().toLowerCase();
+      const items = state.flat
+        .filter(c => !q || c.title.toLowerCase().includes(q))
+        .map(c => {
+          const pad = 8 + c.depth * 16;
+          const disabled = !c.isLeaf;
+          const isSel = c.id === state.selectedId;
+          const notLeaf = bulkT("bulk.products.modal.category.notLeaf");
+          return `
+            <div class="bulk-cat-item${disabled ? ' is-disabled' : ''}${isSel ? ' is-selected' : ''}"
+                 data-cat-id="${c.id}" data-leaf="${c.isLeaf ? '1' : '0'}"
+                 style="padding:6px 8px 6px ${pad}px; cursor:${disabled ? 'not-allowed' : 'pointer'}; color:${disabled ? 'var(--color-text-muted)' : 'inherit'}; background:${isSel ? 'var(--color-bg-soft, #f4f5f1)' : 'transparent'}; border-radius:var(--radius);">
+              ${escapeHTML(c.title)}${disabled ? ` <span style="font-size:11px;">(${escapeHTML(notLeaf)})</span>` : ""}
             </div>
-            <div class="modal__body">
-              <p style="font-size:13px; color:var(--color-text-muted); margin:0 0 12px;">
-                Выберите конечную категорию. Неконечные категории (с подкатегориями) недоступны.
-              </p>
-              <input type="text" class="form-input" id="bulkCategorySearch" placeholder="Поиск…" autocomplete="off" style="margin-bottom:8px;">
-              <div id="bulkCategoryList" style="max-height:50vh; overflow-y:auto; border:1px solid var(--color-border); border-radius:var(--radius); padding:4px;"></div>
-            </div>
-            <div class="modal__footer">
-              <button type="button" class="btn btn--ghost" data-role="cancel">Отмена</button>
-              <button type="button" class="btn btn--primary" data-role="confirm" disabled>Назначить</button>
-            </div>
-          </div>
-        </div>
-      `;
-      const host = document.createElement("div");
-      host.innerHTML = html;
-      const overlay = host.firstElementChild;
-      document.body.appendChild(overlay);
-
-      const listEl = overlay.querySelector("#bulkCategoryList");
-      const searchEl = overlay.querySelector("#bulkCategorySearch");
-      const confirmBtn = overlay.querySelector('[data-role="confirm"]');
-      let selectedId = null;
-
-      function renderList(query) {
-        const q = (query || "").trim().toLowerCase();
-        const items = flat
-          .filter(c => !q || c.title.toLowerCase().includes(q))
-          .map(c => {
-            const pad = 8 + c.depth * 16;
-            const disabled = !c.isLeaf;
-            const isSel = c.id === selectedId;
-            return `
-              <div class="bulk-cat-item${disabled ? ' is-disabled' : ''}${isSel ? ' is-selected' : ''}"
-                   data-cat-id="${c.id}" data-leaf="${c.isLeaf ? '1' : '0'}"
-                   style="padding:6px 8px 6px ${pad}px; cursor:${disabled ? 'not-allowed' : 'pointer'}; color:${disabled ? 'var(--color-text-muted)' : 'inherit'}; background:${isSel ? 'var(--color-bg-soft, #f4f5f1)' : 'transparent'}; border-radius:var(--radius);">
-                ${escapeHTML(c.title)}${disabled ? ' <span style="font-size:11px;">(не конечная)</span>' : ''}
-              </div>
-            `;
-          })
-          .join("");
-        listEl.innerHTML = items || '<p class="empty-text" style="margin:8px;">Ничего не найдено</p>';
-      }
-      renderList("");
-
-      listEl.addEventListener("click", e => {
-        const row = e.target.closest("[data-cat-id]");
-        if (!row || row.dataset.leaf !== "1") return;
-        selectedId = Number(row.dataset.catId);
-        confirmBtn.disabled = false;
-        renderList(searchEl.value);
-      });
-      searchEl.addEventListener("input", () => renderList(searchEl.value));
-
-      const close = (result) => {
-        overlay.remove();
-        document.removeEventListener("keydown", onKey);
-        resolve(result);
-      };
-      const onKey = (e) => { if (e.key === "Escape") close(null); };
-
-      overlay.querySelector('[data-role="cancel"]').addEventListener("click", () => close(null));
-      overlay.querySelector('[data-role="close"]').addEventListener("click", () => close(null));
-      overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
-      confirmBtn.addEventListener("click", () => {
-        if (selectedId == null) return;
-        close(selectedId);
-      });
-      document.addEventListener("keydown", onKey);
-      setTimeout(() => searchEl.focus(), 30);
-    });
+          `;
+        })
+        .join("");
+      listEl.innerHTML = items || `<p class="empty-text" style="margin:8px;">${escapeHTML(bulkT("bulk.empty.notFound"))}</p>`;
+    }
+    return {
+      html: html,
+      onMount: (overlay, ctx) => {
+        ctx.setValid(false);
+        global.api.get("/catalog/admin/categories/tree").then(tree => {
+          if (!tree || tree._failed) return;
+          state.flat = [];
+          flattenLeafCategories(tree, 0, state.flat);
+          renderList(overlay);
+        });
+        const searchEl = overlay.querySelector('[data-role="cat-search"]');
+        const listEl = overlay.querySelector('[data-role="cat-list"]');
+        searchEl.addEventListener("input", () => renderList(overlay));
+        listEl.addEventListener("click", e => {
+          const row = e.target.closest("[data-cat-id]");
+          if (!row || row.dataset.leaf !== "1") return;
+          state.selectedId = Number(row.dataset.catId);
+          renderList(overlay);
+          ctx.setValid(true);
+        });
+      },
+      validate: () => state.selectedId != null,
+      getValue: () => ({ category_id: state.selectedId }),
+    };
   }
 
-  // ─── Tags picker modal ──────────────────────────────────────────────
-  // Returns a Promise resolving to { tag_ids: number[], mode: 'replace'|'add'|'remove' }
-  // or null if the user cancelled.
+  // ─── Tags picker controls ───────────────────────────────────────────
 
-  function pickTagsModal() {
-    return new Promise(resolve => {
-      const html = `
-        <div class="modal-overlay modal-overlay--active" id="bulkTagsOverlay" role="dialog" aria-modal="true">
-          <div class="modal">
-            <div class="modal__header">
-              Изменить теги
-              <button class="modal__close" type="button" data-role="close">&times;</button>
-            </div>
-            <div class="modal__body">
-              <fieldset style="border:none; padding:0; margin:0 0 12px;">
-                <legend style="font-size:13px; color:var(--color-text-muted); margin-bottom:6px;">Режим</legend>
-                <label style="margin-right:12px;"><input type="radio" name="bulkTagsMode" value="replace" checked> Заменить</label>
-                <label style="margin-right:12px;"><input type="radio" name="bulkTagsMode" value="add"> Добавить</label>
-                <label><input type="radio" name="bulkTagsMode" value="remove"> Убрать</label>
-              </fieldset>
-              <div id="bulkTagsPickerHost" class="tag-picker"></div>
-            </div>
-            <div class="modal__footer">
-              <button type="button" class="btn btn--ghost" data-role="cancel">Отмена</button>
-              <button type="button" class="btn btn--primary" data-role="confirm" disabled>Применить</button>
-            </div>
-          </div>
-        </div>
-      `;
-      const host = document.createElement("div");
-      host.innerHTML = html;
-      const overlay = host.firstElementChild;
-      document.body.appendChild(overlay);
-
-      const pickerHost = overlay.querySelector("#bulkTagsPickerHost");
-      const confirmBtn = overlay.querySelector('[data-role="confirm"]');
-      const picker = new global.TagPicker({ container: pickerHost });
-      picker.load([]).then(() => {
-        pickerHost.addEventListener("change", () => {
-          confirmBtn.disabled = picker.getValue().length === 0;
+  function tagsControls() {
+    const state = { mode: "add", tagIds: [], picker: null };
+    const html = `
+      <fieldset>
+        <legend>${escapeHTML(bulkT("bulk.products.modal.tags.modeLegend"))}</legend>
+        <label><input type="radio" name="bulkTagsMode" value="add" checked> ${escapeHTML(bulkT("bulk.products.modal.tags.mode.add"))}</label>
+        <label><input type="radio" name="bulkTagsMode" value="remove"> ${escapeHTML(bulkT("bulk.products.modal.tags.mode.remove"))}</label>
+        <label><input type="radio" name="bulkTagsMode" value="replace"> ${escapeHTML(bulkT("bulk.products.modal.tags.mode.replace"))}</label>
+      </fieldset>
+      <div data-role="tags-picker" class="tag-picker"></div>
+    `;
+    function refresh(overlay, ctx) {
+      const valid = state.tagIds.length > 0;
+      const danger = state.mode === "replace";
+      ctx.setValid({ valid: valid, danger: danger });
+    }
+    return {
+      html: html,
+      onMount: (overlay, ctx) => {
+        const pickerHost = overlay.querySelector('[data-role="tags-picker"]');
+        state.picker = new global.TagPicker({ container: pickerHost });
+        state.picker.load([]).then(() => {
+          pickerHost.addEventListener("change", () => {
+            state.tagIds = state.picker.getValue();
+            refresh(overlay, ctx);
+          });
         });
-      });
-
-      const close = (result) => {
-        overlay.remove();
-        document.removeEventListener("keydown", onKey);
-        resolve(result);
-      };
-      const onKey = (e) => { if (e.key === "Escape") close(null); };
-
-      overlay.querySelector('[data-role="cancel"]').addEventListener("click", () => close(null));
-      overlay.querySelector('[data-role="close"]').addEventListener("click", () => close(null));
-      overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
-      confirmBtn.addEventListener("click", () => {
-        const tag_ids = picker.getValue();
-        if (!tag_ids.length) return;
-        const mode = overlay.querySelector('input[name="bulkTagsMode"]:checked').value;
-        close({ tag_ids: tag_ids, mode: mode });
-      });
-      document.addEventListener("keydown", onKey);
-    });
+        overlay.querySelectorAll('input[name="bulkTagsMode"]').forEach(input => {
+          input.addEventListener("change", () => {
+            state.mode = overlay.querySelector('input[name="bulkTagsMode"]:checked').value;
+            refresh(overlay, ctx);
+          });
+        });
+        ctx.setValid({ valid: false, danger: false });
+      },
+      validate: () => state.tagIds.length > 0,
+      getValue: () => ({ tag_ids: state.tagIds, mode: state.mode }),
+    };
   }
 
   // Wraps an api.post call: api.js already shows an error toast on failure,
@@ -201,53 +154,49 @@
       actions: [
         {
           id: "activate",
-          label: "Активировать",
+          label: bulkT("bulk.btn.activate"),
           icon: "check-circle",
-          confirm: "soft",
+          confirm: "modal",
+          explain: () => bulkT("bulk.products.explain.activate"),
           handler: payload => postBulk("/admin/products/bulk/activate",
             { ...payload, active: true })
         },
         {
           id: "deactivate",
-          label: "Деактивировать",
+          label: bulkT("bulk.btn.deactivate"),
           icon: "circle-off",
-          confirm: "soft",
+          confirm: "modal",
+          explain: () => bulkT("bulk.products.explain.deactivate"),
           handler: payload => postBulk("/admin/products/bulk/activate",
             { ...payload, active: false })
         },
         {
           id: "category",
-          label: "Категория",
+          label: bulkT("bulk.products.action.category"),
           icon: "folder",
-          confirm: "none",
-          handler: async (payload) => {
-            const categoryId = await pickCategoryModal();
-            if (categoryId == null) return { cancelled: true };
-            return postBulk("/admin/products/bulk/category",
-              { ...payload, category_id: categoryId });
-          }
+          confirm: "modal",
+          explain: () => bulkT("bulk.products.explain.category"),
+          customControls: () => categoryControls(),
+          handler: payload => postBulk("/admin/products/bulk/category", payload)
         },
         {
           id: "tags",
-          label: "Теги",
+          label: bulkT("bulk.products.action.tags"),
           icon: "tag",
-          confirm: "none",
-          handler: async (payload) => {
-            const choice = await pickTagsModal();
-            if (!choice) return { cancelled: true };
-            return postBulk("/admin/products/bulk/tags",
-              { ...payload, tag_ids: choice.tag_ids, mode: choice.mode });
-          }
+          confirm: "modal",
+          // Explain swaps by mode at modal-open time. Mode picker also
+          // recolors the primary button to red when "replace" is chosen.
+          explain: () => bulkT("bulk.products.explain.tags.add"),
+          customControls: () => tagsControls(),
+          handler: payload => postBulk("/admin/products/bulk/tags", payload)
         },
         {
           id: "delete",
-          label: "Удалить",
+          label: bulkT("bulk.btn.delete"),
           icon: "trash-2",
           variant: "danger",
-          confirm: "type-to-confirm",
-          typeWord: "удалить",
-          confirmTitle: "Удалить выбранные товары?",
-          confirmText: sel => `Будет удалено: ${fmtNum(sel.total)}. Действие необратимо.`,
+          confirm: "modal",
+          explain: sel => bulkT("bulk.products.confirm.deleteText", { n: sel.total }),
           handler: payload => postBulk("/admin/products/bulk/delete", payload)
         }
       ]
@@ -255,6 +204,4 @@
   }
 
   global.mountProductsBulkBar = mountProductsBulkBar;
-  global.bulkPickCategory = pickCategoryModal;
-  global.bulkPickTags = pickTagsModal;
 })(window);

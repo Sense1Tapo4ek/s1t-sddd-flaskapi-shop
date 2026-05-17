@@ -5,6 +5,7 @@
   "use strict";
 
   const STRINGS = {
+    // ─── Bar + counters ───────────────────────────────────────────────
     "bulk.count":               "Выбрано: {n}",
     "bulk.clear":               "Снять выделение",
     "bulk.master.page":         "Выделить страницу ({n})",
@@ -13,14 +14,17 @@
     "bulk.allSelected":         "Выбрано все {total} по фильтру.",
     "bulk.filterChanged":       "Выделение сброшено: фильтр изменён.",
     "bulk.htmxReset.hint":      "Выделение сброшено. Используйте «Выделить всё», чтобы сохранять выбор между категориями.",
-    "bulk.confirm.softPrompt":  "Подтвердите",
-    "bulk.confirm.modalTitle":  "Подтвердите действие",
-    "bulk.confirm.modalConfirm":"Да, выполнить",
-    "bulk.confirm.modalCancel": "Отмена",
-    "bulk.confirm.type.title":  "Подтвердите удаление",
-    "bulk.confirm.type.hint":   "Чтобы подтвердить, введите слово:",
-    "bulk.confirm.type.button": "Удалить {n}",
-    "bulk.confirm.type.word":   "удалить",
+
+    // ─── Unified action modal ─────────────────────────────────────────
+    "bulk.modal.cancel":        "Отмена",
+    "bulk.modal.primary":       "{label} ({n})",
+    "bulk.preview.show":        "Показать список",
+    "bulk.preview.hide":        "Скрыть список",
+    "bulk.preview.moreSuffix":  "… и ещё {n}",
+    "bulk.preview.empty":       "Нет данных для предпросмотра",
+    "bulk.preview.filterHint":  "Выбор по фильтру — список доступен после выполнения.",
+
+    // ─── Lifecycle ────────────────────────────────────────────────────
     "bulk.beforeUnload":        "Операция выполняется. Закрыть страницу?",
     "bulk.actionInProgress":    "Выполняется…",
     "bulk.actionDone":          "Готово: затронуто {n}",
@@ -28,11 +32,66 @@
     "bulk.actionPartial.sub":   "{failed} не удалось обработать.",
     "bulk.actionPartial.details":"Показать подробности",
     "bulk.actionFailed":        "Не удалось выполнить операцию",
+
+    // ─── Failures-detail modal ────────────────────────────────────────
     "bulk.failures.title":      "Не удалось обработать",
     "bulk.failures.col.name":   "Название",
     "bulk.failures.col.id":     "ID",
     "bulk.failures.col.reason": "Причина",
     "bulk.failures.close":      "Закрыть",
+
+    // ─── Action labels (used in bar buttons and modal headers) ────────
+    "bulk.btn.activate":        "Активировать",
+    "bulk.btn.deactivate":      "Деактивировать",
+    "bulk.btn.delete":          "Удалить",
+    "bulk.btn.cancel":          "Отмена",
+    "bulk.btn.apply":           "Применить",
+    "bulk.btn.assign":          "Назначить",
+
+    // ─── Products ─────────────────────────────────────────────────────
+    "bulk.products.action.category":         "Категория",
+    "bulk.products.action.tags":             "Теги",
+
+    "bulk.products.modal.category.title":    "Перенести в категорию",
+    "bulk.products.modal.category.help":     "Выберите конечную категорию. Промежуточные узлы дерева недоступны.",
+    "bulk.products.modal.category.search":   "Поиск категории…",
+    "bulk.products.modal.category.notLeaf":  "не конечная",
+    "bulk.products.modal.tags.title":        "Изменить теги",
+    "bulk.products.modal.tags.modeLegend":   "Режим",
+    "bulk.products.modal.tags.mode.add":     "Добавить (сохранить старые)",
+    "bulk.products.modal.tags.mode.remove":  "Убрать выбранные",
+    "bulk.products.modal.tags.mode.replace": "Заменить весь набор",
+
+    "bulk.products.confirm.deleteTitle":     "Удалить товары",
+    "bulk.products.confirm.deleteText":      "Будет удалено {n} товаров. Действие необратимо: файлы изображений будут стёрты, а позиции в существующих заказах помечены как удалённые.",
+
+    "bulk.products.explain.activate":        "Выбранные товары станут видимыми в каталоге. Уже активные не изменятся.",
+    "bulk.products.explain.deactivate":      "Выбранные товары перестанут показываться в публичном каталоге. В админке они останутся.",
+    "bulk.products.explain.category":        "Все выбранные товары будут перенесены в новую конечную категорию. Прошлая категория заменится.",
+    "bulk.products.explain.tags.add":        "Выбранные теги будут добавлены к товарам. Уже стоящие теги сохранятся.",
+    "bulk.products.explain.tags.remove":     "Выбранные теги будут сняты с товаров. Остальные теги сохранятся.",
+    "bulk.products.explain.tags.replace":    "Набор тегов у выбранных товаров будет полностью заменён. Старые теги пропадут.",
+
+    // ─── Tags ─────────────────────────────────────────────────────────
+    "bulk.tags.confirm.deleteTitle":         "Удалить теги",
+    "bulk.tags.confirm.deleteText":          "Будет удалено {n} тегов. Действие необратимо. Теги, использованные хотя бы в одном товаре, будут пропущены.",
+
+    "bulk.tags.explain.activate":            "Выбранные теги станут видимыми в каталоге.",
+    "bulk.tags.explain.deactivate":          "Выбранные теги перестанут показываться в каталоге. Привязка к товарам сохранится.",
+
+    // ─── Orders ───────────────────────────────────────────────────────
+    "bulk.orders.action.status":             "Изменить статус",
+    "bulk.orders.modal.statusTitle":         "Изменить статус заказов",
+    "bulk.orders.modal.statusLegend":        "Новый статус",
+    "bulk.orders.status.new":                "Новый",
+    "bulk.orders.status.processing":         "В обработке",
+    "bulk.orders.status.done":               "Выполнен",
+    "bulk.orders.status.canceled":           "Отменён",
+    "bulk.orders.explain.status":            "Выбранным заказам будет назначен новый статус. Недопустимые переходы будут отклонены.",
+
+    // ─── Generic ──────────────────────────────────────────────────────
+    "bulk.search.placeholder":               "Поиск…",
+    "bulk.empty.notFound":                   "Ничего не найдено",
   };
 
   // Stable error codes mapped to RU labels. Unknown codes fall back to raw value.
@@ -55,7 +114,7 @@
 
   function fmtNumber(n) {
     if (typeof n !== "number" || !isFinite(n)) return String(n);
-    // Тонкие пробелы у тысяч: 1 234, 1 234 567.
+    // Тонкие пробелы у тысяч: 1 234, 1 234 567 (U+202F narrow no-break).
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
 

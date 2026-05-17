@@ -23,11 +23,10 @@ function setupWiring(extraGlobals) {
     get: async () => ({}),
   };
   const env = loadBrowserScripts(
-    ["static/js/bulk-tags-wiring.js"],
+    ["static/js/bulk-i18n.js", "static/js/bulk-tags-wiring.js"],
     {
       BulkActionBar: FakeBulkActionBar,
       api,
-      bulkFmtNumber: (n) => String(n),
       ...(extraGlobals || {}),
     },
   );
@@ -55,29 +54,31 @@ test("mountTagsBulkBar registers 3 actions with stable ids in order", () => {
   assert.deepEqual(plain(ids), ["activate", "deactivate", "delete"]);
 });
 
-test("activate action has confirm 'soft' and icon 'check-circle'", () => {
+test("every action uses unified confirm:'modal'", () => {
+  const { sandbox, captured } = setupWiring();
+  sandbox.mountTagsBulkBar({});
+  for (const action of captured.args.actions) {
+    assert.equal(action.confirm, "modal", `action ${action.id} should use confirm:"modal"`);
+  }
+});
+
+test("activate / deactivate carry stable icons and explain text", () => {
   const { sandbox, captured } = setupWiring();
   sandbox.mountTagsBulkBar({});
   const byId = Object.fromEntries(captured.args.actions.map(a => [a.id, a]));
-  assert.equal(byId.activate.confirm, "soft");
   assert.equal(byId.activate.icon, "check-circle");
-});
-
-test("deactivate action has confirm 'soft' and icon 'circle-off'", () => {
-  const { sandbox, captured } = setupWiring();
-  sandbox.mountTagsBulkBar({});
-  const byId = Object.fromEntries(captured.args.actions.map(a => [a.id, a]));
-  assert.equal(byId.deactivate.confirm, "soft");
   assert.equal(byId.deactivate.icon, "circle-off");
+  assert.ok(byId.activate.explain({ total: 1 }).length > 0);
+  assert.ok(byId.deactivate.explain({ total: 1 }).length > 0);
 });
 
-test("delete action is type-to-confirm with danger variant and typeWord 'удалить'", () => {
+test("delete action has danger variant and no type-to-confirm leftover", () => {
   const { sandbox, captured } = setupWiring();
   sandbox.mountTagsBulkBar({});
   const del = captured.args.actions.find(a => a.id === "delete");
-  assert.equal(del.confirm, "type-to-confirm");
   assert.equal(del.variant, "danger");
-  assert.equal(del.typeWord, "удалить");
+  assert.equal(del.confirm, "modal");
+  assert.equal(del.typeWord, undefined);
 });
 
 test("activate handler POSTs to /admin/tags/bulk/activate with active=true", async () => {
@@ -119,11 +120,11 @@ test("handler returns {cancelled:true} when api.post returns {_failed:true}", as
   assert.deepEqual(plain(result), { cancelled: true });
 });
 
-test("delete confirmText includes selection total and 'необратимо'", () => {
+test("delete explain interpolates total and mentions 'необратимо'", () => {
   const { sandbox, captured } = setupWiring();
   sandbox.mountTagsBulkBar({});
   const del = captured.args.actions.find(a => a.id === "delete");
-  const text = del.confirmText({ total: 42 });
+  const text = del.explain({ total: 42 });
   assert.ok(text.includes("42"));
   assert.ok(text.includes("необратимо"));
 });

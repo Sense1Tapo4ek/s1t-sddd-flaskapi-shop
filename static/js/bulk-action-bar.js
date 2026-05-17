@@ -1,12 +1,20 @@
 /* Bulk Action Bar — floating capsule that surfaces actions on the
    current SmartTable selection.
-   Spec: docs/superpowers/specs/2026-05-15-bulk-actions-design.md §4.2, §10. */
+   Spec: docs/superpowers/specs/2026-05-15-bulk-actions-design.md §4.2, §10.
+
+   Confirmation model (post-2026-05-17 redesign):
+     every action opens a single unified modal — header (icon + label),
+     explain block, optional custom controls (category picker, tag
+     picker, status picker), collapsible selection preview, footer with
+     [Cancel] + primary button. Primary is red when variant === "danger".
+     No soft-arm, no type-to-confirm — all actions share one shape.
+*/
 
 (function (global) {
   "use strict";
 
-  const SOFT_CONFIRM_TIMEOUT = 3000;
-  const FOCUS_DELAY_MS = 30;        // one paint cycle before focusing a freshly mounted modal input
+  const FOCUS_DELAY_MS = 30;       // one paint cycle before focusing a freshly mounted modal input
+  const PREVIEW_MAX_ROWS = 200;    // safety cap when the selection blows past sane sizes
 
   function bulkText(key, params) {
     return (typeof global.bulkT === "function") ? global.bulkT(key, params) : key;
@@ -41,7 +49,6 @@
       this.countLabel = typeof countLabel === "function" ? countLabel : null;
 
       this.el = null;
-      this.softArmed = null;  // {actionId, timer}
       this.busy = false;
       this._prevCount = 0;
 
@@ -75,7 +82,6 @@
 
     destroy() {
       window.removeEventListener("beforeunload", this._onBeforeUnload);
-      if (this.softArmed) clearTimeout(this.softArmed.timer);
       if (this.el) this.el.remove();
       document.body.classList.remove("has-bulk-bar");
     }
@@ -159,113 +165,68 @@
       this.el.classList.remove("is-visible");
       // aria-hidden is managed exclusively by _setAriaHiddenWhileModal —
       // do not overwrite it here, otherwise we may lift pointer-events
-      // off the bar while a confirm modal is still open above it.
+      // off the bar while a modal is still open above it.
       document.body.classList.remove("has-bulk-bar");
-      this._resetSoftArmed();
-    }
-
-    _resetSoftArmed() {
-      if (!this.softArmed) return;
-      clearTimeout(this.softArmed.timer);
-      const btn = this.el.querySelector(`[data-action="${CSS.escape(this.softArmed.actionId)}"]`);
-      const action = this.actions.find(a => a.id === this.softArmed.actionId);
-      if (btn && action) {
-        btn.classList.remove("bulk-bar__btn--soft-armed");
-        const labelEl = btn.querySelector('[data-role="label"]');
-        if (labelEl) labelEl.textContent = action.label;
-      }
-      this.softArmed = null;
     }
 
     _handleClick(action) {
       if (this.busy) return;
       const sel = this.table.getSelection();
       if (!sel || !sel.total) return;
-
-      const mode = action.confirm || "none";
-      if (mode === "soft") {
-        if (this.softArmed && this.softArmed.actionId === action.id) {
-          this._resetSoftArmed();
-          this._runAction(action, sel);
-          return;
-        }
-        this._armSoft(action);
-        return;
-      }
-      if (mode === "modal") {
-        this._modalConfirm(action, sel);
-        return;
-      }
-      if (mode === "type-to-confirm") {
-        this._typeConfirm(action, sel);
-        return;
-      }
-      // default — no confirm
-      this._runAction(action, sel);
+      this._openActionModal(action, sel);
     }
 
-    _armSoft(action) {
-      this._resetSoftArmed();
-      const btn = this.el.querySelector(`[data-action="${CSS.escape(action.id)}"]`);
-      if (!btn) return;
-      btn.classList.add("bulk-bar__btn--soft-armed");
-      const labelEl = btn.querySelector('[data-role="label"]');
-      if (labelEl) labelEl.textContent = bulkText("bulk.confirm.softPrompt") + " · " + action.label;
-      this.softArmed = {
-        actionId: action.id,
-        timer: setTimeout(() => this._resetSoftArmed(), SOFT_CONFIRM_TIMEOUT)
-      };
-    }
+    // ─── Unified action modal ─────────────────────────────────────────
+    //
+    // Every bulk action — destructive or not — goes through this single
+    // shape. Per-action customisation lives in three optional callbacks
+    // on the action descriptor:
+    //
+    //   explain(sel)        : string  — "what will happen" plain text
+    //   customControls(sel) : { html, onMount(modalEl, ctx)?, getValue() } | null
+    //   primaryLabel(sel)   : string  — overrides default "<label> N"
+    //
+    // The handler is invoked with payload merged with whatever
+    // customControls.getValue() returned, so wiring stays declarative.
 
-    _modalConfirm(action, sel) {
-      const title = action.confirmTitle || bulkText("bulk.confirm.modalTitle");
-      // text is plain string — showConfirmModal uses textContent (see modal.js),
-      // so HTML in confirmText would be displayed literally, not interpreted.
-      const text = (action.confirmText && action.confirmText(sel)) ||
-        `${action.label}: ${fmtNum(sel.total)}.`;
-      global.showConfirmModal({
-        title: title,
-        text: text,
-        confirmText: bulkText("bulk.confirm.modalConfirm"),
-        cancelText: bulkText("bulk.confirm.modalCancel"),
-        isDanger: action.variant === "danger",
-        onConfirm: () => this._runAction(action, sel)
-      });
-      this._setAriaHiddenWhileModal();
-    }
+    _openActionModal(action, sel) {
+      const explainText = (typeof action.explain === "function")
+        ? action.explain(sel)
+        : (action.explain || "");
+      const controls = (typeof action.customControls === "function")
+        ? action.customControls(sel)
+        : null;
+      const isDanger = action.variant === "danger";
+      const primaryClass = isDanger ? "btn btn--danger" : "btn btn--primary";
+      const primaryLabel = (typeof action.primaryLabel === "function")
+        ? action.primaryLabel(sel)
+        : bulkText("bulk.modal.primary", { label: action.label, n: sel.total });
+      const cancelLabel = bulkText("bulk.modal.cancel");
 
-    _setAriaHiddenWhileModal() {
-      // While the confirm modal is open the bar must not catch clicks.
-      this.el.setAttribute("aria-hidden", "true");
-      const overlay = document.getElementById("globalModalOverlay");
-      if (!overlay) return;
-      const observer = new MutationObserver(() => {
-        if (!overlay.classList.contains("modal-overlay--active")) {
-          this.el.setAttribute("aria-hidden", "false");
-          observer.disconnect();
-        }
-      });
-      observer.observe(overlay, { attributes: true, attributeFilter: ["class"] });
-    }
-
-    _typeConfirm(action, sel) {
-      const expected = (action.typeWord || bulkText("bulk.confirm.type.word")).toLowerCase();
-      const total = sel.total;
       const html = `
-        <div class="modal-overlay modal-overlay--active" id="bulkTypeConfirmOverlay" role="dialog" aria-modal="true">
+        <div class="modal-overlay modal-overlay--active" id="bulkActionOverlay" role="dialog" aria-modal="true">
           <div class="modal">
             <div class="modal__header">
-              ${iconSvg("alert-triangle", "lucide--lg")}
-              <span style="margin-left:8px;">${escapeHTML(action.confirmTitle || bulkText("bulk.confirm.type.title"))}</span>
+              ${iconSvg(action.icon || "info", "lucide--lg")}
+              <span style="margin-left:8px;">${escapeHTML(action.label)}</span>
+              <button class="modal__close" type="button" data-role="close" aria-label="${escapeHTML(cancelLabel)}">&times;</button>
             </div>
             <div class="modal__body">
-              <p style="color:var(--color-text-muted); font-size:13px; white-space:pre-line;">${escapeHTML(action.confirmText ? action.confirmText(sel) : `Будет удалено ${fmtNum(total)}. Действие необратимо.`)}</p>
-              <p class="bulk-confirm__hint">${escapeHTML(bulkText("bulk.confirm.type.hint"))} <span class="bulk-confirm__expected">${escapeHTML(expected)}</span></p>
-              <input type="text" id="bulkTypeConfirmInput" class="form-input bulk-confirm__input" autocomplete="off" placeholder="${escapeHTML(expected)}">
+              ${explainText ? `<div class="bulk-modal__explain">${escapeHTML(explainText)}</div>` : ""}
+              ${controls && controls.html ? `<div class="bulk-modal__custom" data-role="custom">${controls.html}</div>` : ""}
+              <div class="bulk-modal__preview" data-role="preview">
+                <div class="bulk-modal__preview-head">
+                  <span class="bulk-modal__preview-count">${escapeHTML(bulkText("bulk.count", { n: sel.total }))}</span>
+                  <button type="button" class="bulk-modal__preview-toggle" data-role="preview-toggle" aria-expanded="false">
+                    ${escapeHTML(bulkText("bulk.preview.show"))}
+                  </button>
+                </div>
+                <div class="bulk-modal__preview-list" data-role="preview-list" hidden></div>
+              </div>
             </div>
             <div class="modal__footer">
-              <button id="bulkTypeConfirmCancel" type="button" class="btn btn--ghost">${escapeHTML(bulkText("bulk.confirm.modalCancel"))}</button>
-              <button id="bulkTypeConfirmOk" type="button" class="btn btn--danger" disabled>${escapeHTML(bulkText("bulk.confirm.type.button", { n: total }))}</button>
+              <button type="button" class="btn btn--ghost" data-role="cancel">${escapeHTML(cancelLabel)}</button>
+              <button type="button" class="${primaryClass}" data-role="confirm">${escapeHTML(primaryLabel)}</button>
             </div>
           </div>
         </div>
@@ -275,9 +236,58 @@
       const overlay = host.firstElementChild;
       document.body.appendChild(overlay);
 
-      const input = overlay.querySelector("#bulkTypeConfirmInput");
-      const okBtn = overlay.querySelector("#bulkTypeConfirmOk");
-      const cancelBtn = overlay.querySelector("#bulkTypeConfirmCancel");
+      const confirmBtn = overlay.querySelector('[data-role="confirm"]');
+      const previewToggle = overlay.querySelector('[data-role="preview-toggle"]');
+      const previewList = overlay.querySelector('[data-role="preview-list"]');
+
+      // Mount custom controls and wire validity → primary-button state.
+      // setValid accepts boolean (toggles disabled) OR object
+      // { valid?: bool, danger?: bool } — the danger flag lets a control
+      // promote the primary button to btn--danger at runtime (e.g., the
+      // tag picker switching to "replace" mode).
+      let getValue = () => ({});
+      const setValid = (state) => {
+        if (typeof state === "boolean") {
+          confirmBtn.disabled = !state;
+          return;
+        }
+        if (state && typeof state === "object") {
+          if (typeof state.valid === "boolean") confirmBtn.disabled = !state.valid;
+          if ("danger" in state) {
+            confirmBtn.classList.toggle("btn--danger", !!state.danger);
+            confirmBtn.classList.toggle("btn--primary", !state.danger);
+          }
+        }
+      };
+      if (controls) {
+        if (typeof controls.getValue === "function") getValue = () => controls.getValue();
+        if (typeof controls.onMount === "function") {
+          controls.onMount(overlay, { setValid: setValid });
+        }
+        // If validate() exists, disable until valid; otherwise enabled.
+        if (typeof controls.validate === "function") {
+          confirmBtn.disabled = !controls.validate();
+        }
+      }
+
+      // Preview toggle.
+      previewToggle.addEventListener("click", () => {
+        const expanded = previewToggle.getAttribute("aria-expanded") === "true";
+        if (expanded) {
+          previewList.hidden = true;
+          previewToggle.textContent = bulkText("bulk.preview.show");
+          previewToggle.setAttribute("aria-expanded", "false");
+          return;
+        }
+        // Render lazily on first expand.
+        if (!previewList.dataset.rendered) {
+          previewList.innerHTML = this._renderPreviewList(sel);
+          previewList.dataset.rendered = "1";
+        }
+        previewList.hidden = false;
+        previewToggle.textContent = bulkText("bulk.preview.hide");
+        previewToggle.setAttribute("aria-expanded", "true");
+      });
 
       const close = () => {
         overlay.remove();
@@ -286,24 +296,65 @@
       };
       const onKey = (e) => {
         if (e.key === "Escape") { e.preventDefault(); close(); }
-        else if (e.key === "Enter" && !okBtn.disabled) { e.preventDefault(); confirm(); }
+        else if (e.key === "Enter" && !confirmBtn.disabled && e.target.tagName !== "TEXTAREA") {
+          e.preventDefault();
+          submit();
+        }
       };
-      const confirm = () => { close(); this._runAction(action, sel); };
+      const submit = () => {
+        if (confirmBtn.disabled) return;
+        const extra = getValue() || {};
+        close();
+        this._runAction(action, sel, extra);
+      };
 
-      input.addEventListener("input", () => {
-        const v = input.value.trim().toLowerCase();
-        okBtn.disabled = v !== expected;
-      });
-      okBtn.addEventListener("click", confirm);
-      cancelBtn.addEventListener("click", close);
+      overlay.querySelector('[data-role="cancel"]').addEventListener("click", close);
+      overlay.querySelector('[data-role="close"]').addEventListener("click", close);
       overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+      confirmBtn.addEventListener("click", submit);
       document.addEventListener("keydown", onKey);
 
       this.el.setAttribute("aria-hidden", "true");
-      setTimeout(() => input.focus(), FOCUS_DELAY_MS);
+      // Focus first interactive element inside the custom slot when present,
+      // otherwise the confirm button.
+      setTimeout(() => {
+        const firstInput = overlay.querySelector('[data-role="custom"] input, [data-role="custom"] button, [data-role="custom"] select');
+        if (firstInput && !confirmBtn.disabled === false) {
+          firstInput.focus();
+        } else if (firstInput) {
+          firstInput.focus();
+        } else {
+          confirmBtn.focus();
+        }
+      }, FOCUS_DELAY_MS);
     }
 
-    async _runAction(action, sel) {
+    _renderPreviewList(sel) {
+      const names = [];
+      if (sel.mode === "ids" && Array.isArray(sel.ids) && typeof this.table.getRowSnapshot === "function") {
+        const ids = sel.ids.slice(0, PREVIEW_MAX_ROWS);
+        for (const id of ids) {
+          const row = this.table.getRowSnapshot(id);
+          const label = (row && this.getRowName) ? this.getRowName(row) : null;
+          names.push(label || `#${id}`);
+        }
+      } else if (sel.mode === "all_by_filter") {
+        return `<p class="bulk-modal__preview-empty">${escapeHTML(bulkText("bulk.preview.filterHint"))}</p>`;
+      }
+      if (!names.length) {
+        return `<p class="bulk-modal__preview-empty">${escapeHTML(bulkText("bulk.preview.empty"))}</p>`;
+      }
+      const more = sel.total - names.length;
+      const items = names.map((n, i) =>
+        `<li><span class="bulk-modal__preview-idx">${i + 1}.</span> ${escapeHTML(n)}</li>`
+      ).join("");
+      const moreHtml = more > 0
+        ? `<li class="bulk-modal__preview-more">${escapeHTML(bulkText("bulk.preview.moreSuffix", { n: more }))}</li>`
+        : "";
+      return `<ol class="bulk-modal__preview-items">${items}${moreHtml}</ol>`;
+    }
+
+    async _runAction(action, sel, extra) {
       const btn = this.el.querySelector(`[data-action="${CSS.escape(action.id)}"]`);
       const originalLabel = action.label;
       this.busy = true;
@@ -321,9 +372,9 @@
         }
       }
       try {
-        const payload = this._buildPayload(sel);
+        const payload = { ...this._buildPayload(sel), ...(extra || {}) };
         const result = await action.handler(payload, sel);
-        if (result && result.cancelled) return;  // handler-side cancellation (custom picker modal)
+        if (result && result.cancelled) return;
         this._afterAction(action, sel, result);
       } catch (err) {
         console.error("bulk action failed", err);

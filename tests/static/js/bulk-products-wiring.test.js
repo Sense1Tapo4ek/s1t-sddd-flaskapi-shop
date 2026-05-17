@@ -23,11 +23,10 @@ function setupWiring(extraGlobals) {
     get: async () => ({}),
   };
   const env = loadBrowserScripts(
-    ["static/js/bulk-products-wiring.js"],
+    ["static/js/bulk-i18n.js", "static/js/bulk-products-wiring.js"],
     {
       BulkActionBar: FakeBulkActionBar,
       api,
-      bulkFmtNumber: (n) => String(n),
       ...(extraGlobals || {}),
     },
   );
@@ -48,23 +47,34 @@ test("mountProductsBulkBar registers 5 actions with stable ids", () => {
   assert.deepEqual(plain(ids), ["activate", "deactivate", "category", "tags", "delete"]);
 });
 
-test("activate / deactivate actions are soft-confirm with correct icons", () => {
+test("every action uses unified confirm:'modal'", () => {
+  const { sandbox, captured } = setupWiring();
+  sandbox.mountProductsBulkBar({});
+  for (const action of captured.args.actions) {
+    assert.equal(action.confirm, "modal", `action ${action.id} should use confirm:"modal"`);
+  }
+});
+
+test("activate / deactivate carry stable icons and explain text", () => {
   const { sandbox, captured } = setupWiring();
   sandbox.mountProductsBulkBar({});
   const byId = Object.fromEntries(captured.args.actions.map(a => [a.id, a]));
-  assert.equal(byId.activate.confirm, "soft");
   assert.equal(byId.activate.icon, "check-circle");
-  assert.equal(byId.deactivate.confirm, "soft");
   assert.equal(byId.deactivate.icon, "circle-off");
+  assert.equal(typeof byId.activate.explain, "function");
+  assert.equal(typeof byId.deactivate.explain, "function");
+  assert.ok(byId.activate.explain({ total: 1 }).length > 0);
+  assert.ok(byId.deactivate.explain({ total: 1 }).length > 0);
 });
 
-test("delete action is type-to-confirm with danger variant and word 'удалить'", () => {
+test("delete action has danger variant and red-button intent (no type-to-confirm)", () => {
   const { sandbox, captured } = setupWiring();
   sandbox.mountProductsBulkBar({});
   const del = captured.args.actions.find(a => a.id === "delete");
-  assert.equal(del.confirm, "type-to-confirm");
   assert.equal(del.variant, "danger");
-  assert.equal(del.typeWord, "удалить");
+  assert.equal(del.confirm, "modal");
+  // The old `typeWord` property no longer exists.
+  assert.equal(del.typeWord, undefined);
 });
 
 test("activate handler POSTs to /admin/products/bulk/activate with active=true", async () => {
@@ -105,21 +115,21 @@ test("handler returns {cancelled:true} when api.post fails", async () => {
   assert.deepEqual(plain(result), { cancelled: true });
 });
 
-test("delete confirmText interpolates selection total", () => {
+test("delete explain interpolates selection total and mentions 'необратимо'", () => {
   const { sandbox, captured } = setupWiring();
   sandbox.mountProductsBulkBar({});
   const del = captured.args.actions.find(a => a.id === "delete");
-  const text = del.confirmText({ total: 42 });
+  const text = del.explain({ total: 42 });
   assert.ok(text.includes("42"));
   assert.ok(text.includes("необратимо"));
 });
 
-test("category and tags actions use confirm:none (custom modal in handler)", () => {
+test("category action exposes customControls; tags action exposes customControls", () => {
   const { sandbox, captured } = setupWiring();
   sandbox.mountProductsBulkBar({});
   const byId = Object.fromEntries(captured.args.actions.map(a => [a.id, a]));
-  assert.equal(byId.category.confirm, "none");
-  assert.equal(byId.tags.confirm, "none");
+  assert.equal(typeof byId.category.customControls, "function");
+  assert.equal(typeof byId.tags.customControls, "function");
 });
 
 test("getRowName is wired and returns product title", () => {

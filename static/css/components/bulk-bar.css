@@ -129,11 +129,6 @@
   border-color: rgba(196, 101, 74, 0.5);
 }
 
-.bulk-bar__btn--soft-armed {
-  background: rgba(212, 168, 83, 0.3);
-  border-color: rgba(212, 168, 83, 0.6);
-}
-
 .bulk-bar__btn-icon {
   width: 16px;
   height: 16px;
@@ -275,27 +270,114 @@
   margin: 4px 0;
 }
 
-/* ─── Type-to-confirm modal addition ───────────────────────────────── */
+/* ─── Unified action modal ─────────────────────────────────────────── */
 
-.bulk-confirm__input {
-  width: 100%;
-  margin-top: 8px;
+.bulk-modal__explain {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text);
+  white-space: pre-line;
 }
 
-.bulk-confirm__hint {
+.bulk-modal__custom {
+  margin: 0 0 12px;
+}
+
+.bulk-modal__custom fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 10px;
+}
+
+.bulk-modal__custom legend {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bulk-modal__custom label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.bulk-modal__preview {
   margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.bulk-modal__preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 12px;
   color: var(--color-text-muted);
 }
 
-.bulk-confirm__expected {
-  display: inline-block;
-  padding: 1px 6px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
+.bulk-modal__preview-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk-modal__preview-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.bulk-modal__preview-toggle:hover {
+  text-decoration: underline;
+}
+
+.bulk-modal__preview-list {
+  margin-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.bulk-modal__preview-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
   color: var(--color-text);
+}
+
+.bulk-modal__preview-items li {
+  padding: 2px 0;
+}
+
+.bulk-modal__preview-idx {
+  display: inline-block;
+  min-width: 24px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk-modal__preview-more {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.bulk-modal__preview-empty {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 /* ─── Failures-detail modal ────────────────────────────────────────── */
