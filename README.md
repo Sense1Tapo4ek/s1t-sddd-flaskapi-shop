@@ -40,12 +40,13 @@ PYTHONPATH=src FLASK_DEBUG=1 uv run src/root/entrypoints/api.py
 
 Open http://localhost:5000.
 
-- Owner login: `admin` / `changeme`
-- Dev superadmin login: `superadmin` / `superadmin`
+- Default admin: `admin` / `changeme`
+  - In dev (default), role is `owner` (limited permissions).
+  - In prod, set `ACCESS_PROMOTE_TO_SUPERADMIN=true` to make it a superadmin at bootstrap.
+- Customer registration: Use the `/auth/customer/register` endpoint or try the storefront UI.
 - Swagger UI: http://localhost:5000/api/docs
 
-The fallback dev superadmin can sign in, but cannot download a
-database dump until its password is changed.
+The default admin can sign in but cannot download a database dump until its password is changed.
 
 ## Common Commands
 
@@ -104,10 +105,12 @@ Copy `.env.example` to `.env` for local work. Important variables:
 | `INFRA_DATABASE_URL` | `mysql+pymysql://shop:shop@localhost:3306/shop?charset=utf8mb4` | SQLAlchemy URL (PyMySQL driver, utf8mb4) |
 | `INFRA_DB_POOL_SIZE` / `INFRA_DB_POOL_RECYCLE` / `INFRA_DB_POOL_PRE_PING` | `5` / `3600` / `true` | Pool tuning — leave `pre_ping=true` on CPanel |
 | `ACCESS_JWT_SECRET` | `change-me-in-production` | JWT signing secret |
-| `ACCESS_DEFAULT_LOGIN` / `ACCESS_DEFAULT_PASSWORD` | `admin` / `changeme` | Bootstrap owner credentials |
-| `ACCESS_SUPERADMIN_LOGIN` / `ACCESS_SUPERADMIN_PASSWORD` | `superadmin` / dev fallback | Superadmin credentials |
+| `ACCESS_DEFAULT_LOGIN` / `ACCESS_DEFAULT_PASSWORD` | `admin` / `changeme` | Bootstrap admin credentials |
+| `ACCESS_PROMOTE_TO_SUPERADMIN` | `false` | If `true`, the default admin (id=1) is a superadmin; otherwise owner role |
 | `ACCESS_OWNER_CAN_*` | mostly `false` | Owner permission flags |
 | `ACCESS_RECOVERY_CODE_*` | code defaults | Telegram code TTL / cooldown / attempts / lockout |
+| `ACCESS_CUSTOMER_RECOVERY_CODE_*` | code defaults | Customer password recovery code settings |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | see `.env.example` | Email sender for customer recovery (leave `SMTP_HOST` empty for logging mode) |
 | `CATALOG_UPLOAD_DIR` | `media/products` | Product image upload directory |
 | `SYSTEM_RECOVERY_TOKEN` | `change-me-in-production` | URL token for Telegram password recovery |
 | `ROOT_PUBLIC_CORS_ORIGINS` / `ROOT_ADMIN_CORS_ORIGINS` | unset | CORS allow-lists |

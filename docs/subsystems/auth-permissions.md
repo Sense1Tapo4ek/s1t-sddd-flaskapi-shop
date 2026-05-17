@@ -27,19 +27,45 @@ transport, CSRF, server-side permission checks, public/admin boundary.
                                           facade.method(...)
 ```
 
+## Account type gate (first authorization check)
+
+`account_type` claim is checked BEFORE any role/permission rules:
+
+| Guard | Accepts | Rejects |
+|---|---|---|
+| `admin_required` | `account_type=admin` | `account_type=customer` |
+| `customer_required` | `account_type=customer` | `account_type=admin` |
+| `permission_required(...)` | `account_type=admin` + permission | `account_type=customer` (no permissions field) |
+| `superadmin_required` | `account_type=admin` + role=superadmin | `account_type=customer` + other roles |
+
+Customer JWTs carry no `role` or `permissions` fields. If a customer somehow
+obtains an admin JWT, role/permission checks still apply (defense in depth).
+
 ## Tokens
 
 - **Algorithm:** HS256.
 - **Secret:** `ACCESS_JWT_SECRET`. Must be a strong random value in
   production. Default `change-me-in-production` is a deployment smell.
-- **Claims:**
-  - `sub` — admin id
+- **Claims (admin):**
+  - `sub` — user id
+  - `account_type` — `admin`
+  - `login` — login name
   - `role` — `owner` or `superadmin`
   - `permissions` — snapshot of non-runtime permissions at login time
+  - `tv` — token version for cache invalidation
+  - `csrf` — CSRF token (if supplied at login)
+  - `exp` — expiry (longer when `remember_me=true`)
+- **Claims (customer):**
+  - `sub` — customer id
+  - `account_type` — `customer`
+  - `email` — customer email
+  - `tv` — token version for cache invalidation
+  - `csrf` — CSRF token (if supplied at login)
   - `exp` — expiry (longer when `remember_me=true`)
 - **Transport:**
   - Admin UI: `token=<jwt>` cookie, set by login response.
   - External API: `Authorization: Bearer <jwt>` header.
+  - Customers: same as admin (cookie or bearer header).
 
 ## Permission set
 
@@ -82,10 +108,13 @@ The eight permissions enforced server-side:
 
 | Route type | Decorator |
 |---|---|
-| Admin page read | `permission_required("view_*")`, `any_permission_required(...)`, or `jwt_required` for security/account pages |
-| Admin mutation | Specific edit/manage permission |
-| Superadmin-only | Dedicated permission (`create_demo_data`) or `superadmin_required` when owners must never reach the action |
+| Admin page read | `permission_required("view_*")`, `any_permission_required(...)`, or `admin_required` for security/account pages |
+| Admin mutation | Specific edit/manage permission via `permission_required(...)` |
+| Superadmin-only | `superadmin_required` (enforces role=superadmin + account_type=admin) |
+| Customer-only | `customer_required` (enforces account_type=customer) |
 | Public API | No JWT; visibility enforced inside the use case / repository |
+
+The `admin_required`, `customer_required`, and `permission_required(...)` decorators all check `account_type` FIRST.
 
 UI hiding (omitting a button when `permission` is false) is a UX nicety,
 not authorization. Every protected endpoint must declare a server-side

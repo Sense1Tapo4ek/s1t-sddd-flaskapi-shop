@@ -112,6 +112,47 @@ Active tags. Product counts count active products only.
 
 ---
 
+## Auth
+
+### `POST /auth/login`
+
+Issue JWT token. Dispatch on `"@" in login`: contains `@` → customer (search email); no `@` → admin (search login).
+
+Body: `{ "login": "...", "password": "...", "remember_me": false }`
+
+`200`: `{ "token": "eyJ0eXAi..." }` (sets `token` and `csrf_token` cookies)
+
+`401`: `{ "error": "INVALID_CREDENTIALS" }` or `{ "error": "ACCOUNT_INACTIVE" }`
+
+---
+
+### `POST /auth/customer/register`
+
+Create customer account and issue JWT. Body: `{ "email": "...", "password": "..." }`
+
+`201`: `{ "token": "eyJ0eXAi..." }` (same behavior as login)
+
+`409`: `{ "error": "EMAIL_EXISTS" }`
+
+---
+
+### `POST /auth/customer/recover`
+
+Request password recovery code. Always `202` (no email enumeration).
+Body: `{ "email": "..." }`. Code sent via SMTP ([../infra/smtp.md](../infra/smtp.md)).
+
+---
+
+### `POST /auth/customer/verify`
+
+Verify code and reset password. Body: `{ "email": "...", "code": "123456", "password": "..." }`
+
+`200`: `{ "token": "eyJ0eXAi..." }` (same behavior as login)
+
+`401`: `{ "error": "INVALID_CODE" }` or `{ "error": "CODE_EXPIRED" }`
+
+---
+
 ## Orders
 
 ### `POST /orders`

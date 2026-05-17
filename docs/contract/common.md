@@ -16,10 +16,19 @@ JWT claims:
 
 | Claim | Type | Meaning |
 |---|---|---|
-| `sub` | int | Admin id |
-| `role` | string | `owner` or `superadmin` |
-| `permissions` | string[] | Non-runtime permission snapshot (see auth subsystem) |
+| `sub` | int | User/customer id |
+| `account_type` | string | `admin` or `customer` (backward-compat: missing → `admin`) |
+| `role` | string | `owner` or `superadmin` (admin only) |
+| `permissions` | object | Non-runtime permission snapshot (admin only; see auth subsystem) |
+| `login` | string | Login name (admin only) |
+| `email` | string | Email address (customer only) |
+| `csrf` | string | CSRF token (if supplied at login) |
+| `tv` | int | Token version (for invalidation cache) |
 | `exp` | int | Expiry (longer if `remember_me` was true at login) |
+
+`account_type` is the FIRST gate before role/permission checks. Customer
+JWTs are rejected by `admin_required`, `permission_required`, and
+`superadmin_required` decorators.
 
 Public endpoints take no auth. Recovery uses a URL token, not a JWT.
 

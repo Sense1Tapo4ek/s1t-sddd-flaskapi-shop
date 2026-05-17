@@ -155,7 +155,9 @@ method/route/template.
 
 ## Permissions
 
-The eight server-side permissions:
+**Account type gate (first check):** `account_type` claim is checked before role/permissions. Customer JWTs are rejected by `admin_required`, `permission_required(...)`, and `superadmin_required` decorators.
+
+The eight server-side permissions (admin only):
 
 `view_category_tree`, `edit_taxonomy`, `view_products`,
 `edit_products`, `view_orders`, `manage_orders`, `manage_settings`,
@@ -163,7 +165,7 @@ The eight server-side permissions:
 
 `superadmin` has every permission. Owner permissions are constrained
 by runtime settings (catalog scope) and `ACCESS_OWNER_CAN_*` env flags
-(other scopes). Implication rules and runtime-vs-snapshot semantics:
+(other scopes). Customers have no permissions field. Implication rules and runtime-vs-snapshot semantics:
 [docs/subsystems/auth-permissions.md](docs/subsystems/auth-permissions.md).
 
 ## Errors
