@@ -13,6 +13,7 @@ from flask import Flask
 
 from shared.adapters.driving.middleware import (
     admin_required,
+    current_customer_id,
     customer_required,
     init_middleware,
     permission_required,
@@ -302,3 +303,71 @@ class TestSuperadminRequiredRejectsCustomer:
         with app.test_client() as client:
             resp = client.get("/sa_view2", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# customer_required: g.customer_user_id wiring
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+class TestCustomerRequiredCustomerId:
+    def test_sets_customer_user_id_from_sub_claim(self):
+        """
+        Given a customer JWT with sub=42,
+        When customer_required view runs,
+        Then current_customer_id() inside the view returns 42.
+        """
+        app = _make_app()
+
+        @app.get("/cust_id")
+        @customer_required
+        def cust_id_view():
+            return {"id": current_customer_id()}, 200
+
+        token = create_jwt(
+            {"sub": 42, "account_type": "customer", "role": "customer"},
+            _SECRET,
+            expires_hours=1,
+        )
+        with app.test_client() as client:
+            resp = client.get("/cust_id", headers={"Authorization": f"Bearer {token}"})
+        assert resp.status_code == 200
+        assert resp.get_json() == {"id": 42}
+
+    def test_current_customer_id_outside_customer_required_raises(self):
+        """
+        Given no @customer_required decorator on the view,
+        When current_customer_id() is called,
+        Then RuntimeError is raised (programmer error, not auth failure).
+        """
+        app = _make_app()
+
+        @app.get("/no_cust")
+        def no_cust():
+            return {"id": current_customer_id()}, 200
+
+        @app.errorhandler(RuntimeError)
+        def _handle(e):
+            return {"code": "PROGRAMMER_ERROR"}, 500
+
+        with app.test_client() as client:
+            resp = client.get("/no_cust")
+        assert resp.status_code == 500
+        assert resp.get_json() == {"code": "PROGRAMMER_ERROR"}
+
+    def test_no_token_returns_auth_required(self):
+        """
+        Given no token,
+        When customer_required view is accessed,
+        Then DrivingAdapterError(AUTH_REQUIRED) is raised → 401.
+        """
+        app = _make_app()
+        _register_view(app, customer_required, "cust_view_no_token")
+
+        @app.errorhandler(DrivingAdapterError)
+        def _handle(e):
+            return {"code": e.code}, 401
+
+        with app.test_client() as client:
+            resp = client.get("/cust_view_no_token")
+        assert resp.status_code == 401

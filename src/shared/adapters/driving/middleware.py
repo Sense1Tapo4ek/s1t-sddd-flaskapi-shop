@@ -1,6 +1,6 @@
 import hmac
 from functools import wraps
-from flask import current_app, request
+from flask import current_app, g, request
 from shared.helpers.security import verify_jwt
 from shared.generics.errors import DrivingAdapterError
 
@@ -104,8 +104,23 @@ def customer_required(f):
     def decorated(*args, **kwargs):
         if getattr(request, "account_type", "admin") != "customer":
             raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+        g.customer_user_id = int(request.admin_payload["sub"])
         return f(*args, **kwargs)
     return decorated
+
+
+def current_customer_id() -> int:
+    """Customer id from JWT, established by @customer_required.
+
+    Raises RuntimeError if called outside a @customer_required-decorated
+    request context — this is a programmer error, not an auth failure.
+    """
+    cid = getattr(g, "customer_user_id", None)
+    if cid is None:
+        raise RuntimeError(
+            "current_customer_id() requires @customer_required on the route"
+        )
+    return cid
 
 
 def permission_required(permission: str):
