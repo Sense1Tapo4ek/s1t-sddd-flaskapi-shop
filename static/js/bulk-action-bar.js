@@ -163,9 +163,8 @@
 
     _hide() {
       this.el.classList.remove("is-visible");
-      // aria-hidden is managed exclusively by _setAriaHiddenWhileModal —
-      // do not overwrite it here, otherwise we may lift pointer-events
-      // off the bar while a modal is still open above it.
+      // `inert` on the bar (set while a modal is open) is preserved here
+      // intentionally — _openActionModal owns its lifecycle.
       document.body.classList.remove("has-bulk-bar");
     }
 
@@ -291,7 +290,7 @@
 
       const close = () => {
         overlay.remove();
-        this.el.setAttribute("aria-hidden", "false");
+        this.el.inert = false;
         document.removeEventListener("keydown", onKey);
       };
       const onKey = (e) => {
@@ -317,7 +316,7 @@
       confirmBtn.addEventListener("click", submit);
       document.addEventListener("keydown", onKey);
 
-      this.el.setAttribute("aria-hidden", "true");
+      this.el.inert = true;
       // Focus first interactive element inside the custom slot when present,
       // otherwise the confirm button.
       setTimeout(() => {

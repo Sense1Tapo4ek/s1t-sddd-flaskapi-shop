@@ -47,8 +47,9 @@
   pointer-events: auto;
 }
 
-.bulk-bar[aria-hidden="true"] {
-  pointer-events: none;
+/* While a confirm/action modal is open the bar is marked `inert`,
+   which already blocks pointer + focus; this rule just dims it. */
+.bulk-bar[inert] {
   opacity: 0.4;
 }
 

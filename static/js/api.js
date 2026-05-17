@@ -55,3 +55,9 @@ const api = {
   patch(url, body){ return this.request('PATCH',  url, body); },
   del(url, body)  { return this.request('DELETE', url, body); },
 };
+
+// Expose on window so IIFE-wrapped consumers (bulk-bar wiring, etc.) can
+// reach it via `global.api`. Top-level `const` in a classic script does
+// NOT auto-attach to window; bare `api` works via lexical scope, but
+// `global.api` requires this explicit assignment.
+window.api = api;
