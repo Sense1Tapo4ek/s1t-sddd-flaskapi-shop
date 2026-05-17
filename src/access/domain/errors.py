@@ -54,3 +54,26 @@ class RecoveryCodeLockedError(DomainError):
             message="Слишком много неверных кодов. Попробуйте позже.",
             code="RECOVERY_CODE_LOCKED",
         )
+
+
+class CustomerInactiveError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(message="Аккаунт клиента отключён", code="CUSTOMER_INACTIVE")
+
+
+class EmailAlreadyRegisteredError(DomainError):
+    def __init__(self, email: str) -> None:
+        self.email = email
+        super().__init__(
+            message=f"Email {email} уже зарегистрирован",
+            code="EMAIL_ALREADY_REGISTERED",
+        )
+
+
+class CustomerNotFoundError(ApplicationError):
+    def __init__(self, customer_id: int) -> None:
+        self.customer_id = customer_id
+        super().__init__(
+            message=f"Клиент {customer_id} не найден",
+            code="CUSTOMER_NOT_FOUND",
+        )
