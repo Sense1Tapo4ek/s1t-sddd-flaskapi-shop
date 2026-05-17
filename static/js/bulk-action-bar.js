@@ -295,11 +295,14 @@
         document.removeEventListener("keydown", onKey);
       };
       const onKey = (e) => {
-        if (e.key === "Escape") { e.preventDefault(); close(); }
-        else if (e.key === "Enter" && !confirmBtn.disabled && e.target.tagName !== "TEXTAREA") {
-          e.preventDefault();
-          submit();
-        }
+        if (e.key === "Escape") { e.preventDefault(); close(); return; }
+        if (e.key !== "Enter" || confirmBtn.disabled) return;
+        // Don't submit while user is typing inside custom controls
+        // (category search, tag-picker editable input, etc.).
+        const tag = e.target && e.target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        e.preventDefault();
+        submit();
       };
       const submit = () => {
         if (confirmBtn.disabled) return;
@@ -319,27 +322,28 @@
       // otherwise the confirm button.
       setTimeout(() => {
         const firstInput = overlay.querySelector('[data-role="custom"] input, [data-role="custom"] button, [data-role="custom"] select');
-        if (firstInput && !confirmBtn.disabled === false) {
-          firstInput.focus();
-        } else if (firstInput) {
-          firstInput.focus();
-        } else {
-          confirmBtn.focus();
-        }
+        if (firstInput) firstInput.focus();
+        else confirmBtn.focus();
       }, FOCUS_DELAY_MS);
     }
 
     _renderPreviewList(sel) {
       const names = [];
-      if (sel.mode === "ids" && Array.isArray(sel.ids) && typeof this.table.getRowSnapshot === "function") {
+      if (sel.mode === "all_by_filter") {
+        return `<p class="bulk-modal__preview-empty">${escapeHTML(bulkText("bulk.preview.filterHint"))}</p>`;
+      }
+      if (sel.mode === "ids" && Array.isArray(sel.ids)) {
+        // SmartTable does not expose getRowSnapshot — fall back to the
+        // last loaded page. Off-page selections render as "#<id>".
+        const items = (this.table.lastData && this.table.lastData.items) || [];
+        const rowIdKey = this.table.rowIdKey || "id";
+        const byId = new Map(items.map(it => [String(it[rowIdKey]), it]));
         const ids = sel.ids.slice(0, PREVIEW_MAX_ROWS);
         for (const id of ids) {
-          const row = this.table.getRowSnapshot(id);
+          const row = byId.get(String(id));
           const label = (row && this.getRowName) ? this.getRowName(row) : null;
           names.push(label || `#${id}`);
         }
-      } else if (sel.mode === "all_by_filter") {
-        return `<p class="bulk-modal__preview-empty">${escapeHTML(bulkText("bulk.preview.filterHint"))}</p>`;
       }
       if (!names.length) {
         return `<p class="bulk-modal__preview-empty">${escapeHTML(bulkText("bulk.preview.empty"))}</p>`;
@@ -374,10 +378,12 @@
       try {
         const payload = { ...this._buildPayload(sel), ...(extra || {}) };
         const result = await action.handler(payload, sel);
-        if (result && result.cancelled) return;
+        // api.js already surfaces a toast on backend failure; postBulk
+        // wraps that into {cancelled:true}, but tolerate raw _failed too.
+        if (result && (result.cancelled || result._failed)) return;
         this._afterAction(action, sel, result);
       } catch (err) {
-        console.error("bulk action failed", err);
+        console.error("[bulk] action failed:", action.id, "err=", err, "sel=", sel);
         document.body.dispatchEvent(new CustomEvent("showToast", {
           detail: { message: bulkText("bulk.actionFailed"), type: "error" }
         }));
