@@ -1,16 +1,16 @@
 from dataclasses import dataclass
 
 from system.app.interfaces import IAccessAcl
-from access.ports.driving.facade import AccessFacade
+from access.ports.driving import AdminFacade
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AccessAcl(IAccessAcl):
     """
-    Implements the ACL using the Access Context's public facade.
+    Implements the ACL using the Access Context's AdminFacade.
     """
 
-    _facade: AccessFacade
+    _facade: AdminFacade
 
     def reset_admin_password(self) -> str:
         return self._facade.reset_password()

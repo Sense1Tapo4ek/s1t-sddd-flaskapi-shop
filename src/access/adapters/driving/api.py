@@ -5,6 +5,7 @@ from flask import request
 from access.domain import InvalidPasswordError
 from access.ports.driving import (
     AccessFacade,
+    AdminFacade,
     ChangePasswordIn,
     LoginIn,
     LoginOut,
@@ -36,7 +37,7 @@ def login(json_data: LoginIn, facade: FromDishka[AccessFacade]):
     security="JWTAuth",
 )
 @inject
-def change_password(json_data: ChangePasswordIn, facade: FromDishka[AccessFacade]):
+def change_password(json_data: ChangePasswordIn, facade: FromDishka[AdminFacade]):
     admin_id = request.admin_payload.get("sub", 1)
-    facade.change_password(admin_id, json_data.model_dump())
+    facade.change_password(admin_id, json_data)
     return {"success": True}

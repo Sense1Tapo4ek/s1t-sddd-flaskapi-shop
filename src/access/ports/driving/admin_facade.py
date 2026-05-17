@@ -2,8 +2,6 @@ from dataclasses import dataclass
 
 from access.app import (
     ChangePasswordUseCase,
-    LoginUseCase,
-    ChangePasswordCommand,
     ResetPasswordUseCase,
     GenerateRecoveryCodeUseCase,
     VerifyRecoveryCodeUseCase,
@@ -11,30 +9,19 @@ from access.app import (
 )
 from access.domain import AdminNotFoundError, User
 
-from .schemas import LoginIn, LoginOut
+from .schemas import ChangePasswordIn, LoginOut
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class AccessFacade:
+class AdminFacade:
     _repo: IAdminRepo
-    _login_uc: LoginUseCase
     _change_password_uc: ChangePasswordUseCase
     _reset_password_uc: ResetPasswordUseCase
     _generate_code_uc: GenerateRecoveryCodeUseCase
     _verify_code_uc: VerifyRecoveryCodeUseCase
 
-    def login(self, schema: LoginIn, *, csrf_token: str | None = None) -> LoginOut:
-        token = self._login_uc(schema.to_command(csrf_token=csrf_token))
-        return LoginOut(token=token)
-
-    def change_password(self, admin_id: int, schema: dict) -> None:
-        cmd = ChangePasswordCommand(
-            admin_id=admin_id,
-            new_password=schema["new_password"],
-            old_password=schema.get("old_password"),
-            confirmation_code=schema.get("confirmation_code"),
-        )
-        self._change_password_uc(cmd)
+    def change_password(self, admin_id: int, schema: ChangePasswordIn) -> None:
+        self._change_password_uc(schema.to_command(admin_id=admin_id))
 
     def get_user(self, admin_id: int) -> User:
         user = self._repo.get_by_id(admin_id)

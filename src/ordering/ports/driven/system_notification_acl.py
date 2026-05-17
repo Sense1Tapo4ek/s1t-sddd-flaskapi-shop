@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import logging
 
-from access.ports.driving.facade import AccessFacade
+from access.ports.driving import AdminFacade
 from ordering.app.interfaces.i_notification_acl import INotificationAcl
 from ordering.domain.order_agg import Order
 from system.ports.driving import SystemFacade
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SystemNotificationAcl(INotificationAcl):
     _system: SystemFacade
-    _access: AccessFacade
+    _access: AdminFacade
 
     def notify_new_order(self, order: Order) -> None:
         for user in self._access.order_notification_recipients():

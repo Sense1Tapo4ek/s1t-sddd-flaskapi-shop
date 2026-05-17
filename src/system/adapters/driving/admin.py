@@ -14,8 +14,7 @@ from system.ports.driving.schemas import (
     StorageSettingsUpdateIn,
 )
 from access.config import AccessConfig
-from access.ports.driving.facade import AccessFacade
-from access.ports.driving.schemas import ChangePasswordIn
+from access.ports.driving import AdminFacade, ChangePasswordIn
 from shared.adapters.driving.middleware import (
     has_permission,
     jwt_required,
@@ -72,7 +71,7 @@ def _latest_dump_file() -> Path | None:
 @system_admin_bp.route("/database-dump", methods=["GET"])
 @superadmin_required
 @inject
-def download_database_dump(access_facade: FromDishka[AccessFacade]):
+def download_database_dump(access_facade: FromDishka[AdminFacade]):
     """Serve the most recent MySQL dump produced by scripts/db_dump.py.
 
     Dumps are created out-of-process (cron in CPanel, manual on a workstation)
@@ -113,7 +112,7 @@ def download_database_dump(access_facade: FromDishka[AccessFacade]):
 @inject
 def settings_page(
     facade: FromDishka[SystemFacade],
-    access_facade: FromDishka[AccessFacade],
+    access_facade: FromDishka[AdminFacade],
     tab: str = "store",
 ):
     if tab == "security":
@@ -142,7 +141,7 @@ def settings_page(
 @account_admin_bp.route("")
 @jwt_required
 @inject
-def account_page(access_facade: FromDishka[AccessFacade]):
+def account_page(access_facade: FromDishka[AdminFacade]):
     current_user = access_facade.get_user(request.admin_payload.get("sub", 1))
     return render_template(
         "system/pages/account.html",
@@ -285,14 +284,14 @@ def test_telegram(facade: FromDishka[SystemFacade]):
 @system_admin_bp.route("/password", methods=["PUT"])
 @jwt_required
 @inject
-def change_password(access_facade: FromDishka[AccessFacade]):
+def change_password(access_facade: FromDishka[AdminFacade]):
     admin_id = request.admin_payload.get("sub", 1)
     schema = ChangePasswordIn(
         old_password=request.form.get("old_password", ""),
         new_password=request.form.get("new_password", ""),
         confirmation_code=request.form.get("confirmation_code", ""),
     )
-    access_facade.change_password(admin_id, schema.model_dump())
+    access_facade.change_password(admin_id, schema)
     response = make_response("")
     response.headers["HX-Trigger"] = json.dumps({
         "showToast": {"message": "Пароль изменён", "type": "success"},
@@ -305,7 +304,7 @@ def change_password(access_facade: FromDishka[AccessFacade]):
 @jwt_required
 @inject
 def request_password_confirmation_code(
-    access_facade: FromDishka[AccessFacade],
+    access_facade: FromDishka[AdminFacade],
     system_facade: FromDishka[SystemFacade],
     access_config: FromDishka[AccessConfig],
 ):
@@ -368,7 +367,7 @@ def fetch_current_user_chat_id(facade: FromDishka[SystemFacade]):
 @jwt_required
 @inject
 def update_current_user_chat_id(
-    access_facade: FromDishka[AccessFacade],
+    access_facade: FromDishka[AdminFacade],
 ):
     admin_id = request.admin_payload.get("sub", 1)
     chat_id = request.form.get("telegram_chat_id", "").strip()

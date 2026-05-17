@@ -8,7 +8,8 @@ from dishka.integrations.flask import inject, FromDishka
 
 from access.config import AccessConfig
 from access.domain import InvalidPasswordError
-from access.ports.driving.facade import AccessFacade
+from access.ports.driving.admin_facade import AdminFacade
+from access.ports.driving.access_facade import AccessFacade
 from access.ports.driving.schemas import LoginIn
 from system.ports.driving.facade import SystemFacade
 from shared.adapters.driving.middleware import jwt_required
@@ -98,7 +99,7 @@ def logout():
 @access_admin_bp.route("/telegram/request-code", methods=["POST"])
 @inject
 def request_telegram_code(
-    access_facade: FromDishka[AccessFacade],
+    access_facade: FromDishka[AdminFacade],
     system_facade: FromDishka[SystemFacade],
     config: FromDishka[AccessConfig],
 ):
@@ -134,7 +135,7 @@ def request_telegram_code(
 
 @access_admin_bp.route("/verify-code", methods=["POST"])
 @inject
-def verify_recovery_code(facade: FromDishka[AccessFacade]):
+def verify_recovery_code(facade: FromDishka[AdminFacade]):
     login = request.form.get("login", "").strip()
     code = request.form.get("code", "").strip()
     remember_me = _remember_enabled(request.form.get("remember_me"))
