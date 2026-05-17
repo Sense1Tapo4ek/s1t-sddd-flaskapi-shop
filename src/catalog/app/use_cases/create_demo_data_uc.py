@@ -98,7 +98,7 @@ class CreateDemoDataUseCase:
     _catalog_uc: ManageCatalogUseCase
     _taxonomy_uc: ManageTaxonomyUseCase
 
-    def __call__(self, *, products_per_leaf: int = 3) -> DemoDataResult:
+    def __call__(self, *, products_per_leaf: int = 60) -> DemoDataResult:
         counters = {
             "categories_created": 0,
             "attributes_created": 0,
