@@ -25,7 +25,6 @@ def _settings() -> SiteSettings:
         phone="+375291234567",
         email="shop@example.com",
         address="Minsk",
-        working_hours="10:00-20:00",
         coords_lat=53.9,
         coords_lon=27.56,
         instagram="@shop",
