@@ -206,6 +206,15 @@ def create_app() -> APIFlask:
     # Dishka wiring — AFTER all blueprints
     setup_dishka(container, app)
 
+    # flask-limiter's limit() returns a wrapped view; calling it without
+    # reassigning back to view_functions leaves Flask dispatching the
+    # original unwrapped function, so the limit never fires.
+    def _attach_limit(endpoint: str, limit_str: str) -> None:
+        if endpoint in app.view_functions:
+            app.view_functions[endpoint] = limiter.limit(limit_str)(
+                app.view_functions[endpoint]
+            )
+
     if root_config.app_env == "prod":
         for endpoint in (
             "access.login",
@@ -214,24 +223,13 @@ def create_app() -> APIFlask:
             "access_admin.verify_recovery_code",
             "system_admin.request_password_confirmation_code",
         ):
-            if endpoint in app.view_functions:
-                limiter.limit(root_config.rate_limit_login)(app.view_functions[endpoint])
-        limiter.limit(root_config.rate_limit_order)(
-            app.view_functions["ordering.place_order"]
-        )
-        limiter.limit(root_config.rate_limit_recovery)(
-            app.view_functions["system.recover_password"]
-        )
+            _attach_limit(endpoint, root_config.rate_limit_login)
+        _attach_limit("ordering.place_order", root_config.rate_limit_order)
+        _attach_limit("system.recover_password", root_config.rate_limit_recovery)
     # Customer register / recover are abuse-prone — rate-limit in every env,
     # not just prod. Dev still keeps its high default (10000/min) for tests.
-    if "access.register_customer" in app.view_functions:
-        limiter.limit(root_config.rate_limit_customer_register)(
-            app.view_functions["access.register_customer"]
-        )
-    if "access.recover_customer" in app.view_functions:
-        limiter.limit(root_config.rate_limit_customer_recover)(
-            app.view_functions["access.recover_customer"]
-        )
+    _attach_limit("access.register_customer", root_config.rate_limit_customer_register)
+    _attach_limit("access.recover_customer", root_config.rate_limit_customer_recover)
 
     @app.route("/media/products/<path:filename>")
     @app.doc(hide=True)
