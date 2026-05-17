@@ -564,10 +564,10 @@
       { key: 'category', label: 'Категория', sortable: true, render: p => p.category_path && p.category_path.length ? esc(p.category_path.join(' / ')) : (p.category ? esc(p.category.title) : '-') },
       { key: 'tags', label: 'Теги', sortable: true, render: p => (p.tags || []).map(t => `<span class="badge">${esc(t.title)}</span>`).join(' ') || '-' },
       {
-        key: 'is_active', label: 'Активен', sortable: false,
+        key: 'is_active', label: 'Активен', sortable: true,
         render: p => p.is_active
-          ? '<span class="badge badge--new">Активен</span>'
-          : '<span class="badge">Скрыт</span>'
+          ? '<span class="badge badge--new" title="Активен">● Активен</span>'
+          : '<span class="badge" title="Скрыт">○ Скрыт</span>'
       },
       ...attributes.map(attributeColumn),
       { key: 'created_at', label: 'Дата', sortable: true, render: p => p.created_at ? String(p.created_at).slice(0, 10) : '-' },

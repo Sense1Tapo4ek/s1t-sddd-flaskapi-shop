@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import TypeVar, Generic, Callable, Any, ClassVar
-from sqlalchemy import Date, DateTime, asc, cast, desc, func, select
+from sqlalchemy import Boolean, Date, DateTime, asc, cast, desc, func, select
 from sqlalchemy.orm import Session
 
 from shared.generics.pagination import PaginatedResult, PaginationParams
@@ -43,6 +43,10 @@ class SqlBaseRepo(Generic[TDomain, TModel]):
             # Check if the column is a date/time type
             is_date = isinstance(column.type, (DateTime, Date))
             target_col = func.date(column) if is_date else column
+
+            # Normalize boolean values arriving as strings ("true"/"false") from the wire.
+            if isinstance(column.type, Boolean) and isinstance(value, str):
+                value = value.strip().lower() in ("1", "true", "yes", "on")
 
             if op == "eq":
                 stmt = stmt.where(target_col == value)

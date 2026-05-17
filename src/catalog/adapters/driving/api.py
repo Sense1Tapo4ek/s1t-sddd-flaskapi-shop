@@ -287,6 +287,16 @@ def admin_search_schema(facade: FromDishka[CatalogFacade]):
             {"key": "price",      "label": "Цена",     "type": "number", "operators": ["eq", "gte", "lte"]},
             {"key": "created_at", "label": "Дата",     "type": "date",   "operators": ["eq", "gte", "lte"]},
             {
+                "key": "is_active",
+                "label": "Активен",
+                "type": "enum",
+                "operators": ["eq"],
+                "options": [
+                    {"value": "true", "label": "Активен"},
+                    {"value": "false", "label": "Скрыт"},
+                ],
+            },
+            {
                 "key": "category_id",
                 "label": "Категория",
                 "type": "enum",

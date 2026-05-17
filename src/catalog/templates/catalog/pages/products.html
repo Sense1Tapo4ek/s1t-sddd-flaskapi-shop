@@ -90,10 +90,10 @@ window.productsTable = new SmartTable({
     { key: 'title',      label: 'Название', sortable: true },
     { key: 'price',      label: 'Цена',     sortable: true, render: p => parseFloat(p.price).toFixed(2) + ' Br' },
     {
-      key: 'is_active', label: 'Активен', sortable: false,
+      key: 'is_active', label: 'Активен', sortable: true,
       render: p => p.is_active
-        ? '<span class="badge badge--new">Активен</span>'
-        : '<span class="badge">Скрыт</span>'
+        ? '<span class="badge badge--new" title="Активен">● Активен</span>'
+        : '<span class="badge" title="Скрыт">○ Скрыт</span>'
     },
     { key: 'created_at', label: 'Дата',     sortable: true, render: p => p.created_at ? String(p.created_at).slice(0, 10) : '—' },
     {
