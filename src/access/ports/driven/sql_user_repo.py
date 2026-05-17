@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from access.adapters.driven import UserModel
 from access.app.interfaces import IAdminRepo
 from access.domain import User
+from access.domain.errors import AdminNotFoundError
 from shared.helpers.db import handle_db_errors
 
 
@@ -21,6 +22,8 @@ class SqlUserRepo(IAdminRepo):
             telegram_chat_id=model.telegram_chat_id,
             is_active=model.is_active,
             password_changed_at=model.password_changed_at,
+            token_version=model.token_version or 0,
+            last_login_at=model.last_login_at,
             recovery_code_hash=model.recovery_code_hash,
             recovery_code_expires=model.recovery_code_expires,
             recovery_code_attempts=model.recovery_code_attempts or 0,
@@ -117,4 +120,34 @@ class SqlUserRepo(IAdminRepo):
                 model.recovery_code_expires = None
                 model.recovery_code_attempts = 0
                 model.recovery_code_locked_until = None
+                session.commit()
+
+    @handle_db_errors("get admin token version")
+    def get_token_version(self, admin_id: int) -> int | None:
+        with self._session_factory() as session:
+            model = session.get(UserModel, admin_id)
+            if model is None:
+                return None
+            return model.token_version
+
+    @handle_db_errors("bump admin token version")
+    def bump_token_version(self, admin_id: int) -> int:
+        with self._session_factory() as session:
+            result = session.execute(
+                update(UserModel)
+                .where(UserModel.id == admin_id)
+                .values(token_version=UserModel.token_version + 1)
+            )
+            if result.rowcount == 0:
+                raise AdminNotFoundError(admin_id)
+            session.commit()
+            model = session.get(UserModel, admin_id)
+            return model.token_version
+
+    @handle_db_errors("update admin last login")
+    def update_last_login(self, admin_id: int, when: datetime) -> None:
+        with self._session_factory() as session:
+            model = session.get(UserModel, admin_id)
+            if model:
+                model.last_login_at = when
                 session.commit()
