@@ -23,6 +23,13 @@ class AccessConfig(BaseSettings):
     recovery_code_max_attempts: int = 5
     recovery_code_lockout_minutes: int = 15
 
+    customer_recovery_code_ttl_minutes: int = 15
+    customer_recovery_code_cooldown_seconds: int = 60
+    customer_recovery_code_max_attempts: int = 5
+    customer_recovery_code_lockout_minutes: int = 15
+    customer_jwt_ttl_hours: int = 24 * 7
+    customer_jwt_remember_me_ttl_hours: int = 24 * 30
+
     owner_can_view_category_tree: bool = True
     owner_can_edit_taxonomy: bool = False
     owner_can_view_products: bool = False

@@ -16,11 +16,6 @@ from ...domain.customer_agg import Customer
 from ..commands import LoginCommand
 from ..interfaces import IAdminRepo, ICustomerRepo
 
-# TODO: Phase 10 вынесет в AccessConfig
-_CUSTOMER_JWT_TTL_HOURS = 24 * 7
-_CUSTOMER_JWT_REMEMBER_ME_TTL_HOURS = 24 * 30
-
-
 def create_access_token(
     user: User | Customer,
     config: AccessConfig,
@@ -41,7 +36,7 @@ def create_access_token(
             "tv": token_version,
         }
     else:
-        expires_hours = _CUSTOMER_JWT_REMEMBER_ME_TTL_HOURS if remember_me else _CUSTOMER_JWT_TTL_HOURS
+        expires_hours = config.customer_jwt_remember_me_ttl_hours if remember_me else config.customer_jwt_ttl_hours
         payload = {
             "sub": user.id,
             "email": user.email,

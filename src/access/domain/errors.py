@@ -1,4 +1,4 @@
-from shared.generics.errors import DomainError, ApplicationError
+from shared.generics.errors import ApplicationError, DomainError, DrivenPortError
 
 
 class AdminNotFoundError(ApplicationError):
@@ -33,9 +33,10 @@ class PasswordConfirmationRequiredError(DomainError):
 
 
 class WeakPasswordError(DomainError):
-    def __init__(self) -> None:
+    def __init__(self, min_length: int = 5) -> None:
+        self.min_length = min_length
         super().__init__(
-            message="Пароль должен быть не короче 5 символов",
+            message=f"Пароль должен быть не короче {min_length} символов",
             code="WEAK_PASSWORD",
         )
 
@@ -76,4 +77,20 @@ class CustomerNotFoundError(ApplicationError):
         super().__init__(
             message=f"Клиент {customer_id} не найден",
             code="CUSTOMER_NOT_FOUND",
+        )
+
+
+class InvalidRecoveryCodeError(DomainError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Неверный или просроченный код",
+            code="INVALID_RECOVERY_CODE",
+        )
+
+
+class EmailRecoveryFailedError(DrivenPortError):
+    def __init__(self) -> None:
+        super().__init__(
+            message="Не удалось отправить письмо. Попробуйте позже.",
+            code="EMAIL_DELIVERY_FAILED",
         )
