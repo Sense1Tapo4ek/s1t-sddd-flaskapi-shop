@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from access.config import AccessConfig
+from shared.domain import AccountType
 from shared.helpers.security import verify_password
 from shared.generics.errors import DomainError
 from ...domain import AdminInactiveError, RecoveryCodeLockedError, User
@@ -19,10 +20,6 @@ class InvalidRecoveryCodeError(DomainError):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VerifyRecoveryCodeUseCase:
-    """
-    Verifies one-time recovery code and issues JWT for login.
-    """
-
     _repo: IAdminRepo
     _config: AccessConfig
 
@@ -85,6 +82,8 @@ class VerifyRecoveryCodeUseCase:
         return create_access_token(
             user,
             self._config,
+            account_type=AccountType.ADMIN,
+            token_version=user.token_version,
             remember_me=remember_me,
             csrf_token=csrf_token,
         )
