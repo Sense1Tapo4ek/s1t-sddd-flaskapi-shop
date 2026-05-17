@@ -14,7 +14,6 @@
   "use strict";
 
   const FOCUS_DELAY_MS = 30;       // one paint cycle before focusing a freshly mounted modal input
-  const PREVIEW_MAX_ROWS = 200;    // safety cap when the selection blows past sane sizes
 
   function bulkText(key, params) {
     return (typeof global.bulkT === "function") ? global.bulkT(key, params) : key;
@@ -202,6 +201,9 @@
         : bulkText("bulk.modal.primary", { label: action.label, n: sel.total });
       const cancelLabel = bulkText("bulk.modal.cancel");
 
+      const scopeText = sel.mode === "all_by_filter"
+        ? bulkText("bulk.scope.filter", { n: sel.total })
+        : bulkText("bulk.scope.ids", { n: sel.total });
       const html = `
         <div class="modal-overlay modal-overlay--active" id="bulkActionOverlay" role="dialog" aria-modal="true">
           <div class="modal">
@@ -213,15 +215,7 @@
             <div class="modal__body">
               ${explainText ? `<div class="bulk-modal__explain">${escapeHTML(explainText)}</div>` : ""}
               ${controls && controls.html ? `<div class="bulk-modal__custom" data-role="custom">${controls.html}</div>` : ""}
-              <div class="bulk-modal__preview" data-role="preview">
-                <div class="bulk-modal__preview-head">
-                  <span class="bulk-modal__preview-count">${escapeHTML(bulkText("bulk.count", { n: sel.total }))}</span>
-                  <button type="button" class="bulk-modal__preview-toggle" data-role="preview-toggle" aria-expanded="false">
-                    ${escapeHTML(bulkText("bulk.preview.show"))}
-                  </button>
-                </div>
-                <div class="bulk-modal__preview-list" data-role="preview-list" hidden></div>
-              </div>
+              <p class="bulk-modal__scope">${escapeHTML(scopeText)}</p>
             </div>
             <div class="modal__footer">
               <button type="button" class="btn btn--ghost" data-role="cancel">${escapeHTML(cancelLabel)}</button>
@@ -236,8 +230,6 @@
       document.body.appendChild(overlay);
 
       const confirmBtn = overlay.querySelector('[data-role="confirm"]');
-      const previewToggle = overlay.querySelector('[data-role="preview-toggle"]');
-      const previewList = overlay.querySelector('[data-role="preview-list"]');
 
       // Mount custom controls and wire validity → primary-button state.
       // setValid accepts boolean (toggles disabled) OR object
@@ -268,25 +260,6 @@
           confirmBtn.disabled = !controls.validate();
         }
       }
-
-      // Preview toggle.
-      previewToggle.addEventListener("click", () => {
-        const expanded = previewToggle.getAttribute("aria-expanded") === "true";
-        if (expanded) {
-          previewList.hidden = true;
-          previewToggle.textContent = bulkText("bulk.preview.show");
-          previewToggle.setAttribute("aria-expanded", "false");
-          return;
-        }
-        // Render lazily on first expand.
-        if (!previewList.dataset.rendered) {
-          previewList.innerHTML = this._renderPreviewList(sel);
-          previewList.dataset.rendered = "1";
-        }
-        previewList.hidden = false;
-        previewToggle.textContent = bulkText("bulk.preview.hide");
-        previewToggle.setAttribute("aria-expanded", "true");
-      });
 
       const close = () => {
         overlay.remove();
@@ -324,37 +297,6 @@
         if (firstInput) firstInput.focus();
         else confirmBtn.focus();
       }, FOCUS_DELAY_MS);
-    }
-
-    _renderPreviewList(sel) {
-      const names = [];
-      if (sel.mode === "all_by_filter") {
-        return `<p class="bulk-modal__preview-empty">${escapeHTML(bulkText("bulk.preview.filterHint"))}</p>`;
-      }
-      if (sel.mode === "ids" && Array.isArray(sel.ids)) {
-        // SmartTable does not expose getRowSnapshot — fall back to the
-        // last loaded page. Off-page selections render as "#<id>".
-        const items = (this.table.lastData && this.table.lastData.items) || [];
-        const rowIdKey = this.table.rowIdKey || "id";
-        const byId = new Map(items.map(it => [String(it[rowIdKey]), it]));
-        const ids = sel.ids.slice(0, PREVIEW_MAX_ROWS);
-        for (const id of ids) {
-          const row = byId.get(String(id));
-          const label = (row && this.getRowName) ? this.getRowName(row) : null;
-          names.push(label || `#${id}`);
-        }
-      }
-      if (!names.length) {
-        return `<p class="bulk-modal__preview-empty">${escapeHTML(bulkText("bulk.preview.empty"))}</p>`;
-      }
-      const more = sel.total - names.length;
-      const items = names.map((n, i) =>
-        `<li><span class="bulk-modal__preview-idx">${i + 1}.</span> ${escapeHTML(n)}</li>`
-      ).join("");
-      const moreHtml = more > 0
-        ? `<li class="bulk-modal__preview-more">${escapeHTML(bulkText("bulk.preview.moreSuffix", { n: more }))}</li>`
-        : "";
-      return `<ol class="bulk-modal__preview-items">${items}${moreHtml}</ol>`;
     }
 
     async _runAction(action, sel, extra) {

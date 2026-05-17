@@ -311,74 +311,15 @@
   cursor: pointer;
 }
 
-.bulk-modal__preview {
-  margin-top: 8px;
+.bulk-modal__scope {
+  margin: 8px 0 0;
   padding: 8px 10px;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-}
-
-.bulk-modal__preview-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   font-size: 12px;
   color: var(--color-text-muted);
-}
-
-.bulk-modal__preview-count {
-  font-variant-numeric: tabular-nums;
-}
-
-.bulk-modal__preview-toggle {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: var(--color-primary);
-  cursor: pointer;
-}
-
-.bulk-modal__preview-toggle:hover {
-  text-decoration: underline;
-}
-
-.bulk-modal__preview-list {
-  margin-top: 8px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.bulk-modal__preview-items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-size: 12px;
-  color: var(--color-text);
-}
-
-.bulk-modal__preview-items li {
-  padding: 2px 0;
-}
-
-.bulk-modal__preview-idx {
-  display: inline-block;
-  min-width: 24px;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.bulk-modal__preview-more {
-  color: var(--color-text-muted);
-  font-style: italic;
-}
-
-.bulk-modal__preview-empty {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--color-text-muted);
+  line-height: 1.4;
 }
 
 /* ─── Failures-detail modal ────────────────────────────────────────── */

@@ -372,6 +372,7 @@ class ProductDetailOut(BaseModel):
     price: float
     description: str
     images: list[str]
+    is_active: bool
     created_at: str
     category_id: int | None = None
     category: CategorySummaryOut | None = None
@@ -387,6 +388,7 @@ class ProductDetailOut(BaseModel):
             price=product.price,
             description=product.description,
             images=product.images,
+            is_active=product.is_active,
             created_at=product.created_at.strftime("%Y-%m-%d"),
             category_id=product.category_id,
             category=CategorySummaryOut.from_product(product),

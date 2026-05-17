@@ -563,6 +563,12 @@
       { key: 'price', label: 'Цена', sortable: true, render: p => parseFloat(p.price || 0).toFixed(2) + ' Br' },
       { key: 'category', label: 'Категория', sortable: true, render: p => p.category_path && p.category_path.length ? esc(p.category_path.join(' / ')) : (p.category ? esc(p.category.title) : '-') },
       { key: 'tags', label: 'Теги', sortable: true, render: p => (p.tags || []).map(t => `<span class="badge">${esc(t.title)}</span>`).join(' ') || '-' },
+      {
+        key: 'is_active', label: 'Активен', sortable: false,
+        render: p => p.is_active
+          ? '<span class="badge badge--new">Активен</span>'
+          : '<span class="badge">Скрыт</span>'
+      },
       ...attributes.map(attributeColumn),
       { key: 'created_at', label: 'Дата', sortable: true, render: p => p.created_at ? String(p.created_at).slice(0, 10) : '-' },
       {
