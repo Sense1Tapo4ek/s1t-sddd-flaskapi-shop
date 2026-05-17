@@ -88,8 +88,9 @@ INFRA_DATABASE_URL=mysql+pymysql://cpaneluser_shop:STRONG_PASSWORD@localhost:330
 ACCESS_JWT_SECRET=<strong random>
 ACCESS_DEFAULT_LOGIN=admin
 ACCESS_DEFAULT_PASSWORD=<strong>
-ACCESS_SUPERADMIN_LOGIN=superadmin
-ACCESS_SUPERADMIN_PASSWORD=<strong>
+# Single admin row. Set to `true` to grant role=superadmin to that admin;
+# otherwise role=owner and per-permission ACCESS_OWNER_CAN_* flags apply.
+ACCESS_PROMOTE_TO_SUPERADMIN=true
 CATALOG_UPLOAD_DIR=media/products
 SYSTEM_RECOVERY_TOKEN=<strong random>
 
