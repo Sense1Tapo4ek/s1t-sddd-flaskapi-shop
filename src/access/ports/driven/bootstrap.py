@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Callable
 
 from sqlalchemy import select
@@ -9,8 +9,7 @@ from sqlalchemy.orm import Session
 
 from access.adapters.driven.db.models import UserModel
 from access.config import AccessConfig
-from root.config import RootConfig
-from shared.helpers.security import hash_password, verify_password
+from shared.helpers.security import hash_password
 
 logger = logging.getLogger("access.bootstrap")
 
@@ -19,35 +18,25 @@ def bootstrap_access_defaults(
     session_factory: Callable[[], Session],
     *,
     access_config: AccessConfig,
-    root_config: RootConfig,
 ) -> None:
+    # "@" в login админа сломает дисптач "/auth/login" — admin будет
+    # классифицирован как customer. Падаем рано.
+    if "@" in access_config.default_login:
+        raise ValueError(
+            "ACCESS_DEFAULT_LOGIN must not contain '@' — "
+            "'@' is reserved for customer email identifiers."
+        )
+
+    role = "superadmin" if access_config.promote_to_superadmin else "owner"
     with session_factory() as session:
         _ensure_user(
             session,
             login=access_config.default_login,
             password=access_config.default_password,
-            role="owner",
+            role=role,
             telegram_chat_id=access_config.default_telegram_chat_id,
             password_changed_at=None,
         )
-
-        superadmin_password = access_config.superadmin_password
-        if not superadmin_password and root_config.app_env == "dev":
-            superadmin_password = "superadmin"
-        if superadmin_password:
-            superadmin = _ensure_user(
-                session,
-                login=access_config.superadmin_login,
-                password=superadmin_password,
-                role="superadmin",
-                telegram_chat_id=access_config.superadmin_telegram_chat_id,
-                password_changed_at=(
-                    None
-                    if superadmin_password == "superadmin"
-                    else datetime.now(timezone.utc)
-                ),
-            )
-            _mark_legacy_superadmin_password_if_changed(superadmin)
         session.commit()
 
 
@@ -81,10 +70,3 @@ def _ensure_user(
         if telegram_chat_id and not user.telegram_chat_id:
             user.telegram_chat_id = telegram_chat_id
     return user
-
-
-def _mark_legacy_superadmin_password_if_changed(user: UserModel) -> None:
-    if user.password_changed_at is not None:
-        return
-    if not verify_password("superadmin", user.password_hash):
-        user.password_changed_at = datetime.now(timezone.utc)

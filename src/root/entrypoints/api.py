@@ -123,7 +123,6 @@ def create_app() -> APIFlask:
     bootstrap_access_defaults(
         session_factory,
         access_config=access_config,
-        root_config=root_config,
     )
     bootstrap_system_defaults(
         session_factory,
