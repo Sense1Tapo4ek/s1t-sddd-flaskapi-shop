@@ -1,4 +1,5 @@
 import datetime
+import secrets
 
 import jwt
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -18,6 +19,12 @@ def create_jwt(payload: dict, secret: str, expires_hours: int = 24) -> str:
         hours=expires_hours
     )
     return jwt.encode(data, secret, algorithm="HS256")
+
+
+def generate_recovery_code(length: int = 6) -> str:
+    if length < 1:
+        raise ValueError("length must be >= 1")
+    return f"{secrets.randbelow(10 ** length):0{length}d}"
 
 
 def verify_jwt(token: str, secret: str) -> dict | None:
