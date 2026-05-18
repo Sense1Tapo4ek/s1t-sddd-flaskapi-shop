@@ -54,3 +54,47 @@ def test_inquiry_notification_uses_user_level_recipients_and_continues_on_failur
     assert [item["chat_id"] for item in system.sent] == ["owner-chat", "super-chat"]
     assert all(item["subject"] == "Новое обращение" for item in system.sent)
     assert all("Alice" in item["body"] for item in system.sent)
+
+
+def test_order_notification_fans_out_to_all_recipients_and_continues_on_failure():
+    """
+    Given a placed order and two recipients (one with a failing Telegram chat),
+    When notify_order_placed is called,
+    Then both recipients are contacted, failure on the first doesn't stop the second.
+    """
+    from decimal import Decimal
+
+    from ordering.domain import (
+        DeliveryInfo,
+        DeliveryMethod,
+        Order,
+        OrderItem,
+    )
+
+    item = OrderItem(
+        product_id=10,
+        title_snapshot="Mug",
+        unit_price=Decimal("5.00"),
+        quantity=2,
+    )
+    delivery = DeliveryInfo(method=DeliveryMethod.PICKUP)
+    order = Order.place(
+        customer_user_id=8,
+        items=[item],
+        delivery=delivery,
+        comment="leave at door",
+    )
+    order.id = 56
+    access = FakeAccessFacade([_user("owner", "owner-chat"), _user("super", "super-chat")])
+    system = FakeSystemFacade(fail_for={"owner-chat"})
+    acl = SystemNotificationAcl(_system=system, _access=access)
+
+    acl.notify_order_placed(order, customer_email="ivan@example.com")
+
+    assert [item["chat_id"] for item in system.sent] == ["owner-chat", "super-chat"]
+    assert all(item["subject"] == "Новый заказ" for item in system.sent)
+    body = system.sent[0]["body"]
+    assert "#56" in body
+    assert "customer=8" in body
+    assert "ivan@example.com" in body
+    assert "pickup" in body
