@@ -11,6 +11,7 @@
       <h2 class="page-title">Каталог</h2>
     </div>
     <div class="catalog-workspace__actions">
+      <button class="help-badge" type="button" onclick="document.getElementById('catalog-help-modal').classList.add('modal-overlay--active')" title="Справка по каталогу">?</button>
       {% if has_perm('edit_taxonomy') %}
       <button class="btn btn--ghost btn--sm" type="button" onclick="openCatalogTags()">Теги</button>
       {% endif %}
@@ -20,6 +21,49 @@
       {% if has_perm('edit_taxonomy') %}
       <button class="btn btn--primary btn--sm" type="button" onclick="createRootCategory()">+ Категория</button>
       {% endif %}
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="catalog-help-modal" role="dialog" aria-modal="true" aria-label="Справка по каталогу" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+    <div class="modal">
+      <div class="modal__header">
+        Каталог — Справка
+        <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('catalog-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+      </div>
+      <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+        <section>
+          <p style="margin-top:0;">Рабочий центр каталога: дерево категорий слева, редактор категории справа (настройки, атрибуты, товары). Здесь управляется вся структура магазина.</p>
+        </section>
+        <section>
+          <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Выбрать категорию:</strong> кликните по узлу дерева слева — справа откроются вкладки редактора.</li>
+            <li><strong>Создать категорию:</strong> кнопка «+ Категория» добавляет корневой узел; «+ Подкатегория» — дочерний к выбранному.</li>
+            <li><strong>Настройки категории:</strong> вкладка «Настройки» — название, slug, описание, активность.</li>
+            <li><strong>Атрибуты:</strong> вкладка «Атрибуты» — типизированные поля товаров (Размер, Цвет, Материал…). Каждый атрибут наследуется подкатегориями.</li>
+            <li><strong>Товары:</strong> вкладка «Товары» — таблица с фильтрацией, сортировкой, добавлением нового товара.</li>
+            <li><strong>Теги:</strong> кнопка «Теги» открывает управление метками, применяемыми к товарам.</li>
+            <li><strong>Поиск категории:</strong> поле «Найти категорию...» фильтрует дерево по названию.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><kbd>Esc</kbd> — закрыть открытое модальное окно (форма категории, форма атрибута, лайтбокс).</li>
+            <li><kbd>Enter</kbd> — применить фильтр в поле таблицы товаров.</li>
+            <li><kbd>Shift</kbd> + клик по чекбоксу — выделить диапазон строк в таблице.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+          <ul style="padding-left:18px; margin:0;">
+            <li>Товары привязываются только к <strong>листовым</strong> (конечным) категориям — без дочерних узлов.</li>
+            <li>Атрибут, созданный на родительской категории, наследуется всеми потомками и не редактируется на них.</li>
+            <li>Снятая галка «Активна» скрывает категорию и все её товары на витрине без удаления из базы.</li>
+            <li>Код атрибута (snake_case) нельзя изменить после сохранения — по нему работают фильтры витрины.</li>
+          </ul>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -80,7 +124,7 @@
           <p>Удалить можно через таб «Настройки» у выбранной категории, и только если у неё нет дочерних узлов и товаров.</p>
         </div>
       </details>
-      <button class="modal__close" type="button" onclick="closeCategoryForm()">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="closeCategoryForm()">&times;</button>
     </div>
     <form class="modal__body form form--wide" id="categoryModalForm" onsubmit="saveCategoryModal(event)">
       <input type="hidden" id="category-id">
@@ -133,7 +177,7 @@
           <p>Атрибут, заданный на категории, <strong>наследуется всеми её потомками</strong>. На потомке его не редактируют — только смотрят.</p>
         </div>
       </details>
-      <button class="modal__close" type="button" onclick="closeAttributeForm()">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="closeAttributeForm()">&times;</button>
     </div>
     <form class="modal__body form form--wide" id="attributeForm" onsubmit="saveAttribute(event)">
       <input type="hidden" id="attribute-id">
@@ -199,11 +243,11 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="tagModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeTagForm()">
+<div class="modal-overlay" id="tagModal" role="dialog" aria-modal="true" aria-labelledby="tagModalTitle" onclick="if(event.target===this)closeTagForm()">
   <div class="modal">
     <div class="modal__header">
       <span id="tagModalTitle">Тег</span>
-      <button class="modal__close" type="button" onclick="closeTagForm()">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="closeTagForm()">&times;</button>
     </div>
     <form class="modal__body" id="tagForm" onsubmit="saveTag(event)">
       <input type="hidden" id="tag-id">

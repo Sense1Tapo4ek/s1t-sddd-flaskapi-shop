@@ -1,6 +1,30 @@
+from dataclasses import dataclass
+
 from pydantic import BaseModel, ConfigDict, Field
 from ...domain import SiteSettings, StorageSettings
 from ...app import UpdateSettingsCommand, UpdateStorageSettingsCommand
+
+
+@dataclass(frozen=True, slots=True)
+class SocialsFlags:
+    """Visibility flags for each social channel — mirrors SystemConfig."""
+
+    instagram: bool = True
+    telegram: bool = True
+    whatsapp: bool = True
+    viber: bool = True
+
+
+_ALL_SOCIALS_ON = SocialsFlags()
+
+
+def _build_socials(s: SiteSettings, flags: SocialsFlags) -> "SocialsOut":
+    return SocialsOut(
+        instagram=s.instagram if flags.instagram else None,
+        telegram=s.telegram_public_url if flags.telegram else None,
+        whatsapp=s.whatsapp_url if flags.whatsapp else None,
+        viber=s.viber_url if flags.viber else None,
+    )
 
 
 class FetchChatIdIn(BaseModel):
@@ -21,8 +45,20 @@ class CoordsOut(BaseModel):
 
 
 class SocialsOut(BaseModel):
+    """
+    Public social-network handles.
+
+    Each field is independently gated by a SystemConfig.socials_*_enabled
+    flag. Disabled fields are absent from the serialised payload (via
+    `exclude_none=True` in the facade), so clients only see what the
+    operator has chosen to expose.
+    """
+
     model_config = ConfigDict(frozen=True)
-    instagram: str
+    instagram: str | None = None
+    telegram: str | None = None
+    whatsapp: str | None = None
+    viber: str | None = None
 
 
 class ContactsOut(BaseModel):
@@ -66,7 +102,10 @@ class SettingsOut(BaseModel):
     catalog_access: CatalogAccessOut
 
     @classmethod
-    def from_domain(cls, s: SiteSettings) -> "SettingsOut":
+    def from_domain(
+        cls, s: SiteSettings, socials_flags: SocialsFlags | None = None
+    ) -> "SettingsOut":
+        flags = socials_flags or _ALL_SOCIALS_ON
         return cls(
             branding=BrandingOut(
                 app_name=s.app_name,
@@ -82,7 +121,7 @@ class SettingsOut(BaseModel):
                 bot_token=s.telegram_bot_token, chat_id=s.telegram_chat_id
             ),
             coords=CoordsOut(lat=s.coords_lat, lon=s.coords_lon),
-            socials=SocialsOut(instagram=s.instagram),
+            socials=_build_socials(s, flags),
             catalog_access=CatalogAccessOut(
                 owner_can_view_category_tree=s.owner_can_view_category_tree,
                 owner_can_edit_taxonomy=s.owner_can_edit_taxonomy,
@@ -106,7 +145,10 @@ class InfoOut(BaseModel):
     socials: SocialsOut
 
     @classmethod
-    def from_domain(cls, s: SiteSettings) -> "InfoOut":
+    def from_domain(
+        cls, s: SiteSettings, socials_flags: SocialsFlags | None = None
+    ) -> "InfoOut":
+        flags = socials_flags or _ALL_SOCIALS_ON
         return cls(
             app_name=s.app_name,
             phone=s.phone,
@@ -114,7 +156,7 @@ class InfoOut(BaseModel):
             email=s.email,
             working_hours=s.working_hours,
             coords=CoordsOut(lat=s.coords_lat, lon=s.coords_lon),
-            socials=SocialsOut(instagram=s.instagram),
+            socials=_build_socials(s, flags),
         )
 
 
@@ -145,8 +187,22 @@ class CoordsUpdateIn(BaseModel):
 
 
 class SocialsUpdateIn(BaseModel):
+    """
+    Partial update of social-network handles.
+
+    Each field maps 1:1 to a column on `settings` and corresponds to a
+    SystemConfig flag controlling its public visibility:
+    - instagram        -> SYSTEM_SOCIALS_INSTAGRAM_ENABLED
+    - telegram         -> SYSTEM_SOCIALS_TELEGRAM_ENABLED  (telegram_public_url)
+    - whatsapp         -> SYSTEM_SOCIALS_WHATSAPP_ENABLED  (whatsapp_url)
+    - viber            -> SYSTEM_SOCIALS_VIBER_ENABLED     (viber_url)
+    """
+
     model_config = ConfigDict(frozen=True)
     instagram: str | None = None
+    telegram: str | None = None
+    whatsapp: str | None = None
+    viber: str | None = None
 
 
 class CatalogAccessUpdateIn(BaseModel):
@@ -192,7 +248,15 @@ class SettingsUpdateIn(BaseModel):
             if "lon" in coords:
                 kwargs["coords_lon"] = coords["lon"]
         if self.socials is not None:
-            kwargs.update(self.socials.model_dump(exclude_unset=True))
+            socials = self.socials.model_dump(exclude_unset=True)
+            if "instagram" in socials:
+                kwargs["instagram"] = socials["instagram"]
+            if "telegram" in socials:
+                kwargs["telegram_public_url"] = socials["telegram"]
+            if "whatsapp" in socials:
+                kwargs["whatsapp_url"] = socials["whatsapp"]
+            if "viber" in socials:
+                kwargs["viber_url"] = socials["viber"]
         if self.catalog_access is not None:
             kwargs.update(self.catalog_access.model_dump(exclude_unset=True))
         return UpdateSettingsCommand(**kwargs)

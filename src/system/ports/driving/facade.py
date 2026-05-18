@@ -19,6 +19,7 @@ from .schemas import (
     InfoOut,
     SettingsOut,
     SettingsUpdateIn,
+    SocialsFlags,
     StorageSettingsOut,
     StorageSettingsUpdateIn,
 )
@@ -45,21 +46,30 @@ class SystemFacade:
     def get_config(self) -> SystemConfig:
         return self._config
 
+    def _socials_flags(self) -> SocialsFlags:
+        cfg = self._config
+        return SocialsFlags(
+            instagram=cfg.socials_instagram_enabled,
+            telegram=cfg.socials_telegram_enabled,
+            whatsapp=cfg.socials_whatsapp_enabled,
+            viber=cfg.socials_viber_enabled,
+        )
+
     def get_settings(self) -> SettingsOut:
         """Full settings for admin panel."""
         settings = self._get_query()
-        return SettingsOut.from_domain(settings)
+        return SettingsOut.from_domain(settings, self._socials_flags())
 
     def get_public_info(self) -> InfoOut:
         """Safe settings for public footer/contacts."""
         settings = self._get_query()
-        return InfoOut.from_domain(settings)
+        return InfoOut.from_domain(settings, self._socials_flags())
 
     def update_settings(self, schema: SettingsUpdateIn) -> SettingsOut:
         """Update settings from admin panel."""
         cmd = schema.to_command()
         settings = self._manage_uc(cmd)
-        return SettingsOut.from_domain(settings)
+        return SettingsOut.from_domain(settings, self._socials_flags())
 
     def get_storage_settings(self) -> StorageSettingsOut:
         """Storage configuration view for admin (secret is masked)."""

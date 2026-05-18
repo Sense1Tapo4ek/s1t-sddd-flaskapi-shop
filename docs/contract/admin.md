@@ -188,6 +188,12 @@ Both entity groups use `view_orders` (read) and `manage_orders` (write)
 permissions. Separate `view_inquiries`/`manage_inquiries` are deferred
 (see [../adr/0010-inquiries-vs-orders-split.md](../adr/0010-inquiries-vs-orders-split.md)).
 
+> **Orders are feature-gated.** All `/admin/orders/*` endpoints (and the
+> public `/orders*`) exist only when `ORDERING_ORDERS_ENABLED=true`
+> (default). When the flag is `false`, the Orders tab is removed from
+> `/admin/requests/` and the inquiries-only view is shown. See
+> [../subsystems/feature-flags.md](../subsystems/feature-flags.md).
+
 ### Unified page
 
 | Route | Auth | Notes |
@@ -240,16 +246,32 @@ Error codes: `404` entity not found; `422` illegal status transition.
 
 ```json
 {
+  "branding": { "app_name": "...", "admin_panel_title": "..." },
   "contacts": { "phone": "...", "email": "...", "working_hours": "...", "address": "..." },
   "telegram": { "bot_token": "...", "chat_id": "..." },
   "coords": { "lat": 53.9, "lon": 27.56 },
-  "socials": { "instagram": "..." }
+  "socials": {
+    "instagram": "https://instagram.com/shop",
+    "telegram":  null,
+    "whatsapp":  "https://wa.me/...",
+    "viber":     null
+  },
+  "catalog_access": { "owner_can_view_category_tree": true, ... }
 }
 ```
+
+Each `socials.<channel>` is gated by a `SYSTEM_SOCIALS_<CHANNEL>_ENABLED`
+env flag (see [../subsystems/feature-flags.md](../subsystems/feature-flags.md)).
+Disabled channels are returned as `null` and are NOT writable via `PUT`
+— the admin form does not even render the input.
 
 ### `PUT /system/settings` (`manage_settings`)
 
 Partial update; any subset of the response body is accepted.
+
+The `socials` payload uses field names `instagram` / `telegram` /
+`whatsapp` / `viber`. They map to DB columns `instagram`,
+`telegram_public_url`, `whatsapp_url`, `viber_url` respectively.
 
 `telegram.bot_token` is the global bot credential.
 `telegram.chat_id` is a legacy global fallback; orders, login codes,

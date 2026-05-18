@@ -31,58 +31,67 @@
   <div class="modal">
     <div class="modal__header">
       {{ tab_title }} — Справка
-      <button class="modal__close" onclick="document.getElementById('settings-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('settings-help-modal').classList.remove('modal-overlay--active')">&times;</button>
     </div>
     <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
       {% if tab == 'telegram' %}
-        <p style="margin-top:0;"><strong>Зачем нужен бот.</strong></p>
-        <ul style="padding-left:20px; margin:6px 0 14px;">
-          <li>Мгновенные уведомления о новых заказах.</li>
-          <li>Одноразовые коды для смены пароля и восстановления доступа.</li>
-        </ul>
-
-        <p><strong>Архитектура:</strong> один <em>токен бота</em> на весь магазин (хранится в этой вкладке)
-        и персональный <em>Chat ID</em> у каждого администратора (привязывается на странице
-        <a href="/admin/account" style="color:var(--color-accent);">«Аккаунт»</a>).</p>
-
-        <p style="margin-top:14px;"><strong>Шаг 1. Создать бота.</strong></p>
-        <ol style="padding-left:20px; margin:6px 0 12px;">
-          <li>Откройте Telegram и найдите <a href="https://t.me/BotFather" target="_blank" rel="noopener" style="color:var(--color-accent);"><code>@BotFather</code></a>.</li>
-          <li>Отправьте команду <code>/newbot</code>.</li>
-          <li>Введите отображаемое имя бота (например, <em>«Мой магазин — уведомления»</em>).</li>
-          <li>Введите username бота — должен заканчиваться на <code>bot</code> (например, <code>myshop_notify_bot</code>).</li>
-          <li>BotFather пришлёт строку токена вида <code>1234567890:ABCdef...</code> — это секрет, не публикуйте.</li>
-        </ol>
-
-        <p><strong>Шаг 2. Сохранить токен здесь.</strong></p>
-        <ol style="padding-left:20px; margin:6px 0 12px;">
-          <li>Вставьте токен в поле «Токен бота» на этой вкладке.</li>
-          <li>Нажмите «Сохранить».</li>
-        </ol>
-
-        <p><strong>Шаг 3. Привязать Chat ID к своему аккаунту.</strong></p>
-        <ol style="padding-left:20px; margin:6px 0 12px;">
-          <li>Откройте диалог со <strong>своим</strong> ботом (по ссылке от BotFather) и нажмите «Запустить» / отправьте <code>/start</code>.</li>
-          <li>Перейдите на страницу <a href="/admin/account" style="color:var(--color-accent);">«Аккаунт»</a>.</li>
-          <li>Нажмите «Получить Chat ID» — система автоматически найдёт ваш диалог.</li>
-          <li>Сохраните привязку.</li>
-        </ol>
-
-        <p style="margin-top:14px;"><strong>Важно:</strong></p>
-        <ul style="padding-left:20px; margin:6px 0 0;">
-          <li>Между <code>/start</code> и кнопкой «Получить Chat ID» должно пройти не более 15 минут — Telegram сам очищает очередь обновлений.</li>
-          <li>Каждый администратор делает шаг 3 для своего аккаунта — Chat ID индивидуальный.</li>
-          <li>Если перевыпустили токен у BotFather — пересохраните его здесь; старый перестаёт работать сразу.</li>
-        </ul>
+        <section>
+          <p style="margin-top:0;">Telegram-бот отправляет уведомления о заказах и одноразовые коды входа / смены пароля. Один токен на весь магазин; Chat ID — индивидуально для каждого администратора.</p>
+        </section>
+        <section>
+          <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как подключить — три шага</h4>
+          <p style="margin:0 0 4px;"><strong>Шаг 1. Создать бота.</strong></p>
+          <ol style="padding-left:20px; margin:0 0 10px;">
+            <li>Найдите в Telegram <a href="https://t.me/BotFather" target="_blank" rel="noopener" style="color:var(--color-accent);"><code>@BotFather</code></a> и отправьте <code>/newbot</code>.</li>
+            <li>Введите имя и username (заканчивается на <code>bot</code>).</li>
+            <li>BotFather пришлёт токен вида <code>1234567890:ABCdef...</code> — не публикуйте.</li>
+          </ol>
+          <p style="margin:0 0 4px;"><strong>Шаг 2. Сохранить токен.</strong></p>
+          <ol style="padding-left:20px; margin:0 0 10px;">
+            <li>Вставьте токен в поле «Токен бота» и нажмите «Сохранить».</li>
+          </ol>
+          <p style="margin:0 0 4px;"><strong>Шаг 3. Привязать Chat ID.</strong></p>
+          <ol style="padding-left:20px; margin:0 0 10px;">
+            <li>Откройте бота в Telegram, отправьте <code>/start</code>.</li>
+            <li>Перейдите на страницу <a href="/admin/account" style="color:var(--color-accent);">«Аккаунт»</a> и нажмите «Получить Chat ID».</li>
+            <li>Сохраните привязку.</li>
+          </ol>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+          <ul style="padding-left:18px; margin:0;">
+            <li>Между <code>/start</code> и «Получить Chat ID» — не более 15 минут.</li>
+            <li>Каждый администратор привязывает Chat ID самостоятельно на странице «Аккаунт».</li>
+            <li>Перевыпустили токен у BotFather — пересохраните его здесь; старый перестаёт работать мгновенно.</li>
+          </ul>
+        </section>
       {% else %}
-        <ul style="padding-left:18px; margin:0;">
-          <li><strong>Приложение:</strong> Имя приложения и подпись админ-панели — без правки кода и без перезапуска.</li>
-          <li><strong>Контакты:</strong> Телефон, email, адрес и режим работы — отображаются на публичных страницах (шапка, подвал, страница контактов).</li>
-          <li><strong>Карта:</strong> Укажите координаты (широту и долготу) для интерактивной карты на странице контактов.</li>
-          <li><strong>Соцсети:</strong> Полная ссылка на Instagram (начиная с <code>https://</code>). Пустое поле — иконка скрыта.</li>
-          <li><strong>Сохранение:</strong> Нажмите «Сохранить» внизу формы. Изменения применяются мгновенно.</li>
-        </ul>
-        <p style="margin-top:12px;"><strong>Права владельца на каталог</strong> задаются в <code>.env</code> переменными <code>ACCESS_OWNER_CAN_*</code> и применяются на старте процесса. Через UI они больше не меняются.</p>
+        <section>
+          <p style="margin-top:0;">Общие настройки магазина: имя, контакты, карта и соцсети. Изменения применяются мгновенно без перезапуска.</p>
+        </section>
+        <section>
+          <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Приложение:</strong> имя магазина и подпись панели управления — отображаются в заголовке страниц.</li>
+            <li><strong>Контакты:</strong> телефон, email, адрес и режим работы — используются в шапке, подвале и на странице контактов.</li>
+            <li><strong>Карта:</strong> широта и долгота для интерактивной карты; оставьте пустыми, если карту показывать не нужно.</li>
+            <li><strong>Соцсети:</strong> полная ссылка на Instagram (начиная с <code>https://</code>); пустое поле — иконка скрыта.</li>
+            <li><strong>Сохранить:</strong> кнопка «Сохранить» внизу формы — изменения вступают в силу немедленно.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><kbd>Esc</kbd> — закрыть это окно справки.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+          <ul style="padding-left:18px; margin:0;">
+            <li>Вкладки «Магазин», «Telegram», «Хранилище» переключаются через боковое меню слева.</li>
+            <li>Права владельца на каталог задаются переменными <code>ACCESS_OWNER_CAN_*</code> в <code>.env</code> и применяются на старте процесса — через UI не меняются.</li>
+          </ul>
+        </section>
       {% endif %}
     </div>
   </div>

@@ -83,7 +83,7 @@ JSON payloads and casing.
 | Product edit | `/admin/products/<id>` | `catalog/templates/catalog/pages/product_form.html` |
 | Categories | `/admin/categories/` | `catalog/templates/catalog/pages/categories.html` |
 | Tags | `/admin/tags/` | `catalog/templates/catalog/pages/tags.html` |
-| Orders | `/admin/orders/` | `ordering/templates/ordering/pages/orders.html` |
+| Requests (inquiries + orders, two tabs) | `/admin/requests/` | `ordering/templates/ordering/pages/requests.html` |
 | Settings | `/admin/settings/` | `system/templates/system/pages/settings.html` |
 | Account | `/admin/account/` | `access/templates/access/pages/account.html` |
 

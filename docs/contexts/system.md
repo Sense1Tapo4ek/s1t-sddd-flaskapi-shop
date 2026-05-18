@@ -58,6 +58,14 @@ Wire-level shapes: [../contract/public.md](../contract/public.md) and
   not import `access` internals from `system` use cases directly.
 - **Boolean settings are typed.** APIFlask schemas coerce `"false"`
   strings to `False`. Do not branch on string truthiness in handlers.
+- **Social channels are feature-gated.** Each of
+  `socials.{instagram,telegram,whatsapp,viber}` is independently gated
+  by a `SYSTEM_SOCIALS_<CHANNEL>_ENABLED` env flag. A disabled channel
+  is `null` in both `InfoOut` and `SettingsOut` and is hidden from the
+  admin store form. The underlying columns
+  (`instagram`, `telegram_public_url`, `whatsapp_url`, `viber_url`)
+  always exist, so re-enabling a flag re-exposes the stored value. See
+  [../subsystems/feature-flags.md](../subsystems/feature-flags.md).
 
 ## Pointers
 

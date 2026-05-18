@@ -71,7 +71,8 @@ Examples:
 
 ```
 GET /catalog/admin/search?title__ilike=phone&price__gte=100&price__lte=500
-GET /orders?status=new&name__ilike=alice&created_at__gte=2025-01-01
+GET /inquiries?status=new&name__ilike=alice&created_at__gte=2025-01-01
+GET /orders?status=confirmed&customer_user_id__eq=42
 ```
 
 ### Catalog taxonomy filters
@@ -92,6 +93,7 @@ Product search supports relation filters beyond plain columns:
 | Entity | Schema | Search |
 |---|---|---|
 | Products | `GET /catalog/admin/search/schema` | `GET /catalog/admin/search` |
+| Inquiries | `GET /inquiries/search/schema` | `GET /inquiries` |
 | Orders | `GET /orders/search/schema` | `GET /orders` |
 | Tags | `GET /catalog/admin/tags/search/schema` | `GET /catalog/admin/tags` |
 

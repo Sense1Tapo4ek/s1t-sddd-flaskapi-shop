@@ -103,7 +103,9 @@
   <script src="/static/js/bulk-products-wiring.js"></script>
   <script src="/static/js/bulk-tags-wiring.js"></script>
   <script src="/static/js/cards-feed.js"></script>
+  {% if feature_flags.orders_enabled %}
   <script src="/static/js/orders-cards-wiring.js"></script>
+  {% endif %}
   <script src="/static/js/inquiries-cards-wiring.js"></script>
 	  <script>
 	  function getCookie(name) {

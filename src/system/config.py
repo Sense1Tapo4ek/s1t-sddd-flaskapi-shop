@@ -18,3 +18,13 @@ class SystemConfig(BaseSettings):
     # in the storage_settings table. Generate via:
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     storage_secrets_key: str = ""
+
+    # Social network visibility flags. A disabled social channel is:
+    # - omitted from public /system/info and admin /system/settings responses,
+    # - hidden from the admin store-form UI (the input is not rendered).
+    # The underlying SiteSettings columns still exist; flipping a flag back to
+    # True re-exposes the previously stored value without any data migration.
+    socials_instagram_enabled: bool = True
+    socials_telegram_enabled: bool = True
+    socials_whatsapp_enabled: bool = True
+    socials_viber_enabled: bool = True

@@ -4,6 +4,7 @@ import logging
 from typing import Callable
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from access.config import AccessConfig
@@ -45,7 +46,12 @@ def bootstrap_system_defaults(
         settings.owner_can_view_products = access_config.owner_can_view_products
         settings.owner_can_edit_products = access_config.owner_can_edit_products
         settings.owner_can_create_demo_data = access_config.owner_can_create_demo_data
-        session.commit()
+        try:
+            session.commit()
+        except IntegrityError:
+            # Another worker won the race on the singleton PK. State on the
+            # row is identical (env-driven), so the loser can safely no-op.
+            session.rollback()
 
 
 def bootstrap_storage_defaults(session_factory: Callable[[], Session]) -> None:
@@ -60,5 +66,9 @@ def bootstrap_storage_defaults(session_factory: Callable[[], Session]) -> None:
         ).scalar_one_or_none()
         if row is None:
             session.add(StorageSettingsModel(id=1, backend="local"))
-            session.commit()
-            logger.info("Created default storage settings (backend=local)")
+            try:
+                session.commit()
+                logger.info("Created default storage settings (backend=local)")
+            except IntegrityError:
+                # Another worker already inserted the singleton row.
+                session.rollback()

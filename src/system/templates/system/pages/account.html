@@ -197,10 +197,38 @@
   <div class="modal">
     <div class="modal__header">
       Аккаунт — Справка
-      <button class="modal__close" onclick="document.getElementById('account-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('account-help-modal').classList.remove('modal-overlay--active')">&times;</button>
     </div>
     <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
-      <p style="margin-top:0;">Управление Telegram для входа в систему и смена пароля.</p>
+      <section>
+        <p style="margin-top:0;">Личный аккаунт: привязка Telegram для входа по одноразовому коду и смена пароля.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Telegram для входа</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li>Убедитесь, что бот-токен сохранён в <a href="/admin/settings/telegram" style="color:var(--color-accent);">Настройки → Telegram</a>.</li>
+          <li>Откройте бота в Telegram и отправьте <code>/start</code>.</li>
+          <li>Нажмите «Получить Chat ID» — поле заполнится автоматически.</li>
+          <li>Нажмите «Сохранить Telegram».</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Смена пароля</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li>Укажите <strong>текущий пароль</strong> или запросите <strong>код Telegram</strong> — одно из двух обязательно.</li>
+          <li>Введите новый пароль (минимум 5 символов) и повторите его.</li>
+          <li>Индикатор силы пароля: красный — слабый, жёлтый — средний, зелёный — сильный.</li>
+          <li>Нажмите «Сохранить пароль».</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+        <ul style="padding-left:18px; margin:0;">
+          <li>Между <code>/start</code> и «Получить Chat ID» — не более 15 минут.</li>
+          <li>Кнопка «Показать» рядом с полем пароля временно делает символы видимыми.</li>
+          <li>Для владельца этот Chat ID используется и для входа, и для уведомлений магазина.</li>
+        </ul>
+      </section>
     </div>
   </div>
 </div>

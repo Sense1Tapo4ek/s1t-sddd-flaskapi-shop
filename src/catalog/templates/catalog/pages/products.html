@@ -23,17 +23,41 @@
   <div class="modal">
     <div class="modal__header">
       Товары — Справка
-      <button class="modal__close" onclick="document.getElementById('products-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('products-help-modal').classList.remove('modal-overlay--active')">&times;</button>
     </div>
     <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
-      <ul style="padding-left:18px; margin:0;">
-        <li><strong>Добавление:</strong> Кнопка «+ Новый товар» открывает страницу создания.</li>
-        <li><strong>Редактирование:</strong> Кнопка «Изм.» в строке открывает страницу редактирования с текущими данными и фотографиями.</li>
-        <li><strong>Удаление:</strong> Кнопка «Удалить» запрашивает подтверждение и удаляет товар вместе с фотографиями <strong>безвозвратно</strong>.</li>
-        <li><strong>Фильтрация:</strong> «+» в заголовке колонки открывает параметры фильтра. Активные фильтры показываются над таблицей.</li>
-        <li><strong>Сортировка:</strong> Клик по заголовку колонки меняет порядок. Повторный клик меняет направление.</li>
-        <li><strong>Колонки:</strong> Кнопка «Колонки» позволяет скрыть ненужные поля.</li>
-      </ul>
+      <section>
+        <p style="margin-top:0;">Список всех товаров магазина. Здесь можно найти, отфильтровать, добавить, отредактировать или удалить товар.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><strong>Добавить:</strong> кнопка «+ Новый товар» ведёт на страницу создания.</li>
+          <li><strong>Редактировать:</strong> «Изм.» в строке — форма с текущими данными и фотографиями.</li>
+          <li><strong>Удалить:</strong> «Удалить» запрашивает подтверждение; товар и все фотографии удаляются <strong>безвозвратно</strong>.</li>
+          <li><strong>Фильтрация:</strong> «+» в заголовке колонки открывает фильтр. Активные фильтры отображаются над таблицей; нажмите «×» на теге фильтра, чтобы снять.</li>
+          <li><strong>Сортировка:</strong> клик по заголовку колонки — по возрастанию; повторный — по убыванию.</li>
+          <li><strong>Колонки:</strong> кнопка «Колонки» справа скрывает/показывает поля.</li>
+          <li><strong>Массовые действия:</strong> отметьте строки чекбоксами — появится плавающая панель с доступными действиями (архивировать, удалить…).</li>
+          <li><strong>Фото:</strong> клик по миниатюре открывает полноразмерное изображение.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><kbd>Esc</kbd> — сбросить выделение строк (если есть) или закрыть открытый фильтр / модал.</li>
+          <li><kbd>Enter</kbd> — применить фильтр в поле ввода.</li>
+          <li><kbd>Shift</kbd> + клик по чекбоксу — выделить диапазон строк.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+        <ul style="padding-left:18px; margin:0;">
+          <li>«● Активен» — товар виден на витрине; «○ Скрыт» — скрыт, не удалён.</li>
+          <li>Товары привязаны к категориям; без категории товар не попадает в каталог.</li>
+          <li>Для массового архивирования используйте панель действий — это безопаснее, чем удаление.</li>
+        </ul>
+      </section>
     </div>
   </div>
 </div>
@@ -84,7 +108,7 @@ window.productsTable = new SmartTable({
     {
       key: 'image', label: 'Фото', sortable: false,
       render: p => p.images && p.images[0]
-        ? `<img src="${esc(p.images[0])}" style="width:40px;height:40px;object-fit:cover;border-radius:var(--radius);cursor:pointer;" onclick="openLightbox('${esc(p.images[0])}')">`
+        ? `<img src="${esc(p.images[0])}" style="width:40px;height:40px;object-fit:cover;border-radius:var(--radius);cursor:pointer;" title="Открыть фото" onclick="openLightbox('${esc(p.images[0])}')">`
         : '<span style="color:var(--color-text-muted);font-size:11px;">—</span>'
     },
     { key: 'title',      label: 'Название', sortable: true },

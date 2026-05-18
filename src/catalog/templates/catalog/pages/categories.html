@@ -21,15 +21,40 @@
   <div class="modal">
     <div class="modal__header">
       Категории — Справка
-      <button class="modal__close" onclick="document.getElementById('categories-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('categories-help-modal').classList.remove('modal-overlay--active')">&times;</button>
     </div>
     <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
-      <ul style="padding-left:18px; margin:0;">
-        <li><strong>Дерево категорий:</strong> Выберите категорию слева для редактирования, добавления атрибутов или товаров.</li>
-        <li><strong>Корневая категория:</strong> Кнопка «+ Корневая категория» создаёт новую группу верхнего уровня.</li>
-        <li><strong>Атрибуты:</strong> Вкладка «Атрибуты» позволяет задать характеристики товаров в категории.</li>
-        <li><strong>Демо-данные:</strong> Кнопка «Создать демо-данные» добавляет тестовые товары в пустые конечные категории.</li>
-      </ul>
+      <section>
+        <p style="margin-top:0;">Дерево категорий каталога. Категории образуют иерархию: разделы → подкатегории → конечные категории, к которым привязываются товары.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><strong>Выбрать категорию:</strong> клик по узлу дерева слева — справа откроется редактор с вкладками «Настройки», «Атрибуты» и «Товары».</li>
+          <li><strong>Создать корневую категорию:</strong> кнопка «+ Корневая категория» создаёт узел верхнего уровня.</li>
+          <li><strong>Создать дочернюю категорию:</strong> в редакторе категории нажмите «+ Подкатегория».</li>
+          <li><strong>Переименовать / изменить:</strong> вкладка «Настройки» в редакторе; здесь же можно скрыть или удалить категорию.</li>
+          <li><strong>Атрибуты:</strong> вкладка «Атрибуты» — задайте характеристики товаров (Размер, Цвет, Материал…). Атрибуты наследуются дочерними категориями.</li>
+          <li><strong>Товары:</strong> вкладка «Товары» — таблица товаров данной категории с фильтрацией и сортировкой.</li>
+          <li><strong>Обновить дерево:</strong> кнопка «Обновить» справа от «Дерево» — перезагружает структуру с сервера.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><kbd>Esc</kbd> — закрыть открытое модальное окно или форму атрибута.</li>
+          <li><kbd>Enter</kbd> — применить фильтр в поле ввода таблицы товаров.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+        <ul style="padding-left:18px; margin:0;">
+          <li>Товары можно добавлять только к <strong>листовым</strong> (конечным) категориям — без дочерних узлов.</li>
+          <li>Удалить категорию можно, только если у неё нет дочерних и нет привязанных товаров.</li>
+          <li>Снятая галка «Активна» скрывает категорию и все её товары на витрине — ничего не удаляется.</li>
+          <li>Код атрибута (snake_case) не меняется после сохранения — по нему работают фильтры на витрине.</li>
+        </ul>
+      </section>
     </div>
   </div>
 </div>

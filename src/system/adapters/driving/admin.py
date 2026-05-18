@@ -169,7 +169,12 @@ def update_store(facade: FromDishka[SystemFacade]):
             "lat": _form_float("coords_lat"),
             "lon": _form_float("coords_lon"),
         },
-        socials={"instagram": f.get("instagram", "")},
+        socials={
+            "instagram": f.get("instagram", ""),
+            "telegram": f.get("telegram_public_url", ""),
+            "whatsapp": f.get("whatsapp_url", ""),
+            "viber": f.get("viber_url", ""),
+        },
         # catalog_access НЕ принимается через UI: владелец-права задаются в
         # .env (ACCESS_OWNER_CAN_*) и применяются на старте процесса.
     )

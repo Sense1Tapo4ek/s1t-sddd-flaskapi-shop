@@ -19,6 +19,7 @@ from root.container import build_container
 # Configs
 from root.config import RootConfig
 from catalog.config import CatalogConfig
+from ordering.config import OrderingConfig
 from access.config import AccessConfig
 from access.app.runtime_permissions import RuntimePermissionProvider
 from access.permissions import RUNTIME_CATALOG_PERMISSIONS
@@ -27,6 +28,7 @@ from system.ports.driven.bootstrap import (
     bootstrap_storage_defaults,
     bootstrap_system_defaults,
 )
+from system.config import SystemConfig
 from system.ports.driving.facade import SystemFacade
 from system.ports.driving.runtime_template import runtime_template_settings
 
@@ -37,6 +39,7 @@ from shared.adapters.driving.middleware import (
     jwt_required,
 )
 from shared.adapters.driving.error_handlers import init_error_handlers
+from shared.adapters.driving.maintenance import init_maintenance
 
 # Import all ORM model modules to register them with the shared Base
 import access.adapters.driven.db.models  # noqa: F401
@@ -109,6 +112,7 @@ def create_app() -> APIFlask:
 
     access_config = container.get(AccessConfig)
     catalog_config = container.get(CatalogConfig)
+    ordering_config = container.get(OrderingConfig)
     engine = container.get(Engine)
     session_factory = container.get(Callable[[], Session])
     permission_provider = container.get(RuntimePermissionProvider)
@@ -137,11 +141,19 @@ def create_app() -> APIFlask:
     app.config["PERMISSION_PROVIDER"] = permission_provider
     app.config["RUNTIME_PERMISSION_KEYS"] = RUNTIME_CATALOG_PERMISSIONS
 
+    system_config = container.get(SystemConfig)
+
     @app.context_processor
     def inject_runtime_template_settings():
-        return runtime_template_settings(system_facade, root_config)
+        return runtime_template_settings(
+            system_facade,
+            root_config,
+            ordering_config=ordering_config,
+            system_config=system_config,
+        )
 
     init_middleware(app, access_config.jwt_secret)
+    init_maintenance(app)
     init_error_handlers(app)
 
     # ChoiceLoader for context templates
@@ -165,18 +177,18 @@ def create_app() -> APIFlask:
         admin_origins = root_config.admin_cors_origins
         public_origins = root_config.public_cors_origins + root_config.admin_cors_origins
 
-        CORS(
-            app,
-            resources={
-                r"/auth/*": {"origins": admin_origins},
-                r"/system/settings*": {"origins": admin_origins},
-                r"/catalog/admin/*": {"origins": admin_origins},
+        cors_resources = {
+            r"/auth/*": {"origins": admin_origins},
+            r"/system/settings*": {"origins": admin_origins},
+            r"/catalog/admin/*": {"origins": admin_origins},
 
-                r"/catalog*": {"origins": public_origins},
-                r"/inquiries*": {"origins": public_origins},
-                r"/system/info": {"origins": public_origins},
-            },
-        )
+            r"/catalog*": {"origins": public_origins},
+            r"/inquiries*": {"origins": public_origins},
+            r"/system/info": {"origins": public_origins},
+        }
+        if ordering_config.orders_enabled:
+            cors_resources[r"/orders*"] = {"origins": public_origins}
+        CORS(app, resources=cors_resources)
         limiter = Limiter(
             get_remote_address,
             app=app,
@@ -192,7 +204,8 @@ def create_app() -> APIFlask:
     # Register blueprints directly
     app.register_blueprint(catalog_bp)
     app.register_blueprint(ordering_bp)
-    app.register_blueprint(orders_bp)
+    if ordering_config.orders_enabled:
+        app.register_blueprint(orders_bp)
     app.register_blueprint(access_bp)
     app.register_blueprint(system_bp)
 
@@ -200,7 +213,8 @@ def create_app() -> APIFlask:
     app.register_blueprint(catalog_admin_bp)
     app.register_blueprint(taxonomy_admin_bp)
     app.register_blueprint(ordering_admin_bp)
-    app.register_blueprint(orders_admin_bp)
+    if ordering_config.orders_enabled:
+        app.register_blueprint(orders_admin_bp)
     app.register_blueprint(requests_admin_bp)
     app.register_blueprint(access_admin_bp)
     app.register_blueprint(system_admin_bp)

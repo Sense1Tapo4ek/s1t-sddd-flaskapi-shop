@@ -55,26 +55,39 @@ app.register_blueprint(account_admin_bp)
 
 ## Schemas
 
-Every route validates input through a Pydantic schema in
-`ports/driving/schemas.py` of the owning context:
+Every JSON route validates input through a Pydantic schema in
+`ports/driving/schemas.py` of the owning context, and declares its
+response shape with `@bp.output`:
 
 ```python
 @bp.post("/")
-@bp.input(CreateProductSchema, location="form")
-@bp.doc(summary="Create product (ADMIN ONLY)", security="JWTAuth")
-@permission_required("edit_products")
+@bp.input(CreateInquiryIn)
+@bp.output(CreatedIdResponse, status_code=201)
+@bp.doc(summary="Create inquiry (Public)")
 @inject
-def create(data: CreateProductSchema,
-           facade: FromDishka[CatalogFacade]) -> ProductSchema:
-    return facade.create_product(data).model_dump()
+def create(json_data: CreateInquiryIn,
+           facade: FromDishka[InquiriesFacade]):
+    return {"success": True, "id": facade.create_inquiry(json_data)}
 ```
 
 Rules:
 
+- Always pair `@bp.input` with `@bp.output` so Swagger UI shows both
+  request and response shapes. Endpoints that return `201` must pass
+  `status_code=201` to `@bp.output` — otherwise the spec lies (claims
+  200).
+- Generic envelopes live in `shared/ports/driving/schemas.py`:
+  `SuccessResponse` (`{success: true}`), `CreatedIdResponse`
+  (`{success: true, id: int}`).
 - No raw `int(request.form["x"])` in handlers — declare it in the
   schema and let APIFlask raise 422 on failure.
-- Multipart uploads use `location="form"` and accept file fields
-  through Pydantic + Werkzeug `FileStorage`.
+- Multipart uploads (`POST/PUT /catalog`) use a marshmallow `Schema`
+  with `apiflask.fields.File` in
+  `<context>/ports/driving/multipart_schemas.py` and
+  `@bp.input(Schema, location="form_and_files", arg_name="_form")`.
+  The handler accepts `_form: dict` and ignores it — schemas exist
+  for the OpenAPI requestBody, the handler reads `request.form`
+  and `request.files` directly.
 
 ## Middleware
 

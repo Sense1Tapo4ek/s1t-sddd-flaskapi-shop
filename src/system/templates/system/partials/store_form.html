@@ -81,18 +81,50 @@
     </div>
   </section>
 
+  {% set ff = feature_flags %}
+  {% if ff.socials_instagram_enabled or ff.socials_telegram_enabled
+        or ff.socials_whatsapp_enabled or ff.socials_viber_enabled %}
   <section class="form-section">
     <h3 class="form-section__title">Социальные сети</h3>
     <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
-      Полная ссылка на профиль. Пустое поле — иконка скрыта.
+      Полная ссылка на профиль. Пустое поле — канал скрыт на витрине.
+      Доступные каналы переключаются env-флагами SYSTEM_SOCIALS_*_ENABLED
+      (см. docs/subsystems/feature-flags.md).
     </p>
+    {% if ff.socials_instagram_enabled %}
     <div class="form-group">
       <label class="form-label" for="instagram">Instagram</label>
       <input class="form-input" type="url" id="instagram" name="instagram"
              placeholder="https://instagram.com/your_profile"
-             value="{{ settings.socials.instagram }}">
+             value="{{ settings.socials.instagram or '' }}">
     </div>
+    {% endif %}
+    {% if ff.socials_telegram_enabled %}
+    <div class="form-group">
+      <label class="form-label" for="telegram_public_url">Telegram</label>
+      <input class="form-input" type="url" id="telegram_public_url" name="telegram_public_url"
+             placeholder="https://t.me/your_channel"
+             value="{{ settings.socials.telegram or '' }}">
+    </div>
+    {% endif %}
+    {% if ff.socials_whatsapp_enabled %}
+    <div class="form-group">
+      <label class="form-label" for="whatsapp_url">WhatsApp</label>
+      <input class="form-input" type="url" id="whatsapp_url" name="whatsapp_url"
+             placeholder="https://wa.me/375291234567"
+             value="{{ settings.socials.whatsapp or '' }}">
+    </div>
+    {% endif %}
+    {% if ff.socials_viber_enabled %}
+    <div class="form-group">
+      <label class="form-label" for="viber_url">Viber</label>
+      <input class="form-input" type="url" id="viber_url" name="viber_url"
+             placeholder="viber://chat?number=%2B375291234567"
+             value="{{ settings.socials.viber or '' }}">
+    </div>
+    {% endif %}
   </section>
+  {% endif %}
 
   {% if request.admin_payload is defined and request.admin_payload.get('role') == 'superadmin' %}
   <section class="form-section">

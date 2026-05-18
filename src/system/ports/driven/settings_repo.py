@@ -19,6 +19,9 @@ class SettingsRepo(ISettingsRepo):
             address=model.address, working_hours=model.working_hours,
             coords_lat=model.coords_lat, coords_lon=model.coords_lon,
             instagram=model.instagram,
+            telegram_public_url=model.telegram_public_url,
+            whatsapp_url=model.whatsapp_url,
+            viber_url=model.viber_url,
             telegram_bot_token=model.telegram_bot_token,
             telegram_chat_id=model.telegram_chat_id,
             app_name=model.app_name or "Shop Admin",
@@ -54,6 +57,9 @@ class SettingsRepo(ISettingsRepo):
             model.coords_lat = settings.coords_lat
             model.coords_lon = settings.coords_lon
             model.instagram = settings.instagram
+            model.telegram_public_url = settings.telegram_public_url
+            model.whatsapp_url = settings.whatsapp_url
+            model.viber_url = settings.viber_url
             model.telegram_bot_token = settings.telegram_bot_token
             model.telegram_chat_id = settings.telegram_chat_id
             model.app_name = settings.app_name

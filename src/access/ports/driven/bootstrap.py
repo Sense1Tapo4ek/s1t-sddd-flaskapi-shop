@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Callable
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from access.adapters.driven.db.models import UserModel
@@ -29,15 +30,22 @@ def bootstrap_access_defaults(
 
     role = "superadmin" if access_config.promote_to_superadmin else "owner"
     with session_factory() as session:
-        _ensure_user(
-            session,
-            login=access_config.default_login,
-            password=access_config.default_password,
-            role=role,
-            telegram_chat_id=access_config.default_telegram_chat_id,
-            password_changed_at=None,
-        )
-        session.commit()
+        try:
+            _ensure_user(
+                session,
+                login=access_config.default_login,
+                password=access_config.default_password,
+                role=role,
+                telegram_chat_id=access_config.default_telegram_chat_id,
+                password_changed_at=None,
+            )
+            session.commit()
+        except IntegrityError:
+            # Another worker won the race on the unique login constraint.
+            # The row exists; idempotent bootstrap is satisfied.
+            session.rollback()
+            logger.info("Default admin already created by another worker: %s",
+                        access_config.default_login)
 
 
 def _ensure_user(

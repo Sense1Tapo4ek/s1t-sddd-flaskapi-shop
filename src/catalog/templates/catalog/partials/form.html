@@ -2,7 +2,19 @@
   <div class="modal">
     <div class="modal__header">
       {% if product %}Редактировать товар #{{ product.id }}{% else %}Новый товар{% endif %}
-      <button class="btn btn--ghost btn--sm" onclick="document.getElementById('product-modal').remove()" style="float:right">&times;</button>
+      <details class="block-help" style="display:inline-block; margin-left:8px;">
+        <summary class="help-badge help-badge--inline" title="Подсказки по форме">?</summary>
+        <div class="block-help__body block-help__body--right" style="font-size:12px; line-height:1.6;">
+          <ul style="padding-left:16px; margin:0;">
+            <li><strong>Название и цена</strong> — обязательны (*).</li>
+            <li><strong>Фото:</strong> выберите файл — предпросмотр появится ниже.</li>
+            <li><strong>Удалить фото:</strong> отметьте «Удалить» под текущим снимком.</li>
+            <li><strong>Увеличить фото:</strong> клик по миниатюре.</li>
+            <li><kbd>Esc</kbd> — закрыть форму (клик по затемнению тоже закрывает).</li>
+          </ul>
+        </div>
+      </details>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('product-modal').remove()">&times;</button>
     </div>
     <div class="modal__body">
       <form

@@ -98,6 +98,12 @@ not live prices.
 - Permissions: `view_orders`/`manage_orders` currently guard BOTH
   inquiries and orders admin endpoints (D2 deferred — see
   [../adr/0010-inquiries-vs-orders-split.md](../adr/0010-inquiries-vs-orders-split.md)).
+- Orders aggregate is **feature-gated** by `ORDERING_ORDERS_ENABLED`
+  (default `true`). When `false`, `/orders*` and `/admin/orders/*`
+  blueprints are not registered, CORS rule for `/orders*` is skipped,
+  and the admin requests page collapses to inquiries-only. Inquiries
+  remain available regardless. See
+  [../subsystems/feature-flags.md](../subsystems/feature-flags.md).
 
 ## Pointers
 

@@ -213,7 +213,7 @@ CREATE TABLE orders (
     delivery_method VARCHAR(20) NOT NULL,
     delivery_address VARCHAR(500) NOT NULL DEFAULT '',
     delivery_comment VARCHAR(500) NOT NULL DEFAULT '',
-    comment TEXT NOT NULL DEFAULT '',
+    comment TEXT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'new',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),

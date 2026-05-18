@@ -8,15 +8,18 @@ from shared.adapters.driving.middleware import (
     current_customer_id,
     permission_required,
 )
+from shared.ports.driving.schemas import CreatedIdResponse, SuccessResponse
 from ordering.ports.driving import (
     InquiriesFacade,
     InquiryIn,
+    InquiryListOut,
     InquiryStatusUpdateIn,
     InquirySearchQuery,
     OrdersFacade,
     OrderIn,
     OrderStatusUpdateIn,
     OrderSearchQuery,
+    PaginatedOrdersOut,
 )
 
 ordering_bp = APIBlueprint("ordering", __name__, url_prefix="/inquiries")
@@ -28,6 +31,7 @@ orders_bp = APIBlueprint("orders", __name__, url_prefix="/orders")
 
 @ordering_bp.post("")
 @ordering_bp.input(InquiryIn)
+@ordering_bp.output(CreatedIdResponse, status_code=201)
 @ordering_bp.doc(
     summary="Создать новое обращение (Public)",
     description="Создаёт новое контактное обращение от посетителя. При успешном создании отправляет уведомления в Telegram активным владельцу/суперадмину, если бот настроен.",
@@ -36,7 +40,7 @@ orders_bp = APIBlueprint("orders", __name__, url_prefix="/orders")
 @inject
 def create_inquiry(json_data: InquiryIn, facade: FromDishka[InquiriesFacade]):
     inquiry_id = facade.create_inquiry(json_data)
-    return {"success": True, "id": inquiry_id}, 201
+    return {"success": True, "id": inquiry_id}
 
 
 # --- ADMIN (Protected) ---
@@ -45,6 +49,7 @@ def create_inquiry(json_data: InquiryIn, facade: FromDishka[InquiriesFacade]):
 @ordering_bp.get("")
 @permission_required("view_orders")
 @ordering_bp.input(InquirySearchQuery, location="query")
+@ordering_bp.output(InquiryListOut)
 @ordering_bp.doc(
     summary="Список обращений (ADMIN ONLY)",
     description="Возвращает постраничный список всех обращений с сортировкой и фильтрацией.",
@@ -57,14 +62,13 @@ def list_inquiries(query_data: InquirySearchQuery, facade: FromDishka[InquiriesF
 
     filters = {k: v for k, v in raw_query_dict.items() if k not in reserved_keys and v != ""}
 
-    result = facade.list_inquiries(
+    return facade.list_inquiries(
         page=query_data.page,
         limit=query_data.limit,
         sort_by=query_data.sort_by,
         sort_dir=query_data.sort_dir,
         filters=filters,
     )
-    return result.model_dump()
 
 
 @ordering_bp.get("/search/schema")
@@ -102,6 +106,7 @@ def admin_search_schema(facade: FromDishka[InquiriesFacade]):
 @ordering_bp.patch("/<int:inquiry_id>/status")
 @permission_required("manage_orders")
 @ordering_bp.input(InquiryStatusUpdateIn)
+@ordering_bp.output(SuccessResponse)
 @ordering_bp.doc(
     summary="Обновить статус обращения (ADMIN ONLY)",
     description="Переводит обращение в новый статус с доменной валидацией.",
@@ -115,6 +120,7 @@ def update_inquiry_status(inquiry_id: int, json_data: InquiryStatusUpdateIn, fac
 
 @ordering_bp.post("/<int:inquiry_id>/archive")
 @permission_required("manage_orders")
+@ordering_bp.output(SuccessResponse)
 @ordering_bp.doc(
     summary="Архивировать обращение (ADMIN ONLY)",
     description="Переводит обращение в статус ARCHIVED.",
@@ -131,6 +137,7 @@ def archive_inquiry(inquiry_id: int, facade: FromDishka[InquiriesFacade]):
 
 @orders_bp.post("")
 @orders_bp.input(OrderIn)
+@orders_bp.output(CreatedIdResponse, status_code=201)
 @orders_bp.doc(
     summary="Разместить заказ (Customer)",
     description="Создаёт заказ от авторизованного покупателя. customer_user_id берётся из JWT.",
@@ -141,7 +148,7 @@ def archive_inquiry(inquiry_id: int, facade: FromDishka[InquiriesFacade]):
 def place_order(json_data: OrderIn, facade: FromDishka[OrdersFacade]):
     customer_user_id = current_customer_id()
     order_id = facade.place_order(json_data, customer_user_id)
-    return {"success": True, "id": order_id}, 201
+    return {"success": True, "id": order_id}
 
 
 # ─── Orders (admin) ───────────────────────────────────────────────────────────
@@ -150,8 +157,10 @@ def place_order(json_data: OrderIn, facade: FromDishka[OrdersFacade]):
 @orders_bp.get("")
 @permission_required("view_orders")
 @orders_bp.input(OrderSearchQuery, location="query")
+@orders_bp.output(PaginatedOrdersOut)
 @orders_bp.doc(
     summary="Список заказов (ADMIN ONLY)",
+    description="Возвращает постраничный список заказов с сортировкой и фильтрацией.",
     security="JWTAuth",
 )
 @inject
@@ -159,14 +168,13 @@ def list_orders(query_data: OrderSearchQuery, facade: FromDishka[OrdersFacade]):
     raw_query_dict = request.args.to_dict()
     reserved_keys = {"page", "limit", "sort_by", "sort_dir"}
     filters = {k: v for k, v in raw_query_dict.items() if k not in reserved_keys and v != ""}
-    result = facade.list_orders(
+    return facade.list_orders(
         page=query_data.page,
         limit=query_data.limit,
         sort_by=query_data.sort_by,
         sort_dir=query_data.sort_dir,
         filters=filters,
     )
-    return result.model_dump()
 
 
 @orders_bp.get("/search/schema")
@@ -199,6 +207,7 @@ def orders_search_schema(facade: FromDishka[OrdersFacade]):
 @orders_bp.patch("/<int:order_id>/status")
 @permission_required("manage_orders")
 @orders_bp.input(OrderStatusUpdateIn)
+@orders_bp.output(SuccessResponse)
 @orders_bp.doc(summary="Обновить статус заказа (ADMIN ONLY)", security="JWTAuth")
 @inject
 def update_order_status(order_id: int, json_data: OrderStatusUpdateIn, facade: FromDishka[OrdersFacade]):
@@ -208,6 +217,7 @@ def update_order_status(order_id: int, json_data: OrderStatusUpdateIn, facade: F
 
 @orders_bp.post("/<int:order_id>/archive")
 @permission_required("manage_orders")
+@orders_bp.output(SuccessResponse)
 @orders_bp.doc(summary="Архивировать заказ (ADMIN ONLY)", security="JWTAuth")
 @inject
 def archive_order(order_id: int, facade: FromDishka[OrdersFacade]):

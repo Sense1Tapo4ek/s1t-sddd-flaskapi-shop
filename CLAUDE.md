@@ -15,6 +15,7 @@ separate AGENTS.md. Detailed contracts live in `docs/`.
 | Admin UI conventions (HTMX, partials, CSRF on mutations) | [docs/subsystems/admin-ui.md](docs/subsystems/admin-ui.md) |
 | SmartTable filter schema and operators | [docs/subsystems/smart-filters.md](docs/subsystems/smart-filters.md) |
 | Telegram flows (inquiries, orders, login codes, recovery) | [docs/subsystems/notifications.md](docs/subsystems/notifications.md) |
+| Feature flags (orders toggle, socials toggles) | [docs/subsystems/feature-flags.md](docs/subsystems/feature-flags.md) |
 | Unified requests page + CardsFeed component | `/admin/requests/` · `static/js/cards-feed.js` |
 | Public storefront contract | [docs/contract/public.md](docs/contract/public.md) |
 | Admin API contract | [docs/contract/admin.md](docs/contract/admin.md) |
@@ -171,6 +172,27 @@ constrained by runtime settings (catalog scope) and `ACCESS_OWNER_CAN_*`
 env flags (other scopes). Customers have no permissions field.
 Implication rules and runtime-vs-snapshot semantics:
 [docs/subsystems/auth-permissions.md](docs/subsystems/auth-permissions.md).
+
+## Feature flags
+
+Env-driven toggles read once at process startup (pydantic-settings).
+NOT stored in the DB and NOT editable from admin — flipping requires
+a restart. Full reference: [docs/subsystems/feature-flags.md](docs/subsystems/feature-flags.md).
+
+| Env var | Default | Effect when `False` |
+|---|---|---|
+| `ORDERING_ORDERS_ENABLED` | `True` | `/orders*` blueprints (public + admin) not registered; CORS skipped; admin requests page falls back to inquiries-only |
+| `SYSTEM_SOCIALS_INSTAGRAM_ENABLED` | `True` | `socials.instagram` returned as `null`; admin form hides Instagram input |
+| `SYSTEM_SOCIALS_TELEGRAM_ENABLED` | `True` | Same for `socials.telegram` (column `telegram_public_url`) |
+| `SYSTEM_SOCIALS_WHATSAPP_ENABLED` | `True` | Same for `socials.whatsapp` (column `whatsapp_url`) |
+| `SYSTEM_SOCIALS_VIBER_ENABLED` | `True` | Same for `socials.viber` (column `viber_url`) |
+
+Affected code paths: `root/entrypoints/api.py` (blueprints/CORS),
+`system/ports/driving/{facade,schemas,runtime_template}.py` (payload
+shape), `static/templates/admin/base.html` +
+`src/ordering/templates/ordering/pages/requests.html` (UI),
+`src/system/templates/system/partials/store_form.html` (admin form).
+DB columns added in `migrations/0002_socials_extra_columns.sql`.
 
 ## Errors
 

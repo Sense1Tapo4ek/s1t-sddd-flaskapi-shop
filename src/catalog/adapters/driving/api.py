@@ -27,6 +27,10 @@ from catalog.ports.driving import (
     TagCreateIn,
     TagUpdateIn,
 )
+from catalog.ports.driving.multipart_schemas import (
+    ProductCreateMultipartIn,
+    ProductUpdateMultipartIn,
+)
 
 catalog_bp = APIBlueprint("catalog", __name__, url_prefix="/catalog")
 
@@ -319,14 +323,15 @@ def admin_search_schema(facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.post("")
 @permission_required("edit_products")
+@catalog_bp.input(ProductCreateMultipartIn, location="form_and_files", arg_name="_form")
 @catalog_bp.output(ProductDetailOut, status_code=201)
 @catalog_bp.doc(
     summary="Создать товар (ADMIN ONLY)",
-    description="Создаёт новый товар. Поддерживает загрузку изображений через multipart/form-data.",
+    description="Создаёт новый товар. Тело запроса — multipart/form-data; поле images повторяется по одному файлу.",
     security="JWTAuth",
 )
 @inject
-def admin_create(facade: FromDishka[CatalogFacade]):
+def admin_create(facade: FromDishka[CatalogFacade], _form: dict):
     title = request.form.get("title", "")
     price = safe_float(request.form.get("price", "0"), "price", min_val=0)
     description = request.form.get("description", "")
@@ -361,14 +366,15 @@ def admin_get_product(product_id: int, facade: FromDishka[CatalogFacade]):
 
 @catalog_bp.put("/<int:product_id>")
 @permission_required("edit_products")
+@catalog_bp.input(ProductUpdateMultipartIn, location="form_and_files", arg_name="_form")
 @catalog_bp.output(ProductDetailOut)
 @catalog_bp.doc(
     summary="Обновить товар (ADMIN ONLY)",
-    description="Обновляет поля товара. Поддерживает добавление новых изображений и удаление старых.",
+    description="Обновляет поля товара. Тело — multipart/form-data; new_images добавляет файлы, deleted_images удаляет существующие по их пути.",
     security="JWTAuth",
 )
 @inject
-def admin_update(product_id: int, facade: FromDishka[CatalogFacade]):
+def admin_update(product_id: int, facade: FromDishka[CatalogFacade], _form: dict):
     kwargs = {}
     if "title" in request.form:
         kwargs["title"] = request.form["title"]

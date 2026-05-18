@@ -34,6 +34,9 @@ class UpdateSettingsCommand:
     coords_lat: float | None = None
     coords_lon: float | None = None
     instagram: str | None = None
+    telegram_public_url: str | None = None
+    whatsapp_url: str | None = None
+    viber_url: str | None = None
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
     app_name: str | None = None

@@ -185,6 +185,11 @@ Body:
 
 ## Orders
 
+> **Feature-gated.** All `/orders*` routes exist only when
+> `ORDERING_ORDERS_ENABLED=true` (default). When the flag is `false`,
+> every path in this section returns `404` and is absent from the
+> OpenAPI spec. See [../subsystems/feature-flags.md](../subsystems/feature-flags.md).
+
 ### `POST /orders`
 
 Place a customer order. Requires a **customer** JWT — admin JWTs are
@@ -244,9 +249,19 @@ Public store card. No sensitive fields.
   "email": "info@example.com",
   "working_hours": "Пн-Пт 09:00 - 18:00",
   "coords": { "lat": 53.9, "lon": 27.56 },
-  "socials": { "instagram": "@shopname" }
+  "socials": {
+    "instagram": "https://instagram.com/shop",
+    "telegram":  "https://t.me/shop",
+    "whatsapp":  null,
+    "viber":     null
+  }
 }
 ```
+
+Each `socials.<channel>` field is independently gated by a
+`SYSTEM_SOCIALS_<CHANNEL>_ENABLED` env flag (default `true`). Disabled
+channels appear as `null` — clients SHOULD render only truthy values.
+See [../subsystems/feature-flags.md](../subsystems/feature-flags.md).
 
 Bot token, recovery state, owner-permission flags, and storage
 credentials are NEVER returned here.

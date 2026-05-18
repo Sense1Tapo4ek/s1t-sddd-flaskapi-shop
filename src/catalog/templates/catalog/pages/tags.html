@@ -18,21 +18,48 @@
   <div class="modal">
     <div class="modal__header">
       Теги — Справка
-      <button class="modal__close" onclick="document.getElementById('tags-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('tags-help-modal').classList.remove('modal-overlay--active')">&times;</button>
     </div>
     <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
-      <p style="margin-top:0;">Теги — это метки для быстрой группировки товаров. Активные теги видны в каталоге. Теги можно назначать товарам в карточке товара. Символьный код (slug) формируется автоматически.</p>
+      <section>
+        <p style="margin-top:0;">Теги — короткие метки для свободной классификации товаров. Один товар может иметь несколько тегов; теги не образуют иерархию.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><strong>Создать тег:</strong> кнопка «+ Новый тег» открывает форму. Slug генерируется автоматически из названия, если оставить поле пустым.</li>
+          <li><strong>Редактировать:</strong> нажмите «Изм.» в строке тега — та же форма, поля уже заполнены.</li>
+          <li><strong>Удалить:</strong> кнопка «Удалить» запрашивает подтверждение; тег снимается со всех товаров.</li>
+          <li><strong>Фильтр / сортировка:</strong> «+» в заголовке колонки открывает фильтр; клик по заголовку меняет порядок сортировки.</li>
+          <li><strong>Отключить тег:</strong> снимите флаг «Активен» в форме — тег исчезнет с витрины, но останется в базе.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><kbd>Esc</kbd> — закрыть открытую форму или модальное окно.</li>
+          <li><kbd>Enter</kbd> — применить фильтр в открытом поле фильтра.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+        <ul style="padding-left:18px; margin:0;">
+          <li>Теги назначаются товарам в карточке товара (форма редактирования).</li>
+          <li>Цвет тега — визуальная метка; влияет только на отображение, не на логику.</li>
+          <li>Slug должен быть уникальным и состоять из латиницы, цифр и дефисов.</li>
+        </ul>
+      </section>
     </div>
   </div>
 </div>
 
 <div id="tags-container"></div>
 
-<div class="modal-overlay" id="tagModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeTagForm()">
+<div class="modal-overlay" id="tagModal" role="dialog" aria-modal="true" aria-labelledby="tagModalTitle" onclick="if(event.target===this)closeTagForm()">
   <div class="modal">
     <div class="modal__header">
       <span id="tagModalTitle">Тег</span>
-      <button class="modal__close" onclick="closeTagForm()">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="closeTagForm()">&times;</button>
     </div>
     <form class="modal__body" id="tagForm" onsubmit="saveTag(event)">
       <input type="hidden" id="tag-id">

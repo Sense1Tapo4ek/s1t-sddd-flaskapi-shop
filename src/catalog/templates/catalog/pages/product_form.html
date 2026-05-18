@@ -18,16 +18,40 @@
   <div class="modal">
     <div class="modal__header">
       Справка
-      <button class="modal__close" onclick="document.getElementById('product-form-help').classList.remove('modal-overlay--active')">&times;</button>
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('product-form-help').classList.remove('modal-overlay--active')">&times;</button>
     </div>
     <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
-      <ul style="padding-left:18px; margin:0;">
-        <li><strong>Название и цена</strong> — обязательные поля (*).</li>
-        <li><strong>Фотографии:</strong> При добавлении открывается редактор — можно обрезать, выбрать соотношение сторон и настроить качество сжатия.</li>
-        <li><strong>Редактирование фото:</strong> Клик по текущему фото открывает редактор. После применения старое фото заменяется новым.</li>
-        <li><strong>Удаление фото:</strong> Крестик на фото удаляет его сразу.</li>
-        <li><strong>Сохранение:</strong> Нажмите «Сохранить» для применения всех изменений.</li>
-      </ul>
+      <section>
+        <p style="margin-top:0;">Форма создания и редактирования товара. Название и цена обязательны; остальные поля заполняются по необходимости.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><strong>Название и цена</strong> — обязательные поля, отмечены «*».</li>
+          <li><strong>Категория:</strong> выберите конечную (листовую) категорию — только к ней можно привязать товар.</li>
+          <li><strong>Теги:</strong> кликните по меткам для выбора нескольких тегов одновременно.</li>
+          <li><strong>Атрибуты:</strong> появляются после выбора категории; обязательные отмечены «*».</li>
+          <li><strong>Добавить фото:</strong> выберите файлы через поле «Фотографии» — появится предпросмотр; после сохранения формы откроется редактор обрезки.</li>
+          <li><strong>Удалить текущее фото:</strong> отметьте чекбокс «Удалить» под миниатюрой и сохраните форму.</li>
+          <li><strong>Увеличить фото:</strong> клик по миниатюре открывает полноразмерное изображение.</li>
+          <li><strong>Сохранить:</strong> кнопка «Сохранить» / «Создать» внизу формы отправляет данные.</li>
+          <li><strong>Отмена:</strong> кнопка «Отмена» вернёт к каталогу (если открывали из него) или к списку товаров.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><kbd>Esc</kbd> — закрыть открытое модальное окно (редактор фото, лайтбокс).</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+        <ul style="padding-left:18px; margin:0;">
+          <li>Атрибуты определяются категорией: смена категории обновляет список полей.</li>
+          <li>Несохранённые фотографии в предпросмотре исчезнут при переходе без сохранения.</li>
+          <li>Для скрытия товара без удаления снимите флаг «Активен» в форме.</li>
+        </ul>
+      </section>
     </div>
   </div>
 </div>

@@ -286,6 +286,10 @@
   gap: 8px;
 }
 
+.form-inline .btn {
+  flex-shrink: 0;
+}
+
 .settings-inline-section {
   border-top: 1px solid var(--color-border);
   margin-top: 10px;
