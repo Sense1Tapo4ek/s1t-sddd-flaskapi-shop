@@ -6,6 +6,12 @@ from .storage_settings_agg import (
     StorageSettings,
 )
 from .errors import SettingsNotFoundError, StorageSettingsNotFoundError
+from .snapshot_vo import SnapshotInfo
+from .backup_errors import (
+    InsufficientDiskSpaceError,
+    SnapshotNameInvalidError,
+    SnapshotNotFoundError,
+)
 
 __all__ = [
     "SiteSettings",
@@ -17,4 +23,8 @@ __all__ = [
     "InvalidStorageBackendError",
     "IncompleteS3SettingsError",
     "StorageSettingsNotFoundError",
+    "SnapshotInfo",
+    "SnapshotNotFoundError",
+    "SnapshotNameInvalidError",
+    "InsufficientDiskSpaceError",
 ]
