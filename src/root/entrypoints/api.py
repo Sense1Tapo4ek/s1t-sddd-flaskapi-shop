@@ -65,13 +65,13 @@ def _first_admin_path() -> str:
 
 # Blueprints (imported directly — no init functions needed, Dishka injects facades)
 from catalog.adapters.driving.api import catalog_bp
-from ordering.adapters.driving.api import ordering_bp
+from ordering.adapters.driving.api import ordering_bp, orders_bp
 from access.adapters.driving.api import access_bp
 from system.adapters.driving.api import system_bp
 
 # Admin blueprints
 from catalog.adapters.driving.admin import catalog_admin_bp, taxonomy_admin_bp
-from ordering.adapters.driving.admin import ordering_admin_bp
+from ordering.adapters.driving.admin import ordering_admin_bp, orders_admin_bp
 from access.adapters.driving.admin import access_admin_bp
 from system.adapters.driving.admin import account_admin_bp, system_admin_bp
 
@@ -192,6 +192,7 @@ def create_app() -> APIFlask:
     # Register blueprints directly
     app.register_blueprint(catalog_bp)
     app.register_blueprint(ordering_bp)
+    app.register_blueprint(orders_bp)
     app.register_blueprint(access_bp)
     app.register_blueprint(system_bp)
 
@@ -199,6 +200,7 @@ def create_app() -> APIFlask:
     app.register_blueprint(catalog_admin_bp)
     app.register_blueprint(taxonomy_admin_bp)
     app.register_blueprint(ordering_admin_bp)
+    app.register_blueprint(orders_admin_bp)
     app.register_blueprint(access_admin_bp)
     app.register_blueprint(system_admin_bp)
     app.register_blueprint(account_admin_bp)

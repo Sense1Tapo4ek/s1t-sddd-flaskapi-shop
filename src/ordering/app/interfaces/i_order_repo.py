@@ -1,0 +1,19 @@
+from typing import Protocol, runtime_checkable
+
+from shared.generics.pagination import PaginatedResult, PaginationParams
+from ...domain import Order
+
+
+@runtime_checkable
+class IOrderRepo(Protocol):
+    def next_id(self) -> int: ...
+    def save(self, order: Order) -> None: ...
+    def get_by_id(self, order_id: int) -> Order | None: ...
+    def get_paginated(self, params: PaginationParams) -> PaginatedResult[Order]: ...
+    def iter_ids_by_filter(
+        self,
+        filter_payload: dict,
+        *,
+        cursor: str | None,
+        limit: int,
+    ) -> tuple[list[int], str | None]: ...

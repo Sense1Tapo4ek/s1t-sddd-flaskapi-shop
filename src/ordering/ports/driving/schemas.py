@@ -1,10 +1,17 @@
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from shared.generics.pagination import PaginatedResult
 from shared.ports.driving.bulk_schemas import BulkTarget
-from ...app.commands import CreateInquiryCommand, ChangeInquiryStatusCommand
-from ...domain import Inquiry
+from ...app.commands import (
+    CreateInquiryCommand,
+    ChangeInquiryStatusCommand,
+    PlaceOrderCommand,
+    PlaceOrderItem as PlaceOrderItemCmd,
+    ChangeOrderStatusCommand,
+)
+from ...domain import Inquiry, Order
 
 InquiryStatusLiteral = Literal["new", "in_progress", "closed", "archived"]
 
@@ -81,10 +88,133 @@ class InquiryListOut(BaseModel):
         )
 
 
-# ─── Bulk action inputs ─────────────────────────────────────────────
+# ─── Bulk action inputs (Inquiries) ─────────────────────────────────
 
 
 class BulkInquiriesStatusIn(BaseModel):
     model_config = ConfigDict(frozen=True)
     target: BulkTarget
     status: str
+
+
+# ─── Order schemas ────────────────────────────────────────────────────────────
+
+OrderStatusLiteral = Literal["new", "confirmed", "completed", "canceled", "archived"]
+
+
+class OrderItemIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    product_id: int = Field(..., ge=1)
+    quantity: int = Field(..., ge=1)
+
+
+class OrderIn(BaseModel):
+    """
+    Input schema for placing an order.
+    customer_user_id is NOT here — it comes from g.customer_user_id via @customer_required.
+    """
+    model_config = ConfigDict(frozen=True)
+    items: list[OrderItemIn] = Field(..., min_length=1)
+    delivery_method: Literal["pickup", "courier"] = "pickup"
+    address: str = Field("", max_length=500)
+    delivery_comment: str = Field("", max_length=500)
+    comment: str = Field("", max_length=2000)
+
+    def to_command(self, customer_user_id: int) -> PlaceOrderCommand:
+        return PlaceOrderCommand(
+            customer_user_id=customer_user_id,
+            items=[
+                PlaceOrderItemCmd(product_id=i.product_id, quantity=i.quantity)
+                for i in self.items
+            ],
+            delivery_method=self.delivery_method,
+            address=self.address,
+            delivery_comment=self.delivery_comment,
+            comment=self.comment,
+        )
+
+
+class OrderStatusUpdateIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    status: OrderStatusLiteral
+
+    def to_command(self, order_id: int) -> ChangeOrderStatusCommand:
+        return ChangeOrderStatusCommand(order_id=order_id, new_status=self.status)
+
+
+class OrderItemOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    product_id: int
+    title_snapshot: str
+    unit_price: Decimal
+    quantity: int
+
+    @classmethod
+    def from_domain(cls, item) -> "OrderItemOut":
+        return cls(
+            product_id=item.product_id,
+            title_snapshot=item.title_snapshot,
+            unit_price=item.unit_price,
+            quantity=item.quantity,
+        )
+
+
+class OrderOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id: int
+    customer_user_id: int
+    items: list[OrderItemOut]
+    total: Decimal
+    delivery_method: str
+    delivery_address: str
+    delivery_comment: str
+    comment: str
+    status: str
+    created_at: str
+
+    @classmethod
+    def from_domain(cls, order: Order) -> "OrderOut":
+        return cls(
+            id=order.id,
+            customer_user_id=order.customer_user_id,
+            items=[OrderItemOut.from_domain(i) for i in order.items],
+            total=order.total,
+            delivery_method=order.delivery.method.value,
+            delivery_address=order.delivery.address,
+            delivery_comment=order.delivery.comment,
+            comment=order.comment,
+            status=order.status.value,
+            created_at=order.created_at.strftime("%Y-%m-%d %H:%M"),
+        )
+
+
+class OrderSearchQuery(BaseModel):
+    model_config = ConfigDict(extra="allow", frozen=True)
+    page: int = Field(1, ge=1)
+    limit: int = Field(20, ge=1, le=100)
+    sort_by: str | None = None
+    sort_dir: str = Field("desc", pattern="^(asc|desc)$")
+    status: OrderStatusLiteral | None = None
+    customer_user_id: int | None = None
+
+
+class PaginatedOrdersOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    items: list[OrderOut]
+    total: int
+
+    @classmethod
+    def from_domain(cls, result: PaginatedResult[Order]) -> "PaginatedOrdersOut":
+        return cls(
+            items=[OrderOut.from_domain(o) for o in result.items],
+            total=result.total,
+        )
+
+
+# ─── Bulk action inputs (Orders) ─────────────────────────────────────
+
+
+class BulkOrdersStatusIn(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    target: BulkTarget
+    status: OrderStatusLiteral

@@ -205,3 +205,30 @@ CREATE TABLE inquiries (
     author_user_id INT NULL,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE orders (
+    id INT NOT NULL AUTO_INCREMENT,
+    customer_user_id INT NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    delivery_method VARCHAR(20) NOT NULL,
+    delivery_address VARCHAR(500) NOT NULL DEFAULT '',
+    delivery_comment VARCHAR(500) NOT NULL DEFAULT '',
+    comment TEXT NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'new',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_orders_customer (customer_user_id),
+    KEY idx_orders_status_created (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE order_items (
+    id INT NOT NULL AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    title_snapshot VARCHAR(255) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    quantity INT NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_order_items_order
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
