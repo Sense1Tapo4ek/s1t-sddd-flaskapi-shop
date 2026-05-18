@@ -31,3 +31,12 @@ class InsufficientDiskSpaceError(DomainError):
             ),
             code="INSUFFICIENT_DISK_SPACE",
         )
+
+
+class SnapshotMissingAfterDumpError(DomainError):
+    def __init__(self, name: str) -> None:
+        self.name = name
+        super().__init__(
+            message=f"Снапшот не найден после создания дампа: {name}",
+            code="SNAPSHOT_MISSING_AFTER_DUMP",
+        )

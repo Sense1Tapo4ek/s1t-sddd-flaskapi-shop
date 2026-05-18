@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class IMaintenanceMode(Protocol):
+    def enter(self) -> None: ...
+    def exit(self) -> None: ...

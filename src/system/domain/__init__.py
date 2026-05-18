@@ -9,6 +9,7 @@ from .errors import SettingsNotFoundError, StorageSettingsNotFoundError
 from .snapshot_vo import SnapshotInfo
 from .backup_errors import (
     InsufficientDiskSpaceError,
+    SnapshotMissingAfterDumpError,
     SnapshotNameInvalidError,
     SnapshotNotFoundError,
 )
@@ -27,4 +28,5 @@ __all__ = [
     "SnapshotNotFoundError",
     "SnapshotNameInvalidError",
     "InsufficientDiskSpaceError",
+    "SnapshotMissingAfterDumpError",
 ]
