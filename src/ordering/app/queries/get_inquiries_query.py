@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from shared.generics.pagination import PaginatedResult, PaginationParams
-from ...domain import Order
-from ..interfaces import IOrderRepo
+from ...domain import Inquiry
+from ..interfaces import IInquiryRepo
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class GetOrdersQuery:
-    _repo: IOrderRepo
+class GetInquiriesQuery:
+    _repo: IInquiryRepo
 
     def __call__(
         self,
@@ -15,7 +15,7 @@ class GetOrdersQuery:
         sort_by: str | None = None,
         sort_dir: str = "desc",
         filters: dict | None = None,
-    ) -> PaginatedResult[Order]:
+    ) -> PaginatedResult[Inquiry]:
 
         params = PaginationParams(
             page=page,

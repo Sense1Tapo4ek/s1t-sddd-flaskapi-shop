@@ -1,19 +1,28 @@
 from dataclasses import dataclass
 
+from shared.ports.driving.bulk_schemas import BulkTarget  # pre-existing project convention (see bulk_change_order_status_uc.py)
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class PlaceOrderCommand:
+class BulkChangeInquiryStatusCommand:
+    target: BulkTarget
+    status: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CreateInquiryCommand:
     name: str
-    phone: str
-    comment: str = ""
+    message: str
+    phone: str | None = None
+    contact_email: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class ProcessOrderCommand:
-    order_id: int
+class ChangeInquiryStatusCommand:
+    inquiry_id: int
     new_status: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class DeleteOrderCommand:
-    order_id: int
+class ArchiveInquiryCommand:
+    inquiry_id: int

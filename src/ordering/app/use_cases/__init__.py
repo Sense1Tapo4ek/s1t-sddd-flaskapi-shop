@@ -1,15 +1,15 @@
-from .place_order_uc import PlaceOrderUseCase
-from .process_order_uc import ProcessOrderUseCase
-from .delete_order_uc import DeleteOrderUseCase
-from .bulk_change_order_status_uc import (
-    BulkChangeOrderStatusCommand,
-    BulkChangeOrderStatusUseCase,
+from .create_inquiry_uc import CreateInquiryUseCase
+from .change_inquiry_status_uc import ChangeInquiryStatusUseCase
+from .archive_inquiry_uc import ArchiveInquiryUseCase
+from .bulk_change_inquiry_status_uc import (
+    BulkChangeInquiryStatusCommand,
+    BulkChangeInquiryStatusUseCase,
 )
 
 __all__ = [
-    "PlaceOrderUseCase",
-    "ProcessOrderUseCase",
-    "DeleteOrderUseCase",
-    "BulkChangeOrderStatusCommand",
-    "BulkChangeOrderStatusUseCase",
+    "CreateInquiryUseCase",
+    "ChangeInquiryStatusUseCase",
+    "ArchiveInquiryUseCase",
+    "BulkChangeInquiryStatusCommand",
+    "BulkChangeInquiryStatusUseCase",
 ]

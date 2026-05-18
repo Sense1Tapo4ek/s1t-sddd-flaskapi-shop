@@ -1,3 +1,3 @@
-from .db.models import OrderModel
+from .db.models import InquiryModel
 
-__all__ = ["OrderModel"]
+__all__ = ["InquiryModel"]

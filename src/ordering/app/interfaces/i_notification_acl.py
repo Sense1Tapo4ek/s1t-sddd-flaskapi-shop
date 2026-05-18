@@ -1,7 +1,7 @@
 from typing import Protocol, runtime_checkable
-from ordering.domain.order_agg import Order
+from ordering.domain.inquiry_agg import Inquiry
 
 
 @runtime_checkable
 class INotificationAcl(Protocol):
-    def notify_new_order(self, order: Order) -> None: ...
+    def notify_inquiry_created(self, inquiry: Inquiry) -> None: ...

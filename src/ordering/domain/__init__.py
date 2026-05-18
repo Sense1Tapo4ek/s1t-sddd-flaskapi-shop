@@ -1,17 +1,17 @@
-from .order_agg import Order
-from .order_status import OrderStatus
+from .inquiry_agg import Inquiry
+from .inquiry_status import InquiryStatus
 from .errors import (
-    OrderCreationError,
-    InvalidOrderTransitionError,
-    IllegalOrderTransitionError,
-    OrderAlreadyTerminalError,
+    InquiryCreationError,
+    InvalidInquiryTransitionError,
+    IllegalInquiryTransitionError,
+    InquiryAlreadyTerminalError,
 )
 
 __all__ = [
-    "Order",
-    "OrderStatus",
-    "OrderCreationError",
-    "InvalidOrderTransitionError",
-    "IllegalOrderTransitionError",
-    "OrderAlreadyTerminalError",
+    "Inquiry",
+    "InquiryStatus",
+    "InquiryCreationError",
+    "InvalidInquiryTransitionError",
+    "IllegalInquiryTransitionError",
+    "InquiryAlreadyTerminalError",
 ]

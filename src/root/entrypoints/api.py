@@ -58,7 +58,7 @@ def _first_admin_path() -> str:
     ):
         return "/admin/catalog/"
     if has_permission("view_orders"):
-        return "/admin/orders/"
+        return "/admin/inquiries/"
     if has_permission("manage_settings"):
         return "/admin/settings/store"
     return "/admin/account"
@@ -173,7 +173,7 @@ def create_app() -> APIFlask:
                 r"/catalog/admin/*": {"origins": admin_origins},
 
                 r"/catalog*": {"origins": public_origins},
-                r"/orders*": {"origins": public_origins},
+                r"/inquiries*": {"origins": public_origins},
                 r"/system/info": {"origins": public_origins},
             },
         )
@@ -224,7 +224,7 @@ def create_app() -> APIFlask:
             "system_admin.request_password_confirmation_code",
         ):
             _attach_limit(endpoint, root_config.rate_limit_login)
-        _attach_limit("ordering.place_order", root_config.rate_limit_order)
+        _attach_limit("ordering.create_inquiry", root_config.rate_limit_order)
         _attach_limit("system.recover_password", root_config.rate_limit_recovery)
     # Customer register / recover are abuse-prone — rate-limit in every env,
     # not just prod. Dev still keeps its high default (10000/min) for tests.

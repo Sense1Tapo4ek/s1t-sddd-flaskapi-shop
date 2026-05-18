@@ -1,35 +1,33 @@
 from shared.generics.errors import DomainError
 
 
-class OrderCreationError(DomainError):
+class InquiryCreationError(DomainError):
     def __init__(self, reason: str) -> None:
         super().__init__(
-            message=f"Невозможно создать заказ: {reason}", code="ORDER_CREATION_FAILED"
+            message=f"Невозможно создать обращение: {reason}", code="INQUIRY_CREATION_FAILED"
         )
 
 
-class InvalidOrderTransitionError(DomainError):
+class InvalidInquiryTransitionError(DomainError):
+    def __init__(self, message: str, code: str = "INVALID_TRANSITION") -> None:
+        super().__init__(message=message, code=code)
+
+    @classmethod
+    def for_transition(cls, current: str, target: str) -> "InvalidInquiryTransitionError":
+        return cls(f"Невозможно перевести обращение из статуса «{current}» в «{target}»")
+
+
+class IllegalInquiryTransitionError(InvalidInquiryTransitionError):
     def __init__(self, current: str, target: str) -> None:
         super().__init__(
-            message=f"Невозможно перевести заказ из статуса «{current}» в «{target}»",
-            code="INVALID_TRANSITION",
-        )
-
-
-class IllegalOrderTransitionError(InvalidOrderTransitionError):
-    def __init__(self, current: str, target: str) -> None:
-        # Call DomainError directly to avoid re-wrapping the message/code
-        DomainError.__init__(
-            self,
-            message=f"Недопустимый переход заказа из «{current}» в «{target}»",
+            message=f"Недопустимый переход обращения из «{current}» в «{target}»",
             code="illegal_transition",
         )
 
 
-class OrderAlreadyTerminalError(InvalidOrderTransitionError):
+class InquiryAlreadyTerminalError(InvalidInquiryTransitionError):
     def __init__(self, current: str, target: str) -> None:
-        DomainError.__init__(
-            self,
-            message=f"Заказ в финальном статусе «{current}»; переход в «{target}» невозможен",
-            code="order_already_terminal",
+        super().__init__(
+            message=f"Обращение в финальном статусе «{current}»; переход в «{target}» невозможен",
+            code="inquiry_already_terminal",
         )

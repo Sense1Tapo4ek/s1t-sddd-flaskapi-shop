@@ -1,3 +1,3 @@
-from .get_orders_query import GetOrdersQuery
+from .get_inquiries_query import GetInquiriesQuery
 
-__all__ = ["GetOrdersQuery"]
+__all__ = ["GetInquiriesQuery"]

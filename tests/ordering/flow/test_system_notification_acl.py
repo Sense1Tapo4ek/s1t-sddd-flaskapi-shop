@@ -1,7 +1,7 @@
 import pytest
 
 from access.domain import User
-from ordering.domain import Order
+from ordering.domain import Inquiry
 from ordering.ports.driven.system_notification_acl import SystemNotificationAcl
 
 
@@ -38,14 +38,19 @@ def _user(login: str, chat_id: str) -> User:
     )
 
 
-def test_order_notification_uses_user_level_recipients_and_continues_on_failure():
-    order = Order.create(id=42, name="Alice", phone="+375291234567", comment="")
+def test_inquiry_notification_uses_user_level_recipients_and_continues_on_failure():
+    """
+    Given an inquiry and two recipients (one with a failing Telegram chat),
+    When notify_inquiry_created is called,
+    Then both recipients are contacted, failure on first doesn't stop second.
+    """
+    inquiry = Inquiry.create(id=42, name="Alice", message="Hello", phone="+375291234567")
     access = FakeAccessFacade([_user("owner", "owner-chat"), _user("super", "super-chat")])
     system = FakeSystemFacade(fail_for={"owner-chat"})
     acl = SystemNotificationAcl(_system=system, _access=access)
 
-    acl.notify_new_order(order)
+    acl.notify_inquiry_created(inquiry)
 
     assert [item["chat_id"] for item in system.sent] == ["owner-chat", "super-chat"]
-    assert all(item["subject"] == "Новый заказ" for item in system.sent)
+    assert all(item["subject"] == "Новое обращение" for item in system.sent)
     assert all("Alice" in item["body"] for item in system.sent)

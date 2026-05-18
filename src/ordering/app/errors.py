@@ -1,6 +1,6 @@
 from shared.generics.errors import ApplicationError
 
 
-class OrderNotFoundError(ApplicationError):
-    def __init__(self, order_id: int) -> None:
-        super().__init__(message=f"Заказ {order_id} не найден", code="ORDER_NOT_FOUND")
+class InquiryNotFoundError(ApplicationError):
+    def __init__(self, inquiry_id: int) -> None:
+        super().__init__(message=f"Обращение {inquiry_id} не найдено", code="INQUIRY_NOT_FOUND")

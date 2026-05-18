@@ -1,18 +1,18 @@
 from dishka import Provider, Scope, provide
 
 from ordering.config import OrderingConfig
-from ordering.app.use_cases.place_order_uc import PlaceOrderUseCase
-from ordering.app.use_cases.process_order_uc import ProcessOrderUseCase
-from ordering.app.use_cases.delete_order_uc import DeleteOrderUseCase
-from ordering.app.use_cases.bulk_change_order_status_uc import (
-    BulkChangeOrderStatusUseCase,
+from ordering.app.use_cases.create_inquiry_uc import CreateInquiryUseCase
+from ordering.app.use_cases.change_inquiry_status_uc import ChangeInquiryStatusUseCase
+from ordering.app.use_cases.archive_inquiry_uc import ArchiveInquiryUseCase
+from ordering.app.use_cases.bulk_change_inquiry_status_uc import (
+    BulkChangeInquiryStatusUseCase,
 )
-from ordering.app.queries.get_orders_query import GetOrdersQuery
-from ordering.app.interfaces.i_order_repo import IOrderRepo
+from ordering.app.queries.get_inquiries_query import GetInquiriesQuery
+from ordering.app.interfaces.i_inquiry_repo import IInquiryRepo
 from ordering.app.interfaces.i_notification_acl import INotificationAcl
-from ordering.ports.driven.sql_order_repo import SqlOrderRepo
+from ordering.ports.driven.sql_inquiry_repo import SqlInquiryRepo
 from ordering.ports.driven.system_notification_acl import SystemNotificationAcl
-from ordering.ports.driving.facade import OrderingFacade
+from ordering.ports.driving.inquiries_facade import InquiriesFacade
 
 
 class OrderingProvider(Provider):
@@ -22,13 +22,13 @@ class OrderingProvider(Provider):
     def config(self) -> OrderingConfig:
         return OrderingConfig()
 
-    repo = provide(SqlOrderRepo, provides=IOrderRepo)
+    repo = provide(SqlInquiryRepo, provides=IInquiryRepo)
     notification_acl = provide(SystemNotificationAcl, provides=INotificationAcl)
 
-    place_uc = provide(PlaceOrderUseCase)
-    process_uc = provide(ProcessOrderUseCase)
-    delete_uc = provide(DeleteOrderUseCase)
-    bulk_status_uc = provide(BulkChangeOrderStatusUseCase)
-    get_query = provide(GetOrdersQuery)
+    create_uc = provide(CreateInquiryUseCase)
+    change_status_uc = provide(ChangeInquiryStatusUseCase)
+    archive_uc = provide(ArchiveInquiryUseCase)
+    bulk_status_uc = provide(BulkChangeInquiryStatusUseCase)
+    get_query = provide(GetInquiriesQuery)
 
-    facade = provide(OrderingFacade)
+    facade = provide(InquiriesFacade)

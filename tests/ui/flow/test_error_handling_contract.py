@@ -107,7 +107,7 @@ def test_apiflask_validation_errors_use_unified_error_json(monkeypatch, tmp_path
     client = app.test_client()
 
     # Act
-    response = client.post("/orders", json={"name": "", "phone": ""})
+    response = client.post("/inquiries", json={"name": "", "message": ""})
     body = response.get_json()
 
     # Assert

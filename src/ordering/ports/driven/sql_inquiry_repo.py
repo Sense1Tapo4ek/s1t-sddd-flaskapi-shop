@@ -6,62 +6,63 @@ from shared.generics.pagination import PaginatedResult, PaginationParams
 from shared.adapters.driven.db.repository import SqlBaseRepo
 from shared.helpers.db import handle_db_errors
 
-from ordering.app.interfaces import IOrderRepo
-from ordering.domain import Order, OrderStatus
-from ordering.adapters.driven import OrderModel
+from ordering.app.interfaces import IInquiryRepo
+from ordering.domain import Inquiry, InquiryStatus
+from ordering.adapters.driven import InquiryModel
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class SqlOrderRepo(SqlBaseRepo[Order, OrderModel], IOrderRepo):
+class SqlInquiryRepo(SqlBaseRepo[Inquiry, InquiryModel], IInquiryRepo):
 
-    _model_class: ClassVar[type[OrderModel]] = OrderModel
+    _model_class: ClassVar[type[InquiryModel]] = InquiryModel
 
-    def _to_domain(self, model: OrderModel) -> Order:
-        return Order(
-            id=model.id, name=model.name, phone=model.phone,
-            comment=model.comment, status=OrderStatus(model.status),
+    def _to_domain(self, model: InquiryModel) -> Inquiry:
+        return Inquiry(
+            id=model.id,
+            name=model.name,
+            phone=model.phone,
+            contact_email=model.contact_email,
+            message=model.message,
+            status=InquiryStatus(model.status),
             created_at=model.created_at,
+            author_user_id=model.author_user_id,
         )
 
     def next_id(self) -> int:
         return 0
 
-    @handle_db_errors("get order")
-    def get_by_id(self, order_id: int) -> Order | None:
+    @handle_db_errors("get inquiry")
+    def get_by_id(self, inquiry_id: int) -> Inquiry | None:
         with self._session_factory() as session:
-            model = session.get(OrderModel, order_id)
+            model = session.get(InquiryModel, inquiry_id)
             return self._to_domain(model) if model else None
 
-    @handle_db_errors("save order")
-    def save(self, order: Order) -> None:
+    @handle_db_errors("save inquiry")
+    def save(self, inquiry: Inquiry) -> None:
         with self._session_factory() as session:
-            if order.id == 0:
-                model = OrderModel(
-                    name=order.name, phone=order.phone,
-                    comment=order.comment, status=order.status.value,
-                    created_at=order.created_at,
+            if inquiry.id == 0:
+                model = InquiryModel(
+                    name=inquiry.name,
+                    phone=inquiry.phone,
+                    contact_email=inquiry.contact_email,
+                    message=inquiry.message,
+                    status=inquiry.status.value,
+                    created_at=inquiry.created_at,
+                    author_user_id=inquiry.author_user_id,
                 )
                 session.add(model)
                 session.flush()
-                order.id = model.id
+                inquiry.id = model.id
             else:
-                model = session.get(OrderModel, order.id)
+                model = session.get(InquiryModel, inquiry.id)
                 if model:
-                    model.status = order.status.value
+                    model.status = inquiry.status.value
             session.commit()
 
-    @handle_db_errors("delete order")
-    def delete(self, order_id: int) -> None:
+    @handle_db_errors("list inquiries")
+    def get_paginated(self, params: PaginationParams) -> PaginatedResult[Inquiry]:
         with self._session_factory() as session:
-            model = session.get(OrderModel, order_id)
-            if model:
-                session.delete(model)
-                session.commit()
-
-    @handle_db_errors("list orders")
-    def get_paginated(self, params: PaginationParams) -> PaginatedResult[Order]:
-        with self._session_factory() as session:
-            stmt = select(OrderModel)
+            stmt = select(InquiryModel)
             return self._paginate(
                 session=session, stmt=stmt, params=params, default_sort="created_at"
             )
@@ -76,10 +77,10 @@ class SqlOrderRepo(SqlBaseRepo[Order, OrderModel], IOrderRepo):
         limit: int,
     ) -> tuple[list[int], str | None]:
         """Cursor-paginated id loader for bulk operations. Orders by
-        ``orders.id`` ascending so that ``cursor`` is the last id from
+        ``inquiries.id`` ascending so that ``cursor`` is the last id from
         the previous page."""
         with self._session_factory() as session:
-            stmt = select(OrderModel.id)
+            stmt = select(InquiryModel.id)
             stmt = self._apply_filters(stmt, filter_payload or {})
 
             if cursor is not None:
@@ -87,9 +88,9 @@ class SqlOrderRepo(SqlBaseRepo[Order, OrderModel], IOrderRepo):
                     cursor_id = int(cursor)
                 except (TypeError, ValueError):
                     cursor_id = 0
-                stmt = stmt.where(OrderModel.id > cursor_id)
+                stmt = stmt.where(InquiryModel.id > cursor_id)
 
-            stmt = stmt.order_by(asc(OrderModel.id)).limit(limit)
+            stmt = stmt.order_by(asc(InquiryModel.id)).limit(limit)
             rows = session.execute(stmt).scalars().all()
             ids = list(rows)
             next_cursor = str(ids[-1]) if len(ids) == limit else None

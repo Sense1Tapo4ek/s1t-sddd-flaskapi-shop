@@ -194,12 +194,14 @@ CREATE TABLE product_images (
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE orders (
+CREATE TABLE inquiries (
     id INT NOT NULL AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
-    comment TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'new',
+    phone VARCHAR(50) NULL,
+    contact_email VARCHAR(255) NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'new',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    author_user_id INT NULL,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
