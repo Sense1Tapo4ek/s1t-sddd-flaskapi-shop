@@ -32,6 +32,10 @@ JWTs are rejected by `admin_required`, `permission_required`, and
 
 Public endpoints take no auth. Recovery uses a URL token, not a JWT.
 
+`@customer_required` routes (e.g. `POST /orders`) require
+`account_type=customer`. Admin JWTs are rejected with `403`.
+Sets `g.customer_user_id` from claim `sub`; never trust a body field.
+
 ## CSRF
 
 Cookie-auth unsafe methods (POST/PUT/PATCH/DELETE) MUST include the
@@ -114,6 +118,7 @@ Defaults (configurable via `ROOT_RATE_LIMIT_*`, only enforced when
 |---|---|
 | Default route | `200 per minute` |
 | `POST /auth/login` | `5 per minute` |
+| `POST /inquiries` | `5 per minute` (IP bucket `inquiries.create`) |
 | `POST /orders` | `10 per minute` |
 | Recovery / Telegram codes | `3 per minute` |
 

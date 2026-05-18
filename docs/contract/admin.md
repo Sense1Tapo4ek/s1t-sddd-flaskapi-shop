@@ -182,42 +182,55 @@ from a local placeholder (no external network).
 
 ---
 
-## Order Management
+## Requests & Inquiries & Orders
 
-### `GET /orders` (`view_orders`)
+Both entity groups use `view_orders` (read) and `manage_orders` (write)
+permissions. Separate `view_inquiries`/`manage_inquiries` are deferred
+(see [../adr/0010-inquiries-vs-orders-split.md](../adr/0010-inquiries-vs-orders-split.md)).
 
-SmartTable orders endpoint. Same conventions as catalog search.
+### Unified page
 
-Filter examples: `status=new`, `name__ilike=alice`,
-`created_at__gte=2025-01-01`.
+| Route | Auth | Notes |
+|---|---|---|
+| `GET /admin/requests/` | `view_orders` | HTMX page, two tabs (Заказы / Обращения) |
+| `GET /admin/requests/badge` | `view_orders` | `{ "count": N }` — sum of `new` for both types |
+| `GET /admin/inquiries/` | `view_orders` | 302 → `/admin/requests/` |
+| `GET /admin/orders/` | `view_orders` | 302 → `/admin/requests/` |
 
-`200`:
+### Inquiry endpoints
 
-```json
-{
-  "items": [
-    { "id": 1, "name": "Alice", "phone": "+375...",
-      "status": "new", "comment": "...", "created_at": "2025-03-15 14:30" }
-  ],
-  "total": 15
-}
-```
+| Route | Auth | Request | Success |
+|---|---|---|---|
+| `GET /admin/inquiries/search` | `view_orders` | `q`, `page`, `limit`, `sort_by`, `sort_dir`, `field__op=value` | `{ "items": [...], "total": N }` |
+| `GET /admin/inquiries/search/schema` | `view_orders` | — | filter schema |
+| `PATCH /admin/inquiries/<id>/status` | `manage_orders` | `{ "status": "in_progress" }` | `{ "success": true }` |
+| `POST /admin/inquiries/<id>/archive` | `manage_orders` | — | `{ "success": true }` |
+| `POST /admin/inquiries/bulk/status` | `manage_orders` | `{ "ids": [...], "status": "closed" }` | `{ "updated": N, "skipped": M }` |
+| `POST /admin/inquiries/bulk/archive` | `manage_orders` | `{ "ids": [...] }` | `{ "updated": N, "skipped": M }` |
 
-### `GET /orders/search/schema` (`view_orders`)
+Inquiry statuses: `new`, `in_progress`, `closed`, `archived`.
 
-Returns SmartTable schema with `status` as an enum (options: `new`,
-`processing`, `done`, `canceled`).
+Inquiry search item shape: `{ id, name, phone, contact_email, message, status, created_at }`.
 
-### `PATCH /orders/{order_id}/status` (`manage_orders`)
+### Order endpoints
 
-```json
-{ "status": "processing" }
-```
+Same route conventions as inquiries under `/admin/orders/`.
 
-Valid statuses: `new`, `processing`, `done`, `canceled`.
+| Route | Auth | Request | Success |
+|---|---|---|---|
+| `GET /admin/orders/search` | `view_orders` | same params as inquiries | `{ "items": [...], "total": N }` |
+| `GET /admin/orders/search/schema` | `view_orders` | — | filter schema |
+| `PATCH /admin/orders/<id>/status` | `manage_orders` | `{ "status": "confirmed" }` | `{ "success": true }` |
+| `POST /admin/orders/<id>/archive` | `manage_orders` | — | `{ "success": true }` |
+| `POST /admin/orders/bulk/status` | `manage_orders` | `{ "ids": [...], "status": "confirmed" }` | `{ "updated": N, "skipped": M }` |
+| `POST /admin/orders/bulk/archive` | `manage_orders` | `{ "ids": [...] }` | `{ "updated": N, "skipped": M }` |
 
-`200`: `{ "success": true }`. `404`: `{ "error": "Order not found" }`.
-`422`: `{ "error": "Invalid status transition" }`.
+Order statuses: `new`, `confirmed`, `completed`, `canceled`, `archived`.
+`archived` is reachable from any terminal state (`completed`, `canceled`).
+
+Order search item shape: `{ id, customer_user_id, total, delivery_method, delivery_address, status, created_at, items: [{product_id, title_snapshot, unit_price, quantity}] }`.
+
+Error codes: `404` entity not found; `422` illegal status transition.
 
 ---
 

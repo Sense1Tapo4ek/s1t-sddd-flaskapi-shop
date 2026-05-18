@@ -153,30 +153,78 @@ Verify code and reset password. Body: `{ "email": "...", "code": "123456", "pass
 
 ---
 
-## Orders
+## Inquiries
 
-### `POST /orders`
+### `POST /inquiries`
 
-Place a customer order. Returns 201 even if Telegram dispatch fails
-(notifications are best-effort).
+Submit a guest contact inquiry. Anonymous — no JWT required. Returns
+201 even if Telegram dispatch fails (notifications are best-effort).
+
+Rate-limited: `5 per minute` per IP. `429` on excess.
 
 Body:
 
 ```json
-{ "name": "Иван Иванов", "phone": "+375291234567", "comment": "..." }
+{ "name": "Иван Иванов", "phone": "+375291234567", "message": "Здравствуйте..." }
 ```
 
 | Field | Type | Required |
 |---|---|---|
 | `name` | string | yes |
-| `phone` | string | yes |
-| `comment` | string | no |
+| `phone` | string | no |
+| `contact_email` | string (email) | no |
+| `message` | string | yes |
 
 `201`:
 
 ```json
 { "success": true, "id": 42 }
 ```
+
+---
+
+## Orders
+
+### `POST /orders`
+
+Place a customer order. Requires a **customer** JWT — admin JWTs are
+rejected with `403`. Returns 201 even if Telegram dispatch fails.
+
+`customer_user_id` is sourced from JWT `sub`; it MUST NOT appear in
+the request body (schema rejects it if present).
+
+Body:
+
+```json
+{
+  "items": [
+    { "product_id": 5, "quantity": 2 }
+  ],
+  "delivery_method": "courier",
+  "address": "ул. Примерная, 1",
+  "delivery_comment": "",
+  "comment": "Позвоните за час"
+}
+```
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `items` | array | yes | Non-empty; each: `product_id` (int) + `quantity` (int ≥ 1) |
+| `delivery_method` | `"pickup"` \| `"courier"` | yes | |
+| `address` | string | yes if courier | Required and non-empty when method is `courier` |
+| `delivery_comment` | string | no | |
+| `comment` | string | no | |
+
+`201`:
+
+```json
+{ "success": true, "id": 56 }
+```
+
+`401`: missing or invalid JWT.
+`403`: JWT is an admin token (not customer).
+`404`: a referenced product does not exist or is inactive.
+`422`: empty items list, or courier delivery without address.
 
 ---
 

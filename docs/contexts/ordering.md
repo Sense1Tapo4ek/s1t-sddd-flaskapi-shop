@@ -1,59 +1,112 @@
 # Context: ordering
 
-For contributors working inside `src/ordering/`. Customer order
-placement, admin order listing, status transitions, and order
-notifications via Telegram.
+For contributors working inside `src/ordering/`. Guest contact
+inquiries and authenticated customer orders, admin management,
+status transitions, and Telegram notifications.
 
 ## Mental model
 
-An `Order` is created from public input (name, phone, comment).
-Status transitions through a fixed lifecycle. Notification of new
-orders is a side effect dispatched to active `owner` and `superadmin`
-admins who have a bound `telegram_chat_id`. Failures to notify never
-fail order placement.
+Two aggregates in one context, sharing notification infrastructure.
 
 ```
-new ─> processing ─> done
-   \─> canceled       \─> canceled
+Inquiry (guest)                   Order (customer)
+───────────────                   ────────────────
+name / phone? / email? / message  customer_user_id (from JWT)
+                                  items[] (price snapshot)
+                                  delivery: pickup | courier+address
+                                  total (computed)
+
+new → in_progress → closed        new → confirmed → completed / canceled
+          ↓ (any state)                         ↓ (any terminal)
+       archived                             archived
 ```
 
-`OrderStatus` is the source of truth (`src/ordering/domain/order_status.py`).
+- `Inquiry` originates from anonymous `POST /inquiries`.
+- `Order` originates from customer-authenticated `POST /orders`.
+  `customer_user_id` is sourced from JWT `sub`, never from the body.
+- Status transitions validated in domain; routes pass the target
+  string, use case raises 422 on illegal moves.
+- Notifications are best-effort. Telegram failures are logged and
+  swallowed; the aggregate is still saved and 201 returned.
+
+## Aggregates
+
+| | Inquiry | Order |
+|---|---|---|
+| Source file | `domain/inquiry_agg.py` | `domain/order_agg.py` |
+| Status enum | `InquiryStatus` | `OrderStatus` |
+| Key fields | name, phone?, contact_email?, message | items, total, delivery, comment |
+| Auth | anonymous | `@customer_required` |
+| Table | `inquiries` | `orders` + `order_items` |
 
 ## Public surface
 
-Driving facade: `OrderingFacade` in `ports/driving/facade.py`.
+Two driving facades:
 
-| Wire endpoint | Auth | Use case |
+- `InquiriesFacade` — `ports/driving/inquiries_facade.py`
+- `OrdersFacade` — `ports/driving/orders_facade.py`
+
+Wire-level endpoint map:
+
+| Endpoint | Auth | Notes |
 |---|---|---|
-| `POST /orders` | public | Place order; fire-and-forget Telegram notify |
-| `GET /orders` | `view_orders` | Admin list with SmartTable filters |
-| `GET /orders/search/schema` | `view_orders` | SmartTable filter schema |
-| `PATCH /orders/{id}/status` | `manage_orders` | Status transition |
+| `POST /inquiries` | public | rate-limited `5/min` (IP) |
+| `POST /orders` | `customer_required` | items + delivery in body |
+| `GET /admin/requests/` | `view_orders` | unified two-tab UI page |
+| `GET /admin/requests/badge` | `view_orders` | combined new-count |
+| `GET /admin/inquiries/search` | `view_orders` | paginated JSON |
+| `GET /admin/inquiries/search/schema` | `view_orders` | filter schema |
+| `PATCH /admin/inquiries/<id>/status` | `manage_orders` | |
+| `POST /admin/inquiries/<id>/archive` | `manage_orders` | |
+| `POST /admin/inquiries/bulk/status` | `manage_orders` | |
+| `POST /admin/inquiries/bulk/archive` | `manage_orders` | |
+| `GET /admin/orders/search` | `view_orders` | paginated JSON |
+| `GET /admin/orders/search/schema` | `view_orders` | filter schema |
+| `PATCH /admin/orders/<id>/status` | `manage_orders` | |
+| `POST /admin/orders/<id>/archive` | `manage_orders` | |
+| `POST /admin/orders/bulk/status` | `manage_orders` | |
+| `POST /admin/orders/bulk/archive` | `manage_orders` | |
 
-Wire-level shapes live in [../contract/public.md](../contract/public.md)
+`GET /admin/inquiries/` and `GET /admin/orders/` redirect 302 → `/admin/requests/`.
+
+Wire-level shapes: [../contract/public.md](../contract/public.md)
 and [../contract/admin.md](../contract/admin.md).
+
+## Cross-context calls
+
+| Need | ACL file |
+|---|---|
+| Telegram bot token + admin chat ids | `ports/driven/system_notification_acl.py` |
+| Product title+price snapshot at order time | `ports/driven/catalog_product_lookup_acl.py` |
+
+Admin notification recipients are resolved via `system_notification_acl`
+→ `SystemFacade` → active `owner`/`superadmin` admins with a bound
+`telegram_chat_id`.
+
+Product snapshot happens inside `PlaceOrderUseCase`: for each item,
+the ACL calls `catalog` to fetch current title and price, which are
+then frozen on `OrderItem`. The order total is computed from snapshots,
+not live prices.
 
 ## Invariants & gotchas
 
-- **Status transitions are validated in the domain.** Routes must not
-  let arbitrary status strings through; the use case returns a 422 if
-  the target is invalid or unreachable from the current state.
-- **Notification target is per-user, not global.** New-order
-  notifications go to every active `owner`/`superadmin` whose
-  `admins.telegram_chat_id` is set. The legacy global
-  `settings.telegram_chat_id` is not used for order notifications.
-- **Notification is best-effort.** Telegram errors are logged and
-  swallowed inside the system-notification ACL; the order is still
-  saved and returned 201.
-- **Cross-context calls go through ACL.** Talking to `system` for the
-  Telegram bot token and admin chat IDs happens via
-  `ports/driven/system_notification_acl.py`. Do not import `system`
-  internals from `ordering` use cases.
+- `courier` delivery requires a non-empty `address`. The VO
+  `DeliveryInfo.__post_init__` raises `CourierAddressRequiredError`.
+- `items` list must not be empty — `EmptyOrderError` from domain.
+- `customer_user_id` comes from `g.customer_user_id` (set by
+  `@customer_required`), NEVER from the request body.
+- Permissions: `view_orders`/`manage_orders` currently guard BOTH
+  inquiries and orders admin endpoints (D2 deferred — see
+  [../adr/0010-inquiries-vs-orders-split.md](../adr/0010-inquiries-vs-orders-split.md)).
 
 ## Pointers
 
-- Aggregate + status enum: `src/ordering/domain/`
-- ACL to system: `src/ordering/ports/driven/system_notification_acl.py`
+- Domain: `src/ordering/domain/`
+- App use cases: `src/ordering/app/use_cases/`
+- Driven ports: `src/ordering/ports/driven/`
 - Admin HTMX: `src/ordering/adapters/driving/admin.py`
-- Filters subsystem: [../subsystems/smart-filters.md](../subsystems/smart-filters.md)
+- Public API: `src/ordering/adapters/driving/api.py`
+- Admin UI (two-tab): `static/ordering/requests.html`
+- CardsFeed component: `static/js/cards-feed.js`
 - Notifications subsystem: [../subsystems/notifications.md](../subsystems/notifications.md)
+- Filters subsystem: [../subsystems/smart-filters.md](../subsystems/smart-filters.md)

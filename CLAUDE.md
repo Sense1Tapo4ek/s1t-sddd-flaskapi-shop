@@ -14,7 +14,8 @@ separate AGENTS.md. Detailed contracts live in `docs/`.
 | Auth & permissions (JWT, CSRF, runtime vs snapshot perms) | [docs/subsystems/auth-permissions.md](docs/subsystems/auth-permissions.md) |
 | Admin UI conventions (HTMX, partials, CSRF on mutations) | [docs/subsystems/admin-ui.md](docs/subsystems/admin-ui.md) |
 | SmartTable filter schema and operators | [docs/subsystems/smart-filters.md](docs/subsystems/smart-filters.md) |
-| Telegram flows (orders, login codes, recovery) | [docs/subsystems/notifications.md](docs/subsystems/notifications.md) |
+| Telegram flows (inquiries, orders, login codes, recovery) | [docs/subsystems/notifications.md](docs/subsystems/notifications.md) |
+| Unified requests page + CardsFeed component | `/admin/requests/` · `static/js/cards-feed.js` |
 | Public storefront contract | [docs/contract/public.md](docs/contract/public.md) |
 | Admin API contract | [docs/contract/admin.md](docs/contract/admin.md) |
 | Common wire conventions (auth, errors, pagination) | [docs/contract/common.md](docs/contract/common.md) |
@@ -163,9 +164,12 @@ The eight server-side permissions (admin only):
 `edit_products`, `view_orders`, `manage_orders`, `manage_settings`,
 `create_demo_data`.
 
-`superadmin` has every permission. Owner permissions are constrained
-by runtime settings (catalog scope) and `ACCESS_OWNER_CAN_*` env flags
-(other scopes). Customers have no permissions field. Implication rules and runtime-vs-snapshot semantics:
+`view_orders`/`manage_orders` currently guard BOTH orders and inquiries
+admin endpoints (D2 — separate `view_inquiries`/`manage_inquiries` —
+is deferred). `superadmin` has every permission. Owner permissions are
+constrained by runtime settings (catalog scope) and `ACCESS_OWNER_CAN_*`
+env flags (other scopes). Customers have no permissions field.
+Implication rules and runtime-vs-snapshot semantics:
 [docs/subsystems/auth-permissions.md](docs/subsystems/auth-permissions.md).
 
 ## Errors

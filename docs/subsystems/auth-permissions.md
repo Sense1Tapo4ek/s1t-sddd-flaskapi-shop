@@ -77,10 +77,16 @@ The eight permissions enforced server-side:
 | `edit_taxonomy` | Create/update/delete categories, tags, attributes |
 | `view_products` | Open product admin pages and product search |
 | `edit_products` | Create/update/delete products and images |
-| `view_orders` | Read orders |
-| `manage_orders` | Change order status, create/delete test orders |
+| `view_orders` | Read orders **and inquiries** (D2 deferred — see below) |
+| `manage_orders` | Change status of orders **and inquiries** (D2 deferred) |
 | `manage_settings` | Edit store and Telegram settings |
 | `create_demo_data` | Run demo catalog generator |
+
+**D2 deferred:** separate `view_inquiries`/`manage_inquiries` permissions
+are planned but not yet implemented. Currently `view_orders` and
+`manage_orders` guard both the orders and inquiries admin endpoints.
+When D2 lands, the permission set grows to ten and a new implication
+rule `manage_inquiries → view_inquiries` is added.
 
 ### Implication rules (enforced in `resolve_permissions`)
 

@@ -58,7 +58,7 @@ def _first_admin_path() -> str:
     ):
         return "/admin/catalog/"
     if has_permission("view_orders"):
-        return "/admin/inquiries/"
+        return "/admin/requests/"
     if has_permission("manage_settings"):
         return "/admin/settings/store"
     return "/admin/account"
@@ -71,7 +71,7 @@ from system.adapters.driving.api import system_bp
 
 # Admin blueprints
 from catalog.adapters.driving.admin import catalog_admin_bp, taxonomy_admin_bp
-from ordering.adapters.driving.admin import ordering_admin_bp, orders_admin_bp
+from ordering.adapters.driving.admin import ordering_admin_bp, orders_admin_bp, requests_admin_bp
 from access.adapters.driving.admin import access_admin_bp
 from system.adapters.driving.admin import account_admin_bp, system_admin_bp
 
@@ -201,6 +201,7 @@ def create_app() -> APIFlask:
     app.register_blueprint(taxonomy_admin_bp)
     app.register_blueprint(ordering_admin_bp)
     app.register_blueprint(orders_admin_bp)
+    app.register_blueprint(requests_admin_bp)
     app.register_blueprint(access_admin_bp)
     app.register_blueprint(system_admin_bp)
     app.register_blueprint(account_admin_bp)

@@ -5,20 +5,22 @@ notifications, login codes, password-change codes, password recovery.
 
 ## Mental model
 
-One bot. Three flows. Per-user chat ids stored on `admins`.
+One bot. Four flows. Per-user chat ids stored on `admins`.
 
 ```
                   ┌──────────────────────────────┐
                   │  settings.telegram_bot_token  │  global bot credential
                   └──────────────┬───────────────┘
                                  │
-              ┌──────────────────┼─────────────────────────┐
-              │                  │                         │
-      order notifications   login/password codes   password recovery
-              │                  │                         │
-   active owner+superadmin   per-user code,           system facade →
-   admins with chat_id       hashed at rest,          admin's chat_id
-                             cooldown/lockout         via URL token
+       ┌─────────────────────────┼──────────────────────────────┐
+       │                         │                              │
+inquiry notifications    order notifications   login/password codes   password recovery
+(POST /inquiries)        (POST /orders)             │                       │
+       │                         │              per-user code,        system facade →
+       └──────────┬──────────────┘              hashed at rest,       admin's chat_id
+                  │                             cooldown/lockout       via URL token
+       active owner+superadmin
+       admins with chat_id
 ```
 
 - The **bot token** is a global system setting
@@ -30,20 +32,39 @@ One bot. Three flows. Per-user chat ids stored on `admins`.
   `src/shared/adapters/driven/telegram_client.py`. Every domain-facing
   call goes through a context-owned channel/ACL.
 
-## Order notifications
+## Inquiry & order notifications
 
-When `POST /orders` succeeds, `ordering` dispatches via
-`ports/driven/system_notification_acl.py` to every active `owner` and
-`superadmin` whose `telegram_chat_id` is set.
+Both `POST /inquiries` and `POST /orders` dispatch Telegram
+notifications on success via
+`ordering/ports/driven/system_notification_acl.py`. The ACL calls
+`system_notification_acl._fanout()` which resolves active `owner`
+and `superadmin` admins with a bound `telegram_chat_id` and sends
+one message per recipient.
 
-Rules:
+Message formats:
 
-- **Best-effort.** Network/Telegram failures are logged and swallowed;
-  the order is still saved and returned `201`.
+```
+📩 Новое обращение #42
+Иван П. · +375 29 123-45-67
+«Здравствуйте, можно ли...»
+
+🛒 Новый заказ #56
+Иван П. (ivan@example.com) · 2 товара · 145.00 Br
+Доставка: courier · ул. Примерная, 1
+Комментарий: «Позвоните за час»
+```
+
+Protocol (both flows):
+
+- `notify_inquiry_created(inquiry)` and
+  `notify_order_placed(order, customer_email)` declared in
+  `ordering/app/interfaces/i_notification_acl.py`.
+- **Best-effort.** Network/Telegram failures are logged at `WARNING`
+  and swallowed; the aggregate is still saved and `201` returned.
 - **No global chat id is consulted.** Without per-user chat ids, no
   notification is sent. This is intentional.
-- **No new-order recipient is configurable in settings.** Bind chat
-  ids per admin on the account page.
+- **Recipients are not configurable in settings.** Bind chat ids per
+  admin on the account page.
 
 ## Login & password codes
 
