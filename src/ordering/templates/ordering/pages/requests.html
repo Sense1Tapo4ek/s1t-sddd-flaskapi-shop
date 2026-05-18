@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% set active = "requests" %}
+
+{% block title %}Заявки — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <div>
+      <h2 class="page-title">Заявки</h2>
+      <p style="font-size:13px; color:var(--color-text-muted); margin-top:4px;">Заказы клиентов и обращения с сайта. Переключайтесь между вкладками.</p>
+    </div>
+    <button class="help-badge" onclick="document.getElementById('requests-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
+  </div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabs" style="display:flex; gap:0; border-bottom:1px solid var(--color-border); margin-bottom:20px;">
+  <button id="tab-orders" class="tab-btn tab-btn--active" onclick="switchTab('orders')" style="padding:8px 20px; border:none; border-bottom:2px solid var(--color-primary); background:none; cursor:pointer; font-size:14px; font-weight:500; color:var(--color-primary);">
+    Заказы <span id="orders-tab-count" style="font-size:12px; color:var(--color-text-muted);"></span>
+  </button>
+  <button id="tab-inquiries" class="tab-btn" onclick="switchTab('inquiries')" style="padding:8px 20px; border:none; border-bottom:2px solid transparent; background:none; cursor:pointer; font-size:14px; color:var(--color-text-muted);">
+    Обращения <span id="inquiries-tab-count" style="font-size:12px; color:var(--color-text-muted);"></span>
+  </button>
+</div>
+
+<!-- Feed containers -->
+<div id="orders-feed"></div>
+<div id="inquiries-feed" style="display:none;"></div>
+
+<!-- Help modal -->
+<div class="modal-overlay" id="requests-help-modal" role="dialog" aria-modal="true" aria-label="Справка" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Заявки — Справка
+      <button class="modal__close" onclick="document.getElementById('requests-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <ul style="padding-left:18px; margin:0;">
+        <li><strong>Заказы</strong> — реальные покупки авторизованных покупателей с составом, суммой и доставкой.</li>
+        <li><strong>Обращения</strong> — контактные сообщения с сайта (имя, телефон, текст). Не требуют авторизации.</li>
+        <li><strong>Фильтрация:</strong> выберите статус из выпадающего списка или введите поисковый запрос.</li>
+        <li><strong>Сортировка:</strong> выберите поле и направление в выпадающем списке.</li>
+        <li><strong>Пагинация:</strong> кнопки «Пред» / «След» и номер страницы.</li>
+        <li><strong>Детали:</strong> нажмите «Детали» на карточке, чтобы открыть полную информацию.</li>
+        <li><strong>Массовые действия:</strong> отметьте несколько карточек — появится панель действий.</li>
+        <li><strong>Архив:</strong> включите переключатель «Показать архив», чтобы увидеть архивные записи.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/cards-feed.js"></script>
+<script src="/static/js/orders-cards-wiring.js"></script>
+<script src="/static/js/inquiries-cards-wiring.js"></script>
+<script>
+const CAN_MANAGE_ORDERS = {{ 'true' if has_perm('manage_orders') else 'false' }};
+
+function switchTab(name) {
+  const ordersEl = document.getElementById('orders-feed');
+  const inquiriesEl = document.getElementById('inquiries-feed');
+  const tabOrders = document.getElementById('tab-orders');
+  const tabInquiries = document.getElementById('tab-inquiries');
+
+  if (name === 'orders') {
+    ordersEl.style.display = '';
+    inquiriesEl.style.display = 'none';
+    tabOrders.style.borderBottomColor = 'var(--color-primary)';
+    tabOrders.style.color = 'var(--color-primary)';
+    tabInquiries.style.borderBottomColor = 'transparent';
+    tabInquiries.style.color = 'var(--color-text-muted)';
+  } else {
+    ordersEl.style.display = 'none';
+    inquiriesEl.style.display = '';
+    tabInquiries.style.borderBottomColor = 'var(--color-primary)';
+    tabInquiries.style.color = 'var(--color-primary)';
+    tabOrders.style.borderBottomColor = 'transparent';
+    tabOrders.style.color = 'var(--color-text-muted)';
+  }
+}
+
+// Boot feeds after DOM is ready
+document.addEventListener('DOMContentLoaded', function () {
+  initOrdersFeed(CAN_MANAGE_ORDERS);
+  initInquiriesFeed(CAN_MANAGE_ORDERS);
+});
+</script>
+{% endblock %}

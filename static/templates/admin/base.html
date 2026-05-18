@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="/static/css/components/toasts.css">
   <link rel="stylesheet" href="/static/css/components/utils.css">
   <link rel="stylesheet" href="/static/css/components/smart-table.css">
+  <link rel="stylesheet" href="/static/css/components/cards-feed.css">
   <link rel="stylesheet" href="/static/css/components/bulk-bar.css">
   <link rel="stylesheet" href="/static/css/components/taxonomy.css">
   <link rel="stylesheet" href="/static/css/components/catalog-workspace.css">
@@ -41,11 +42,11 @@
 
         {% if has_perm('view_orders') %}
         <div class="sidebar__section-title">Продажи</div>
-        <a href="/admin/orders/" class="nav-link {% if active == 'orders' %}nav-link--active{% endif %}" style="display: flex; justify-content: space-between; align-items: center;">
-          <span>Заказы</span>
+        <a href="/admin/requests/" class="nav-link {% if active == 'requests' %}nav-link--active{% endif %}" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Заявки</span>
           <span
-            id="orders-badge"
-            hx-get="/admin/orders/badge"
+            id="requests-badge"
+            hx-get="/admin/requests/badge"
             hx-trigger="load, every 30s"
             hx-swap="innerHTML"></span>
         </a>
@@ -101,7 +102,9 @@
   <script src="/static/js/bulk-action-bar.js"></script>
   <script src="/static/js/bulk-products-wiring.js"></script>
   <script src="/static/js/bulk-tags-wiring.js"></script>
-  <script src="/static/js/bulk-orders-wiring.js"></script>
+  <script src="/static/js/cards-feed.js"></script>
+  <script src="/static/js/orders-cards-wiring.js"></script>
+  <script src="/static/js/inquiries-cards-wiring.js"></script>
 	  <script>
 	  function getCookie(name) {
 	      return document.cookie

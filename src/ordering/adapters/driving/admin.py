@@ -1,4 +1,4 @@
-from flask import jsonify, request, render_template
+from flask import jsonify, request, render_template, redirect, url_for
 from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
@@ -20,17 +20,59 @@ from shared.helpers.parsing import parse_table_params
 ordering_admin_bp = APIBlueprint("ordering_admin", __name__, url_prefix="/admin/inquiries", enable_openapi=False)
 orders_admin_bp = APIBlueprint("orders_admin", __name__, url_prefix="/admin/orders", enable_openapi=False)
 
+# ─── Unified requests page ────────────────────────────────────────────────────
+
+requests_admin_bp = APIBlueprint("requests_admin", __name__, url_prefix="/admin/requests", enable_openapi=False)
+
+
+@requests_admin_bp.route("/")
+@permission_required("view_orders")
+def requests_page():
+    return render_template("ordering/pages/requests.html")
+
+
+@requests_admin_bp.route("/badge")
+@permission_required("view_orders")
+@inject
+def requests_badge(
+    inq_facade: FromDishka[InquiriesFacade],
+    ord_facade: FromDishka[OrdersFacade],
+):
+    inq_count = inq_facade.list_inquiries(page=1, limit=1, filters={"status__eq": "new"}).total
+    ord_count = ord_facade.list_orders(page=1, limit=1, filters={"status__eq": "new"}).total
+    total = inq_count + ord_count
+    if total > 0:
+        return f'<span class="badge badge--new">{total}</span>'
+    return '<span></span>'
+
 
 @ordering_admin_bp.route("/")
 @permission_required("view_orders")
+def inquiries_page():
+    return redirect(url_for("requests_admin.requests_page"))
+
+
+@ordering_admin_bp.route("/search")
+@permission_required("view_orders")
 @inject
-def inquiries_page(facade: FromDishka[InquiriesFacade]):
-    result = facade.list_inquiries(page=1, limit=20, sort_by="created_at", sort_dir="desc")
-    return render_partial_or_full(
-        "ordering/partials/table.html",
-        "ordering/pages/orders.html",
-        orders=result,
-    )
+def inquiries_search_json(facade: FromDishka[InquiriesFacade]):
+    args = request.args
+    reserved = {"q", "page", "limit", "sort_by", "sort_dir"}
+    filters = {k: v for k, v in args.items() if k not in reserved and v != ""}
+    try:
+        page = max(1, int(args.get("page", 1)))
+        limit = max(1, min(100, int(args.get("limit", 20))))
+    except (ValueError, TypeError):
+        page, limit = 1, 20
+    sort_by = args.get("sort_by") or None
+    sort_dir = args.get("sort_dir", "desc")
+    result = facade.list_inquiries(page=page, limit=limit, sort_by=sort_by, sort_dir=sort_dir, filters=filters)
+    return jsonify({
+        "items": [i.model_dump(mode="json") for i in result.items],
+        "total": result.total,
+        "page": page,
+        "limit": limit,
+    })
 
 
 @ordering_admin_bp.route("/table")
@@ -149,14 +191,31 @@ def inquiries_bulk_archive(facade: FromDishka[InquiriesFacade]):
 
 @orders_admin_bp.route("/")
 @permission_required("view_orders")
+def orders_page():
+    return redirect(url_for("requests_admin.requests_page"))
+
+
+@orders_admin_bp.route("/search")
+@permission_required("view_orders")
 @inject
-def orders_page(facade: FromDishka[OrdersFacade]):
-    result = facade.list_orders(page=1, limit=20, sort_by="created_at", sort_dir="desc")
-    return render_partial_or_full(
-        "ordering/partials/orders_table.html",
-        "ordering/pages/orders_list.html",
-        orders=result,
-    )
+def orders_search_json(facade: FromDishka[OrdersFacade]):
+    args = request.args
+    reserved = {"q", "page", "limit", "sort_by", "sort_dir"}
+    filters = {k: v for k, v in args.items() if k not in reserved and v != ""}
+    try:
+        page = max(1, int(args.get("page", 1)))
+        limit = max(1, min(100, int(args.get("limit", 20))))
+    except (ValueError, TypeError):
+        page, limit = 1, 20
+    sort_by = args.get("sort_by") or None
+    sort_dir = args.get("sort_dir", "desc")
+    result = facade.list_orders(page=page, limit=limit, sort_by=sort_by, sort_dir=sort_dir, filters=filters)
+    return jsonify({
+        "items": [o.model_dump(mode="json") for o in result.items],
+        "total": result.total,
+        "page": page,
+        "limit": limit,
+    })
 
 
 @orders_admin_bp.route("/table")
