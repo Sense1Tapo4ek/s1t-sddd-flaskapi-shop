@@ -116,6 +116,7 @@ Copy `.env.example` to `.env` for local work. Important variables:
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | see `.env.example` | Email sender for customer recovery (leave `SMTP_HOST` empty for logging mode) |
 | `CATALOG_UPLOAD_DIR` | `media/products` | Product image upload directory |
 | `SYSTEM_RECOVERY_TOKEN` | `change-me-in-production` | URL token for Telegram password recovery |
+| `SYSTEM_STORAGE_SECRETS_KEY` | empty | Fernet key for encrypting S3 credentials in `storage_settings`. **Required only when backend = `s3`; losing it after writes = lost S3 creds.** See [docs/infra/storage.md](docs/infra/storage.md) |
 | `ROOT_PUBLIC_CORS_ORIGINS` / `ROOT_ADMIN_CORS_ORIGINS` | unset | CORS allow-lists |
 | `ROOT_RATE_LIMIT_*` | code defaults | Default / login / order / recovery rate limits |
 | `PORT` | `5000` | Local server port |

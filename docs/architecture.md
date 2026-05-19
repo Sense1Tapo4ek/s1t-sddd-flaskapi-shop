@@ -162,6 +162,7 @@ These shape the template intentionally; treat them as load-bearing.
 |---|---|
 | `ROOT_APP_ENV=prod` | `.env` |
 | Strong `ACCESS_JWT_SECRET`, `SYSTEM_RECOVERY_TOKEN` | `.env` |
+| `SYSTEM_STORAGE_SECRETS_KEY` set if S3 backend (irrecoverable if lost after writes) | `.env` — see [infra/storage.md](infra/storage.md) |
 | Strong `ACCESS_DEFAULT_PASSWORD` (single admin row) | `.env` |
 | `ACCESS_PROMOTE_TO_SUPERADMIN=true` to grant full access to that admin | `.env` |
 | Swagger off in prod | enforced by `app_env` |
