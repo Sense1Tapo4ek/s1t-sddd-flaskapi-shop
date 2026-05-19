@@ -16,10 +16,6 @@ from ordering.app.interfaces import IOrderRepo, IProductLookupACL, ProductSnapsh
 from ordering.app.use_cases.place_order_uc import PlaceOrderUseCase
 from ordering.app.use_cases.change_order_status_uc import ChangeOrderStatusUseCase
 from ordering.app.use_cases.archive_order_uc import ArchiveOrderUseCase
-from ordering.app.use_cases.bulk_change_order_status_uc import (
-    BulkArchiveOrderUseCase,
-    BulkChangeOrderStatusUseCase,
-)
 from ordering.app.use_cases.create_demo_data_uc import CreateDemoOrderingDataUseCase
 from ordering.app.use_cases.create_test_order_uc import CreateTestOrderUseCase
 from ordering.app.queries.get_order_by_id_query import GetOrderByIdQuery
@@ -33,14 +29,12 @@ from ordering.domain import (
 )
 from ordering.ports.driving.orders_facade import OrdersFacade
 from ordering.ports.driving.schemas import (
-    BulkOrdersStatusIn,
     OrderIn,
     OrderItemIn,
     OrderOut,
     OrderStatusUpdateIn,
 )
 from shared.generics.pagination import PaginatedResult
-from shared.ports.driving.bulk_schemas import BulkResultSchema, BulkTargetIds
 
 pytestmark = pytest.mark.flow
 
@@ -69,8 +63,6 @@ def _make_facade(
     place_uc=None,
     change_status_uc=None,
     archive_uc=None,
-    bulk_status_uc=None,
-    bulk_archive_uc=None,
     get_query=None,
     get_by_id_query=None,
     demo_uc=None,
@@ -80,8 +72,6 @@ def _make_facade(
         _place_uc=place_uc or MagicMock(spec=PlaceOrderUseCase),
         _change_status_uc=change_status_uc or MagicMock(spec=ChangeOrderStatusUseCase),
         _archive_uc=archive_uc or MagicMock(spec=ArchiveOrderUseCase),
-        _bulk_status_uc=bulk_status_uc or MagicMock(spec=BulkChangeOrderStatusUseCase),
-        _bulk_archive_uc=bulk_archive_uc or MagicMock(spec=BulkArchiveOrderUseCase),
         _get_query=get_query or MagicMock(spec=GetOrdersQuery),
         _get_by_id_query=get_by_id_query or MagicMock(spec=GetOrderByIdQuery),
         _demo_uc=demo_uc or MagicMock(spec=CreateDemoOrderingDataUseCase),
@@ -205,53 +195,6 @@ class TestFacadeArchiveOrder:
         archive_uc.assert_called_once()
         cmd = archive_uc.call_args[0][0]
         assert cmd.order_id == 5
-
-
-# ─── bulk operations ─────────────────────────────────────────────────────────
-
-
-class TestFacadeBulkOperations:
-    def test_bulk_change_status_delegates_to_uc(self):
-        """
-        Given a BulkOrdersStatusIn payload,
-        When facade.bulk_change_orders_status() is called,
-        Then BulkChangeOrderStatusUseCase is invoked and the result is returned.
-        """
-        bulk_status_uc = MagicMock(spec=BulkChangeOrderStatusUseCase)
-        expected = BulkResultSchema(total=2, ok=2, failed=[])
-        bulk_status_uc.return_value = expected
-        facade = _make_facade(bulk_status_uc=bulk_status_uc)
-
-        payload = BulkOrdersStatusIn(
-            target=BulkTargetIds(ids=[1, 2]),
-            status="confirmed",
-        )
-        result = facade.bulk_change_orders_status(payload)
-
-        assert result is expected
-        bulk_status_uc.assert_called_once()
-        cmd = bulk_status_uc.call_args[0][0]
-        assert cmd.status == "confirmed"
-
-    def test_bulk_archive_delegates_to_uc(self):
-        """
-        Given a BulkOrdersStatusIn payload,
-        When facade.bulk_archive_orders() is called,
-        Then BulkArchiveOrderUseCase is invoked and the result is returned.
-        """
-        bulk_archive_uc = MagicMock(spec=BulkArchiveOrderUseCase)
-        expected = BulkResultSchema(total=3, ok=3, failed=[])
-        bulk_archive_uc.return_value = expected
-        facade = _make_facade(bulk_archive_uc=bulk_archive_uc)
-
-        payload = BulkOrdersStatusIn(
-            target=BulkTargetIds(ids=[10, 11, 12]),
-            status="archived",
-        )
-        result = facade.bulk_archive_orders(payload)
-
-        assert result is expected
-        bulk_archive_uc.assert_called_once()
 
 
 # ─── list_orders ──────────────────────────────────────────────────────────────

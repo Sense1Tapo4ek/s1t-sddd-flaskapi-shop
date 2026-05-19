@@ -1,16 +1,10 @@
 from dataclasses import dataclass
 
-from shared.ports.driving.bulk_schemas import BulkResultSchema
-
 from typing import Any
 
 from ...app import (
     ArchiveOrderCommand,
     ArchiveOrderUseCase,
-    BulkArchiveOrderCommand,
-    BulkArchiveOrderUseCase,
-    BulkChangeOrderStatusCommand,
-    BulkChangeOrderStatusUseCase,
     ChangeOrderStatusCommand,
     ChangeOrderStatusUseCase,
     CreateDemoOrderingDataUseCase,
@@ -20,7 +14,6 @@ from ...app import (
     PlaceOrderUseCase,
 )
 from .schemas import (
-    BulkOrdersStatusIn,
     OrderIn,
     OrderOut,
     OrderSearchQuery,
@@ -39,8 +32,6 @@ class OrdersFacade:
     _place_uc: PlaceOrderUseCase
     _change_status_uc: ChangeOrderStatusUseCase
     _archive_uc: ArchiveOrderUseCase
-    _bulk_status_uc: BulkChangeOrderStatusUseCase
-    _bulk_archive_uc: BulkArchiveOrderUseCase
     _get_query: GetOrdersQuery
     _get_by_id_query: GetOrderByIdQuery
     _demo_uc: CreateDemoOrderingDataUseCase
@@ -65,16 +56,6 @@ class OrdersFacade:
     def archive_order(self, order_id: int) -> int:
         cmd = ArchiveOrderCommand(order_id=order_id)
         return self._archive_uc(cmd)
-
-    def bulk_change_orders_status(self, payload: BulkOrdersStatusIn) -> BulkResultSchema:
-        return self._bulk_status_uc(
-            BulkChangeOrderStatusCommand(target=payload.target, status=payload.status)
-        )
-
-    def bulk_archive_orders(self, payload: BulkOrdersStatusIn) -> BulkResultSchema:
-        return self._bulk_archive_uc(
-            BulkArchiveOrderCommand(target=payload.target)
-        )
 
     def list_orders(
         self,

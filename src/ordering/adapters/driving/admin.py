@@ -5,12 +5,9 @@ from dishka.integrations.flask import inject, FromDishka
 from ordering.ports.driving.inquiries_facade import InquiriesFacade
 from ordering.ports.driving.orders_facade import OrdersFacade
 from ordering.ports.driving.schemas import (
-    BulkInquiriesStatusIn,
-    BulkOrdersStatusIn,
     InquiryStatusUpdateIn,
     OrderStatusUpdateIn,
 )
-from shared.adapters.driving.bulk import bulk_action_log, bulk_rate_limited
 from shared.adapters.driving.middleware import permission_required
 from shared.adapters.driving.htmx import render_partial_or_full
 from shared.helpers.parsing import parse_table_params
@@ -132,32 +129,6 @@ def inquiries_badge(facade: FromDishka[InquiriesFacade]):
     return '<span></span>'
 
 
-# ─── Bulk actions ───────────────────────────────────────────────────
-
-
-@ordering_admin_bp.route("/bulk/status", methods=["POST"])
-@permission_required("manage_orders")
-@bulk_rate_limited("inquiries.bulk_change_status")
-@bulk_action_log("inquiries.bulk_change_status")
-@inject
-def inquiries_bulk_status(facade: FromDishka[InquiriesFacade]):
-    payload = BulkInquiriesStatusIn.model_validate(request.get_json(silent=True) or {})
-    result = facade.bulk_change_inquiries_status(payload)
-    return jsonify(result.model_dump(mode="json")), 200
-
-
-@ordering_admin_bp.route("/bulk/archive", methods=["POST"])
-@permission_required("manage_orders")
-@bulk_rate_limited("inquiries.bulk_archive")
-@bulk_action_log("inquiries.bulk_archive")
-@inject
-def inquiries_bulk_archive(facade: FromDishka[InquiriesFacade]):
-    from ordering.ports.driving.schemas import BulkInquiriesStatusIn as _BulkIn
-    payload = _BulkIn.model_validate({**(request.get_json(silent=True) or {}), "status": "archived"})
-    result = facade.bulk_change_inquiries_status(payload)
-    return jsonify(result.model_dump(mode="json")), 200
-
-
 # ─── Orders admin routes ──────────────────────────────────────────────────────
 
 
@@ -252,30 +223,6 @@ def update_order_status(order_id: int, facade: FromDishka[OrdersFacade]):
 def archive_order(order_id: int, facade: FromDishka[OrdersFacade]):
     facade.archive_order(order_id)
     return jsonify({"success": True})
-
-
-@orders_admin_bp.route("/bulk/status", methods=["POST"])
-@permission_required("manage_orders")
-@bulk_rate_limited("orders.bulk_change_status")
-@bulk_action_log("orders.bulk_change_status")
-@inject
-def orders_bulk_status(facade: FromDishka[OrdersFacade]):
-    payload = BulkOrdersStatusIn.model_validate(request.get_json(silent=True) or {})
-    result = facade.bulk_change_orders_status(payload)
-    return jsonify(result.model_dump(mode="json")), 200
-
-
-@orders_admin_bp.route("/bulk/archive", methods=["POST"])
-@permission_required("manage_orders")
-@bulk_rate_limited("orders.bulk_archive")
-@bulk_action_log("orders.bulk_archive")
-@inject
-def orders_bulk_archive(facade: FromDishka[OrdersFacade]):
-    payload = BulkOrdersStatusIn.model_validate(
-        {**(request.get_json(silent=True) or {}), "status": "archived"}
-    )
-    result = facade.bulk_change_orders_status(payload)
-    return jsonify(result.model_dump(mode="json")), 200
 
 
 @orders_admin_bp.route("/demo-data", methods=["POST"])

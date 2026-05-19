@@ -4,16 +4,9 @@ from ordering.config import OrderingConfig
 from ordering.app.use_cases.create_inquiry_uc import CreateInquiryUseCase
 from ordering.app.use_cases.change_inquiry_status_uc import ChangeInquiryStatusUseCase
 from ordering.app.use_cases.archive_inquiry_uc import ArchiveInquiryUseCase
-from ordering.app.use_cases.bulk_change_inquiry_status_uc import (
-    BulkChangeInquiryStatusUseCase,
-)
 from ordering.app.use_cases.place_order_uc import PlaceOrderUseCase
 from ordering.app.use_cases.change_order_status_uc import ChangeOrderStatusUseCase
 from ordering.app.use_cases.archive_order_uc import ArchiveOrderUseCase
-from ordering.app.use_cases.bulk_change_order_status_uc import (
-    BulkChangeOrderStatusUseCase,
-    BulkArchiveOrderUseCase,
-)
 from ordering.app.use_cases.create_demo_data_uc import CreateDemoOrderingDataUseCase
 from ordering.app.use_cases.create_test_order_uc import CreateTestOrderUseCase
 from ordering.app.queries.get_inquiries_query import GetInquiriesQuery
@@ -45,7 +38,6 @@ class OrderingProvider(Provider):
     create_uc = provide(CreateInquiryUseCase)
     change_status_uc = provide(ChangeInquiryStatusUseCase)
     archive_uc = provide(ArchiveInquiryUseCase)
-    bulk_status_uc = provide(BulkChangeInquiryStatusUseCase)
     get_query = provide(GetInquiriesQuery)
 
     facade = provide(InquiriesFacade)
@@ -57,8 +49,6 @@ class OrderingProvider(Provider):
     place_order_uc = provide(PlaceOrderUseCase)
     change_order_status_uc = provide(ChangeOrderStatusUseCase)
     archive_order_uc = provide(ArchiveOrderUseCase)
-    bulk_order_status_uc = provide(BulkChangeOrderStatusUseCase)
-    bulk_archive_order_uc = provide(BulkArchiveOrderUseCase)
     get_orders_query = provide(GetOrdersQuery)
     get_order_by_id_query = provide(GetOrderByIdQuery)
 

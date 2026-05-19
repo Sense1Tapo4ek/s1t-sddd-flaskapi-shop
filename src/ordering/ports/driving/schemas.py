@@ -3,7 +3,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from shared.generics.pagination import PaginatedResult
-from shared.ports.driving.bulk_schemas import BulkTarget
 from ...app.commands import (
     CreateInquiryCommand,
     ChangeInquiryStatusCommand,
@@ -86,15 +85,6 @@ class InquiryListOut(BaseModel):
         return cls(
             items=[InquiryOut.from_domain(i) for i in result.items], total=result.total
         )
-
-
-# ─── Bulk action inputs (Inquiries) ─────────────────────────────────
-
-
-class BulkInquiriesStatusIn(BaseModel):
-    model_config = ConfigDict(frozen=True)
-    target: BulkTarget
-    status: str
 
 
 # ─── Order schemas ────────────────────────────────────────────────────────────
@@ -216,10 +206,3 @@ class PaginatedOrdersOut(BaseModel):
         )
 
 
-# ─── Bulk action inputs (Orders) ─────────────────────────────────────
-
-
-class BulkOrdersStatusIn(BaseModel):
-    model_config = ConfigDict(frozen=True)
-    target: BulkTarget
-    status: OrderStatus

@@ -1,8 +1,6 @@
 from .inquiries_facade import InquiriesFacade
 from .orders_facade import OrdersFacade
 from .schemas import (
-    BulkInquiriesStatusIn,
-    BulkOrdersStatusIn,
     InquiryIn,
     InquiryListOut,
     InquirySearchQuery,
@@ -22,7 +20,6 @@ __all__ = [
     "InquiryStatusUpdateIn",
     "InquiryListOut",
     "InquirySearchQuery",
-    "BulkInquiriesStatusIn",
     "OrdersFacade",
     "OrderIn",
     "OrderItemIn",
@@ -31,5 +28,4 @@ __all__ = [
     "OrderSearchQuery",
     "OrderStatusUpdateIn",
     "PaginatedOrdersOut",
-    "BulkOrdersStatusIn",
 ]
