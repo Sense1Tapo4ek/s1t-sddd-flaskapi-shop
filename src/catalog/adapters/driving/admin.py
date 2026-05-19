@@ -14,7 +14,6 @@ from catalog.ports.driving import (
 from catalog.ports.driving.facade import CatalogFacade
 from shared.adapters.driving.bulk import bulk_action_log, bulk_rate_limited
 from shared.adapters.driving.middleware import any_permission_required, permission_required
-from shared.adapters.driving.htmx import render_partial_or_full
 from shared.helpers.parsing import parse_optional_int, safe_float, parse_table_params
 
 catalog_admin_bp = APIBlueprint("catalog_admin", __name__, url_prefix="/admin/products", enable_openapi=False)
@@ -25,18 +24,6 @@ taxonomy_admin_bp = APIBlueprint("catalog_taxonomy_admin", __name__, url_prefix=
 @permission_required("view_products")
 def products_page():
     return redirect("/admin/catalog/?view=products")
-
-
-@catalog_admin_bp.route("/legacy")
-@permission_required("view_products")
-@inject
-def legacy_products_page(facade: FromDishka[CatalogFacade]):
-    result = facade.search_products(page=1, limit=20, sort_by="created_at", sort_dir="desc")
-    return render_partial_or_full(
-        "catalog/partials/table.html",
-        "catalog/pages/products.html",
-        products=result,
-    )
 
 
 @catalog_admin_bp.route("/table")
