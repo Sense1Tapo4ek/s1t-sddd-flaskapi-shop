@@ -88,12 +88,17 @@ def has_permission(permission: str) -> bool:
     return bool(permissions.get(permission))
 
 
+def _require_admin_account() -> None:
+    """Reject customer JWTs at admin-only entry points. Call AFTER @jwt_required."""
+    if getattr(request, "account_type", "admin") != "admin":
+        raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+
+
 def admin_required(f):
     @wraps(f)
     @jwt_required
     def decorated(*args, **kwargs):
-        if getattr(request, "account_type", "admin") != "admin":
-            raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+        _require_admin_account()
         return f(*args, **kwargs)
     return decorated
 
@@ -128,8 +133,7 @@ def permission_required(permission: str):
         @wraps(f)
         @jwt_required
         def decorated(*args, **kwargs):
-            if getattr(request, "account_type", "admin") != "admin":
-                raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+            _require_admin_account()
             if not has_permission(permission):
                 raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             return f(*args, **kwargs)
@@ -142,8 +146,7 @@ def any_permission_required(*permissions: str):
         @wraps(f)
         @jwt_required
         def decorated(*args, **kwargs):
-            if getattr(request, "account_type", "admin") != "admin":
-                raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+            _require_admin_account()
             if not any(has_permission(permission) for permission in permissions):
                 raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
             return f(*args, **kwargs)
@@ -155,8 +158,7 @@ def superadmin_required(f):
     @wraps(f)
     @jwt_required
     def decorated(*args, **kwargs):
-        if getattr(request, "account_type", "admin") != "admin":
-            raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
+        _require_admin_account()
         if not is_superadmin():
             raise DrivingAdapterError("Доступ запрещён", "FORBIDDEN")
         return f(*args, **kwargs)
