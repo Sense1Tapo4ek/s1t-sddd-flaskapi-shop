@@ -283,27 +283,28 @@
     pager.dataset.role = "pager";
     root.appendChild(pager);
 
-    // Drawer
-    var drawer = document.createElement("div");
-    drawer.className = "cf-drawer";
-    drawer.dataset.role = "drawer";
-    drawer.innerHTML = '<button class="cf-drawer__close" type="button" aria-label="Закрыть">&times;</button><div class="cf-drawer__body" data-role="drawer-body"></div>';
-    drawer.querySelector(".cf-drawer__close").addEventListener("click", function () { self._closeDrawer(); });
-    document.body.appendChild(drawer);
-    self._drawer = drawer;
+    // Drawer (only when at least one wiring opts in via showDrawerBtn=true)
+    if (self.showDrawerBtn) {
+      var drawer = document.createElement("div");
+      drawer.className = "cf-drawer";
+      drawer.dataset.role = "drawer";
+      drawer.innerHTML = '<button class="cf-drawer__close" type="button" aria-label="Закрыть">&times;</button><div class="cf-drawer__body" data-role="drawer-body"></div>';
+      drawer.querySelector(".cf-drawer__close").addEventListener("click", function () { self._closeDrawer(); });
+      document.body.appendChild(drawer);
+      self._drawer = drawer;
 
-    // Close drawer on outside click / Escape
-    document.addEventListener("click", function (e) {
-      if (drawer.classList.contains("cf-drawer--open") && !drawer.contains(e.target)) {
-        var card = e.target.closest(".cf-card");
-        if (!card || !card.querySelector('[data-role="drawer-btn"]')) {
-          self._closeDrawer();
+      document.addEventListener("click", function (e) {
+        if (drawer.classList.contains("cf-drawer--open") && !drawer.contains(e.target)) {
+          var card = e.target.closest(".cf-card");
+          if (!card || !card.querySelector('[data-role="drawer-btn"]')) {
+            self._closeDrawer();
+          }
         }
-      }
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") self._closeDrawer();
-    });
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") self._closeDrawer();
+      });
+    }
 
     self._container = root;
   };
@@ -456,6 +457,7 @@
   // ─── Drawer ──────────────────────────────────────────────────────────────
 
   CardsFeed.prototype._openDrawer = function (item) {
+    if (!this._drawer) return;
     var body = this._drawer.querySelector('[data-role="drawer-body"]');
     body.innerHTML = this._renderDrawerContent(item);
     this._drawer.classList.add("cf-drawer--open");
