@@ -123,10 +123,12 @@ Use this sequence; each step builds on the previous one.
 8. **Tests + docs.** Add `unit`/`flow` tests under `tests/<name>/` and
    create `docs/contexts/<name>.md`.
 
-For a new entity inside an existing context, you typically skip
-creating a new provider but you still add a `provide(...)` line for
-every new use case / repo. Step 7's blueprint + ORM-import +
-ChoiceLoader entries are already in place.
+For a new entity inside an existing context, skip step 6 in the sense
+that you do **not** create a new `provider.py` and do **not** touch
+`src/root/container.py`. You **do** edit the existing `provider.py` to
+add a `provide(...)` line for each new use case, query, and repo.
+Step 7's blueprint registration, ORM-import, ChoiceLoader entry, and
+`REQUIRED_TABLES` row are already in place for the context.
 
 ## Operational rules
 
