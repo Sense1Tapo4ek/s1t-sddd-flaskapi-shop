@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% set active = "orders" %}
+
+{% block title %}Заказы — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <div>
+      <h2 class="page-title">Заказы</h2>
+      <p style="font-size:13px; color:var(--color-text-muted); margin-top:4px;">Оформленные покупки клиентов: состав, сумма, адрес доставки.</p>
+    </div>
+  </div>
+  <div class="page-header__right">
+    <button class="help-badge" type="button" onclick="document.getElementById('orders-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
+    {% if has_perm('manage_orders') %}
+    <button class="btn btn--ghost btn--sm" type="button" onclick="createTestOrder()">Создать тестовый заказ</button>
+    {% endif %}
+  </div>
+</div>
+
+<div id="orders-feed"></div>
+
+<div class="modal-overlay" id="orders-help-modal" role="dialog" aria-modal="true" aria-label="Справка по заказам" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Заказы — Справка
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('orders-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <section>
+        <p style="margin-top:0;">Список оформленных покупок авторизованных клиентов. Каждая карточка — отдельный заказ с составом, суммой, адресом доставки и статусом.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><strong>Фильтрация:</strong> выберите статус в выпадающем списке или введите поисковый запрос.</li>
+          <li><strong>Сортировка:</strong> выберите поле и направление в выпадающем списке над лентой.</li>
+          <li><strong>Сменить статус:</strong> нажмите на нужный статус в строке заказа — изменение применяется сразу.</li>
+          <li><strong>Архив:</strong> чтобы скрыть заказ, выберите статус «Архив». Включите переключатель «Показать архив», чтобы увидеть архивные записи.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/cards-feed.js"></script>
+<script src="/static/js/orders-cards-wiring.js"></script>
+<script>
+const CAN_MANAGE_ORDERS = {{ 'true' if has_perm('manage_orders') else 'false' }};
+
+function showToast(message, type) {
+  document.body.dispatchEvent(new CustomEvent('showToast', {
+    detail: { message, type: type || 'info' }
+  }));
+}
+
+async function createTestOrder() {
+  if (!CAN_MANAGE_ORDERS) return;
+  const res = await api.post('/admin/orders/test', {});
+  if (res._failed) return;
+  if (!res.ok) {
+    showToast(res.message || 'Не удалось создать тестовый заказ', 'error');
+    return;
+  }
+  showToast(`Заказ #${res.order_id} создан`, 'success');
+  if (window.ordersFeed) window.ordersFeed.load();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  initOrdersFeed(CAN_MANAGE_ORDERS);
+});
+</script>
+{% endblock %}

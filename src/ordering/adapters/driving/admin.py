@@ -1,4 +1,4 @@
-from flask import jsonify, request, render_template, redirect, url_for
+from flask import jsonify, request, render_template
 from apiflask import APIBlueprint
 from dishka.integrations.flask import inject, FromDishka
 
@@ -20,36 +20,11 @@ from shared.helpers.parsing import parse_table_params
 ordering_admin_bp = APIBlueprint("ordering_admin", __name__, url_prefix="/admin/inquiries", enable_openapi=False)
 orders_admin_bp = APIBlueprint("orders_admin", __name__, url_prefix="/admin/orders", enable_openapi=False)
 
-# ─── Unified requests page ────────────────────────────────────────────────────
-
-requests_admin_bp = APIBlueprint("requests_admin", __name__, url_prefix="/admin/requests", enable_openapi=False)
-
-
-@requests_admin_bp.route("/")
-@permission_required("view_orders")
-def requests_page():
-    return render_template("ordering/pages/requests.html")
-
-
-@requests_admin_bp.route("/badge")
-@permission_required("view_orders")
-@inject
-def requests_badge(
-    inq_facade: FromDishka[InquiriesFacade],
-    ord_facade: FromDishka[OrdersFacade],
-):
-    inq_count = inq_facade.list_inquiries(page=1, limit=1, filters={"status__eq": "new"}).total
-    ord_count = ord_facade.list_orders(page=1, limit=1, filters={"status__eq": "new"}).total
-    total = inq_count + ord_count
-    if total > 0:
-        return f'<span class="badge badge--new">{total}</span>'
-    return '<span></span>'
-
 
 @ordering_admin_bp.route("/")
 @permission_required("view_orders")
 def inquiries_page():
-    return redirect(url_for("requests_admin.requests_page"))
+    return render_template("ordering/pages/inquiries.html")
 
 
 @ordering_admin_bp.route("/search")
@@ -189,7 +164,7 @@ def inquiries_bulk_archive(facade: FromDishka[InquiriesFacade]):
 @orders_admin_bp.route("/")
 @permission_required("view_orders")
 def orders_page():
-    return redirect(url_for("requests_admin.requests_page"))
+    return render_template("ordering/pages/orders.html")
 
 
 @orders_admin_bp.route("/search")

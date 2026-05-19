@@ -42,13 +42,15 @@
 
         {% if has_perm('view_orders') %}
         <div class="sidebar__section-title">Продажи</div>
-        <a href="/admin/requests/" class="nav-link {% if active == 'requests' %}nav-link--active{% endif %}" style="display: flex; justify-content: space-between; align-items: center;">
-          <span>Заявки</span>
-          <span
-            id="requests-badge"
-            hx-get="/admin/requests/badge"
-            hx-trigger="load, every 30s"
-            hx-swap="innerHTML"></span>
+        {% if feature_flags.orders_enabled %}
+        <a href="/admin/orders/" class="nav-link {% if active == 'orders' %}nav-link--active{% endif %}" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Заказы</span>
+          <span hx-get="/admin/orders/badge" hx-trigger="load, every 30s" hx-swap="innerHTML"></span>
+        </a>
+        {% endif %}
+        <a href="/admin/inquiries/" class="nav-link {% if active == 'inquiries' %}nav-link--active{% endif %}" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Обращения</span>
+          <span hx-get="/admin/inquiries/badge" hx-trigger="load, every 30s" hx-swap="innerHTML"></span>
         </a>
         {% endif %}
 
@@ -107,11 +109,6 @@
   <script src="/static/js/bulk-action-bar.js"></script>
   <script src="/static/js/bulk-products-wiring.js"></script>
   <script src="/static/js/bulk-tags-wiring.js"></script>
-  <script src="/static/js/cards-feed.js"></script>
-  {% if feature_flags.orders_enabled %}
-  <script src="/static/js/orders-cards-wiring.js"></script>
-  {% endif %}
-  <script src="/static/js/inquiries-cards-wiring.js"></script>
 	  <script>
 	  function getCookie(name) {
 	      return document.cookie

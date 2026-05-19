@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% set active = "inquiries" %}
+
+{% block title %}Обращения — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <div>
+      <h2 class="page-title">Обращения</h2>
+      <p style="font-size:13px; color:var(--color-text-muted); margin-top:4px;">Сообщения с формы сайта: имя, контакт, текст.</p>
+    </div>
+  </div>
+  <div class="page-header__right">
+    <button class="help-badge" type="button" onclick="document.getElementById('inquiries-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
+    {% if has_perm('manage_orders') %}
+    <button class="btn btn--ghost btn--sm" type="button" onclick="createTestInquiry()">Создать тестовое обращение</button>
+    {% endif %}
+  </div>
+</div>
+
+<div id="inquiries-feed"></div>
+
+<div class="modal-overlay" id="inquiries-help-modal" role="dialog" aria-modal="true" aria-label="Справка по обращениям" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Обращения — Справка
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('inquiries-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <section>
+        <p style="margin-top:0;">Сообщения, отправленные клиентами через форму на сайте. Авторизация не требуется — имя и контакт ввели сами клиенты.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><strong>Фильтрация:</strong> выберите статус в выпадающем списке или введите поисковый запрос.</li>
+          <li><strong>Сортировка:</strong> выберите поле и направление в выпадающем списке над лентой.</li>
+          <li><strong>Сменить статус:</strong> нажмите на нужный статус в строке обращения — изменение применяется сразу.</li>
+          <li><strong>Архив:</strong> чтобы скрыть обращение, выберите статус «Архив». Включите переключатель «Показать архив», чтобы увидеть архивные записи.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/cards-feed.js"></script>
+<script src="/static/js/inquiries-cards-wiring.js"></script>
+<script>
+const CAN_MANAGE_ORDERS = {{ 'true' if has_perm('manage_orders') else 'false' }};
+
+function showToast(message, type) {
+  document.body.dispatchEvent(new CustomEvent('showToast', {
+    detail: { message, type: type || 'info' }
+  }));
+}
+
+async function createTestInquiry() {
+  if (!CAN_MANAGE_ORDERS) return;
+  const res = await api.post('/admin/inquiries/test', {});
+  if (res._failed) return;
+  showToast(`Обращение #${res.inquiry_id} создано`, 'success');
+  if (window.inquiriesFeed) window.inquiriesFeed.load();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  initInquiriesFeed(CAN_MANAGE_ORDERS);
+});
+</script>
+{% endblock %}
