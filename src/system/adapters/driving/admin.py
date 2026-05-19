@@ -22,7 +22,7 @@ from shared.adapters.driving.middleware import (
     superadmin_required,
 )
 from shared.generics.errors import DrivingAdapterError
-from shared.generics.errors import DrivingPortError
+from shared.generics.errors import ApplicationError
 
 system_admin_bp = APIBlueprint("system_admin", __name__, url_prefix="/admin/settings", enable_openapi=False)
 account_admin_bp = APIBlueprint("account_admin", __name__, url_prefix="/admin/account", enable_openapi=False)
@@ -47,7 +47,7 @@ def _form_float(name: str, default: float = 0.0) -> float:
     try:
         return float(raw)
     except (TypeError, ValueError) as exc:
-        raise DrivingPortError(f"Некорректное числовое значение: {name}") from exc
+        raise ApplicationError(f"Некорректное числовое значение: {name}", code="BAD_INPUT") from exc
 
 
 _DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -122,9 +122,10 @@ def download_database_dump(access_facade: FromDishka[AdminFacade]):
 
     dump_path = _latest_dump_file()
     if dump_path is None:
-        raise DrivingPortError(
+        raise ApplicationError(
             "Нет доступных дампов. Запустите `python scripts/db_dump.py` "
-            "или настройте cron на хостинге."
+            "или настройте cron на хостинге.",
+            code="NO_DUMP_AVAILABLE",
         )
 
     timestamp = datetime.fromtimestamp(dump_path.stat().st_mtime).strftime(
@@ -355,7 +356,10 @@ def request_password_confirmation_code(
         ttl_minutes=access_config.recovery_code_ttl_minutes,
     )
     if not sent:
-        raise DrivingPortError("Telegram-бот не настроен или сообщение не отправлено")
+        raise ApplicationError(
+            "Telegram-бот не настроен или сообщение не отправлено",
+            code="TELEGRAM_SEND_FAILED",
+        )
     response = make_response("")
     response.headers["HX-Trigger"] = json.dumps({
         "showToast": {"message": "Код отправлен в Telegram", "type": "success"}

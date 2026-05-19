@@ -5,7 +5,7 @@ from dishka.integrations.flask import inject, FromDishka
 from flask import request
 
 from shared.adapters.driving.middleware import any_permission_required, permission_required
-from shared.generics.errors import DrivingPortError
+from shared.generics.errors import ApplicationError
 from shared.helpers.parsing import parse_optional_int, safe_float, safe_int
 from shared.ports.driving.schemas import SuccessResponse
 from catalog.ports.driving import (
@@ -77,9 +77,9 @@ def _attribute_values_from_form() -> dict:
     try:
         attribute_values = json.loads(raw_attrs) if raw_attrs else {}
     except json.JSONDecodeError:
-        raise DrivingPortError("Некорректный JSON в attribute_values")
+        raise ApplicationError("Некорректный JSON в attribute_values", code="BAD_INPUT")
     if not isinstance(attribute_values, dict):
-        raise DrivingPortError("attribute_values должен быть объектом")
+        raise ApplicationError("attribute_values должен быть объектом", code="BAD_INPUT")
     for key, value in request.form.items():
         if key.startswith("attr."):
             attribute_values[key.removeprefix("attr.")] = value

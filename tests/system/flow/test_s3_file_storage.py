@@ -2,7 +2,7 @@ import pytest
 from botocore.exceptions import ClientError
 
 from shared.adapters.driven import S3FileStorage
-from shared.generics.errors import DrivenAdapterError, DrivingPortError
+from shared.generics.errors import ApplicationError, DrivenAdapterError
 
 
 pytestmark = pytest.mark.flow
@@ -63,14 +63,14 @@ class TestS3FileStorageSave:
         """
         Given a file with disallowed extension,
         When saving,
-        Then DrivingPortError is raised and S3 is NOT called.
+        Then ApplicationError is raised and S3 is NOT called.
         """
         # Arrange
         client = _StubClient()
         storage = _make_storage(client)
 
         # Act / Assert
-        with pytest.raises(DrivingPortError):
+        with pytest.raises(ApplicationError):
             storage.save("evil.exe", b"data")
         assert client.put_calls == []
 

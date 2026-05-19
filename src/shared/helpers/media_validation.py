@@ -1,6 +1,6 @@
 import os
 
-from shared.generics.errors import DrivingPortError
+from shared.generics.errors import ApplicationError
 
 
 ALLOWED_EXTENSIONS: frozenset[str] = frozenset(
@@ -18,17 +18,19 @@ def validate_media_upload(filename: str, data: bytes) -> str:
     """
     Enforce extension whitelist and size cap shared by all storage backends.
 
-    Returns the normalized extension on success, raises DrivingPortError otherwise.
+    Returns the normalized extension on success, raises ApplicationError otherwise.
     """
     ext = normalized_extension(filename)
     if ext not in ALLOWED_EXTENSIONS:
         allowed = ", ".join(sorted(ALLOWED_EXTENSIONS))
-        raise DrivingPortError(
-            f"Недопустимый формат файла: {ext}. Разрешены: {allowed}"
+        raise ApplicationError(
+            f"Недопустимый формат файла: {ext}. Разрешены: {allowed}",
+            code="MEDIA_EXT_INVALID",
         )
     if len(data) > MAX_FILE_SIZE:
-        raise DrivingPortError(
+        raise ApplicationError(
             f"Файл слишком большой ({len(data) // 1024 // 1024} МБ). "
-            f"Максимум: {MAX_FILE_SIZE // 1024 // 1024} МБ"
+            f"Максимум: {MAX_FILE_SIZE // 1024 // 1024} МБ",
+            code="MEDIA_TOO_LARGE",
         )
     return ext

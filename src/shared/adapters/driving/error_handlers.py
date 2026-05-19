@@ -9,7 +9,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from shared.generics.errors import (
     LayerError, DomainError, ApplicationError,
-    DrivingPortError, DrivenPortError,
+    DrivenPortError,
     DrivingAdapterError, DrivenAdapterError,
 )
 from shared.adapters.driving.htmx import is_htmx
@@ -149,13 +149,6 @@ def init_error_handlers(app: Flask) -> None:
         if is_htmx():
             return _htmx_toast(e.message, status)
         return _json_response(e, status)
-
-    @app.errorhandler(DrivingPortError)
-    def handle_driving_port_error(e: DrivingPortError):
-        logger.info("Validation Error: %s", e.message)
-        if is_htmx():
-            return _htmx_toast(e.message, 400)
-        return _json_response(e, 400)
 
     @app.errorhandler(DrivenPortError)
     def handle_driven_port_error(e: DrivenPortError):

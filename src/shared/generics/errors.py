@@ -30,15 +30,6 @@ class ApplicationError(LayerError):
     pass
 
 
-class DrivingPortError(LayerError):
-    """
-    Failure at the entry gate (Validation, Schema).
-    HTTP Map: 400 Bad Request.
-    """
-
-    pass
-
-
 class DrivenPortError(LayerError):
     """
     Failure at the exit gate (Repository contract failed).

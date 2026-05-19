@@ -1,13 +1,13 @@
-from shared.generics.errors import DrivingPortError
+from shared.generics.errors import ApplicationError
 
 
 def safe_float(raw: str, field_name: str = "value", *, min_val: float | None = None) -> float:
     try:
         val = float(raw)
     except (ValueError, TypeError):
-        raise DrivingPortError(f"Invalid {field_name}")
+        raise ApplicationError(f"Invalid {field_name}", code="BAD_INPUT")
     if min_val is not None and val < min_val:
-        raise DrivingPortError(f"{field_name} must be >= {min_val}")
+        raise ApplicationError(f"{field_name} must be >= {min_val}", code="BAD_INPUT")
     return val
 
 
@@ -30,9 +30,9 @@ def parse_optional_int(
     try:
         val = int(raw)
     except (ValueError, TypeError):
-        raise DrivingPortError(f"Invalid {field_name}")
+        raise ApplicationError(f"Invalid {field_name}", code="BAD_INPUT")
     if val < min_val:
-        raise DrivingPortError(f"{field_name} must be >= {min_val}")
+        raise ApplicationError(f"{field_name} must be >= {min_val}", code="BAD_INPUT")
     return val
 
 
