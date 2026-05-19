@@ -81,9 +81,10 @@ and [../contract/admin.md](../contract/admin.md).
 3. ORM: add the column to `ProductModel`.
 4. Mapper: update domain ↔ ORM in `ports/driven/sql_product_repo.py`.
 5. Schemas: add the field to In/Out schemas in `ports/driving/schemas.py`.
-6. UI: add the field to the admin form and SmartTable schema.
-7. Apply locally: `python scripts/db_apply.py`.
-8. Docs: update [../contract/admin.md](../contract/admin.md) and
+6. Use case signature: add the field as a parameter to `ManageCatalogUseCase.create()` and `.update()` in `app/use_cases/manage_catalog_uc.py`. The facade routes kwargs through `_call_supported()` (in `ports/driving/facade.py`), which silently drops any key not in the method signature.
+7. UI: add the field to the admin form and SmartTable schema.
+8. Apply locally: `python scripts/db_apply.py`.
+9. Docs: update [../contract/admin.md](../contract/admin.md) and
    [../infra/mysql.md](../infra/mysql.md).
 
 ### Add a new attribute type
