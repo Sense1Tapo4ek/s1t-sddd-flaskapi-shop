@@ -76,7 +76,7 @@ from system.adapters.driving.api import system_bp
 from catalog.adapters.driving.admin import catalog_admin_bp, taxonomy_admin_bp
 from ordering.adapters.driving.admin import ordering_admin_bp, orders_admin_bp, requests_admin_bp
 from access.adapters.driving.admin import access_admin_bp
-from system.adapters.driving.admin import account_admin_bp, system_admin_bp
+from system.adapters.driving.admin import account_admin_bp, backups_admin_bp, system_admin_bp
 
 
 def create_app() -> APIFlask:
@@ -135,9 +135,17 @@ def create_app() -> APIFlask:
     )
     bootstrap_storage_defaults(session_factory)
 
+    def _is_superadmin() -> bool:
+        try:
+            payload = current_admin_payload()
+        except Exception:
+            return False
+        return bool(payload) and payload.get("role") == "superadmin"
+
     app.jinja_env.globals["app_name"] = root_config.app_name
     app.jinja_env.globals["admin_panel_title"] = "Админ панель"
     app.jinja_env.globals["has_perm"] = has_permission
+    app.jinja_env.globals["is_superadmin"] = _is_superadmin
     app.config["PERMISSION_PROVIDER"] = permission_provider
     app.config["RUNTIME_PERMISSION_KEYS"] = RUNTIME_CATALOG_PERMISSIONS
 
@@ -219,6 +227,7 @@ def create_app() -> APIFlask:
     app.register_blueprint(access_admin_bp)
     app.register_blueprint(system_admin_bp)
     app.register_blueprint(account_admin_bp)
+    app.register_blueprint(backups_admin_bp)
 
     # Dishka wiring — AFTER all blueprints
     setup_dishka(container, app)

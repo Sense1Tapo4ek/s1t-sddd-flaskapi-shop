@@ -57,6 +57,11 @@
         <a href="/admin/settings/store" class="nav-link {% if active == 'settings' and tab == 'store' %}nav-link--active{% endif %}">Магазин</a>
         {% endif %}
         <a href="/admin/help" class="nav-link {% if active == 'help' %}nav-link--active{% endif %}">Помощь</a>
+
+        {% if is_superadmin() %}
+        <div class="sidebar__section-title">База данных</div>
+        <a href="/admin/backups/" class="nav-link {% if active == 'backups' %}nav-link--active{% endif %}">Резервные копии</a>
+        {% endif %}
       </nav>
       <div class="sidebar__footer">
         <a href="/admin/account"
