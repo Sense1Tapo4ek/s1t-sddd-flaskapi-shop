@@ -51,10 +51,8 @@ without any data migration.
 - `src/ordering/config.py` — declared.
 - `src/root/entrypoints/api.py` — gates `register_blueprint(orders_bp)`,
   `register_blueprint(orders_admin_bp)`, prod CORS rule `/orders*`.
-- `static/templates/admin/base.html` — gates `orders-cards-wiring.js`
-  script tag.
-- `src/ordering/templates/ordering/pages/requests.html` — hides Orders
-  tab + feed container, skips `initOrdersFeed()`.
+- `static/templates/admin/base.html` — gates the Orders sidebar entry
+  + the `/admin/orders/badge` polling block.
 
 ### `SYSTEM_SOCIALS_<CHANNEL>_ENABLED`
 

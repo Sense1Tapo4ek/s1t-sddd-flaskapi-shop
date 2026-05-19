@@ -51,9 +51,11 @@ Wire-level endpoint map:
 | Endpoint | Auth | Notes |
 |---|---|---|
 | `POST /inquiries` | public | rate-limited `5/min` (IP) |
-| `POST /orders` | `customer_required` | items + delivery in body |
-| `GET /admin/requests/` | `view_orders` | unified two-tab UI page |
-| `GET /admin/requests/badge` | `view_orders` | combined new-count |
+| `POST /orders` | `customer_required` | items + delivery + contact_phone (required) in body |
+| `GET /admin/inquiries/` | `view_orders` | inquiry cards-feed page |
+| `GET /admin/inquiries/badge` | `view_orders` | `{count}` — new inquiries |
+| `GET /admin/orders/` | `view_orders` | order cards-feed page (feature-gated) |
+| `GET /admin/orders/badge` | `view_orders` | `{count}` — new orders |
 | `GET /admin/inquiries/search` | `view_orders` | paginated JSON |
 | `GET /admin/inquiries/search/schema` | `view_orders` | filter schema |
 | `PATCH /admin/inquiries/<id>/status` | `manage_orders` | |
@@ -66,8 +68,6 @@ Wire-level endpoint map:
 | `POST /admin/orders/<id>/archive` | `manage_orders` | |
 | `POST /admin/orders/bulk/status` | `manage_orders` | |
 | `POST /admin/orders/bulk/archive` | `manage_orders` | |
-
-`GET /admin/inquiries/` and `GET /admin/orders/` redirect 302 → `/admin/requests/`.
 
 Wire-level shapes: [../contract/public.md](../contract/public.md)
 and [../contract/admin.md](../contract/admin.md).
@@ -101,8 +101,8 @@ not live prices.
 - Orders aggregate is **feature-gated** by `ORDERING_ORDERS_ENABLED`
   (default `true`). When `false`, `/orders*` and `/admin/orders/*`
   blueprints are not registered, CORS rule for `/orders*` is skipped,
-  and the admin requests page collapses to inquiries-only. Inquiries
-  remain available regardless. See
+  and the sidebar drops the Orders entry. Inquiries remain available
+  regardless. See
   [../subsystems/feature-flags.md](../subsystems/feature-flags.md).
 
 ## Pointers
@@ -112,7 +112,7 @@ not live prices.
 - Driven ports: `src/ordering/ports/driven/`
 - Admin HTMX: `src/ordering/adapters/driving/admin.py`
 - Public API: `src/ordering/adapters/driving/api.py`
-- Admin UI (two-tab): `static/ordering/requests.html`
-- CardsFeed component: `static/js/cards-feed.js`
+- Admin UI: `src/ordering/templates/ordering/pages/inquiries.html` and `orders.html`
+- CardsFeed component: `static/js/cards-feed.js` (+ `orders-cards-wiring.js`, `inquiries-cards-wiring.js`)
 - Notifications subsystem: [../subsystems/notifications.md](../subsystems/notifications.md)
 - Filters subsystem: [../subsystems/smart-filters.md](../subsystems/smart-filters.md)

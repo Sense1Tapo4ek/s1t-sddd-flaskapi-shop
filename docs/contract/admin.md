@@ -190,18 +190,18 @@ permissions. Separate `view_inquiries`/`manage_inquiries` are deferred
 
 > **Orders are feature-gated.** All `/admin/orders/*` endpoints (and the
 > public `/orders*`) exist only when `ORDERING_ORDERS_ENABLED=true`
-> (default). When the flag is `false`, the Orders tab is removed from
-> `/admin/requests/` and the inquiries-only view is shown. See
+> (default). When the flag is `false`, the Orders blueprint is not
+> registered and the sidebar shows only the Inquiries entry. See
 > [../subsystems/feature-flags.md](../subsystems/feature-flags.md).
 
-### Unified page
+### Index pages
 
 | Route | Auth | Notes |
 |---|---|---|
-| `GET /admin/requests/` | `view_orders` | HTMX page, two tabs (Заказы / Обращения) |
-| `GET /admin/requests/badge` | `view_orders` | `{ "count": N }` — sum of `new` for both types |
-| `GET /admin/inquiries/` | `view_orders` | 302 → `/admin/requests/` |
-| `GET /admin/orders/` | `view_orders` | 302 → `/admin/requests/` |
+| `GET /admin/inquiries/` | `view_orders` | HTMX page — inquiry cards feed |
+| `GET /admin/inquiries/badge` | `view_orders` | `{ "count": N }` — count of `new` inquiries |
+| `GET /admin/orders/` | `view_orders` | HTMX page — order cards feed (only when `ORDERING_ORDERS_ENABLED`) |
+| `GET /admin/orders/badge` | `view_orders` | `{ "count": N }` — count of `new` orders |
 
 ### Inquiry endpoints
 
