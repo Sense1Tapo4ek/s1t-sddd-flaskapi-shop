@@ -8,26 +8,14 @@ import pytest
 pytestmark = pytest.mark.flow
 
 
-def _create_app(monkeypatch: pytest.MonkeyPatch, mysql_test_db):
-    monkeypatch.setenv("ROOT_APP_ENV", "dev")
-
-    from root.entrypoints.api import create_app
-
-    return create_app()
-
-
-def test_admin_login_invalid_credentials_show_safe_visible_htmx_error(
-    monkeypatch,
-    mysql_test_db,
-):
+def test_admin_login_invalid_credentials_show_safe_visible_htmx_error(dev_app):
     """
     Given the admin login form submits with HTMX,
     When credentials are wrong,
     Then the visible error should describe login failure, not current-password failure.
     """
     # Arrange
-    app = _create_app(monkeypatch, mysql_test_db)
-    client = app.test_client()
+    client = dev_app.test_client()
 
     # Act
     response = client.post(
@@ -45,18 +33,14 @@ def test_admin_login_invalid_credentials_show_safe_visible_htmx_error(
     }
 
 
-def test_auth_login_invalid_credentials_use_unified_error_json(
-    monkeypatch,
-    mysql_test_db,
-):
+def test_auth_login_invalid_credentials_use_unified_error_json(dev_app):
     """
     Given public JSON login fails,
     When API clients inspect the response,
     Then they receive the shared error envelope with a safe message.
     """
     # Arrange
-    app = _create_app(monkeypatch, mysql_test_db)
-    client = app.test_client()
+    client = dev_app.test_client()
 
     # Act
     response = client.post(
@@ -73,15 +57,14 @@ def test_auth_login_invalid_credentials_use_unified_error_json(
     }
 
 
-def test_manual_public_api_errors_use_unified_error_json(monkeypatch, mysql_test_db):
+def test_manual_public_api_errors_use_unified_error_json(dev_app):
     """
     Given a public endpoint returns an application-level error itself,
     When the recovery token is invalid,
     Then the response still uses the shared error envelope.
     """
     # Arrange
-    app = _create_app(monkeypatch, mysql_test_db)
-    client = app.test_client()
+    client = dev_app.test_client()
 
     # Act
     response = client.post("/system/settings/recover-password/not-the-token")
@@ -95,15 +78,14 @@ def test_manual_public_api_errors_use_unified_error_json(monkeypatch, mysql_test
     }
 
 
-def test_apiflask_validation_errors_use_unified_error_json(monkeypatch, mysql_test_db):
+def test_apiflask_validation_errors_use_unified_error_json(dev_app):
     """
     Given request schema validation fails before a route handler runs,
     When APIFlask builds the response,
     Then the client still receives the same error envelope and validation detail.
     """
     # Arrange
-    app = _create_app(monkeypatch, mysql_test_db)
-    client = app.test_client()
+    client = dev_app.test_client()
 
     # Act
     response = client.post("/inquiries", json={"name": "", "message": ""})

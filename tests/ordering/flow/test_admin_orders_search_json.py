@@ -35,22 +35,15 @@ def _sample_order_out():
     )
 
 
-def _create_app(monkeypatch, mysql_test_db):
-    monkeypatch.setenv("ROOT_APP_ENV", "dev")
-    from root.entrypoints.api import create_app
-    return create_app()
-
-
 class TestOrdersSearchJsonEndpoint:
-    def test_search_endpoint_exists_and_blocks_unauthenticated(self, monkeypatch, mysql_test_db):
+    def test_search_endpoint_exists_and_blocks_unauthenticated(self, dev_app):
         """
         Given no auth,
         When GET /admin/orders/search,
         Then returns not 404/500 — route registered, auth gate fires.
         """
         # Arrange
-        app = _create_app(monkeypatch, mysql_test_db)
-        client = app.test_client()
+        client = dev_app.test_client()
 
         # Act
         response = client.get(

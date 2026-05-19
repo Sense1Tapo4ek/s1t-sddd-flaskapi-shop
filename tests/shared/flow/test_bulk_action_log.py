@@ -34,15 +34,6 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _make_app(monkeypatch, mysql_test_db):
-    monkeypatch.setenv("ROOT_APP_ENV", "dev")
-    monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
-    monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
-    monkeypatch.setenv("ACCESS_PROMOTE_TO_SUPERADMIN", "true")
-    from root.entrypoints.api import create_app
-    return create_app()
-
-
 # ─── Tests ──────────────────────────────────────────────────────────────────
 
 
@@ -57,17 +48,14 @@ def _reset_bulk_rate_limit_state():
 
 
 class TestBulkActionLogDecorator:
-    def test_logs_event_with_ids_mode_and_counts(
-        self, monkeypatch, mysql_test_db, caplog
-    ):
+    def test_logs_event_with_ids_mode_and_counts(self, superadmin_dev_app, caplog):
         """
         Given a superadmin token and POST /admin/products/bulk/activate with ids target,
         When the request completes with 200,
         Then exactly one INFO record on 'api.bulk' is emitted with
              mode='ids', total==3, ok+failed_count==3, and actor_id matches the JWT sub.
         """
-        app = _make_app(monkeypatch, mysql_test_db)
-        client = app.test_client()
+        client = superadmin_dev_app.test_client()
         token = _login(client, "superadmin", "superadmin")
 
         with caplog.at_level(logging.INFO, logger="api.bulk"):
@@ -90,14 +78,13 @@ class TestBulkActionLogDecorator:
         # actor_id should match the 'sub' from the superadmin JWT
         assert rec.actor_id is not None
 
-    def test_logs_event_with_filter_mode(self, monkeypatch, mysql_test_db, caplog):
+    def test_logs_event_with_filter_mode(self, superadmin_dev_app, caplog):
         """
         Given a POST with target.kind='filter',
         When the request completes,
         Then the log record has mode='filter'.
         """
-        app = _make_app(monkeypatch, mysql_test_db)
-        client = app.test_client()
+        client = superadmin_dev_app.test_client()
         token = _login(client, "superadmin", "superadmin")
 
         with caplog.at_level(logging.INFO, logger="api.bulk"):
@@ -112,14 +99,13 @@ class TestBulkActionLogDecorator:
         assert len(bulk_records) == 1
         assert bulk_records[0].mode == "filter"
 
-    def test_logs_payload_is_not_in_record(self, monkeypatch, mysql_test_db, caplog):
+    def test_logs_payload_is_not_in_record(self, superadmin_dev_app, caplog):
         """
         Given a POST with specific ids [1, 2, 3],
         When the decorator logs,
         Then neither the ids list nor any individual id value appears in the record dict.
         """
-        app = _make_app(monkeypatch, mysql_test_db)
-        client = app.test_client()
+        client = superadmin_dev_app.test_client()
         token = _login(client, "superadmin", "superadmin")
 
         with caplog.at_level(logging.INFO, logger="api.bulk"):
@@ -142,14 +128,13 @@ class TestBulkActionLogDecorator:
         assert "'target'" not in rec_dict_str
         assert '"target"' not in rec_dict_str
 
-    def test_logs_event_even_on_validation_error(self, monkeypatch, mysql_test_db, caplog):
+    def test_logs_event_even_on_validation_error(self, superadmin_dev_app, caplog):
         """
         Given a POST with an empty ids list (violates min_length=1),
         When the route returns 422,
         Then the bulk decorator still emits a log record with total=0, ok=0, failed_count=0.
         """
-        app = _make_app(monkeypatch, mysql_test_db)
-        client = app.test_client()
+        client = superadmin_dev_app.test_client()
         token = _login(client, "superadmin", "superadmin")
 
         with caplog.at_level(logging.INFO, logger="api.bulk"):

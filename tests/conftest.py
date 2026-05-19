@@ -86,3 +86,36 @@ def mysql_test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
             conn.close()
         except Exception:
             pass
+
+
+@pytest.fixture
+def dev_app(monkeypatch: pytest.MonkeyPatch, mysql_test_db):
+    """Build the real Flask app via ``create_app()`` against a per-test MySQL DB.
+
+    Sets ``ROOT_APP_ENV=dev`` so the factory picks dev defaults
+    (in-memory bot, no admin docs gating). Equivalent to the
+    ``_create_app(monkeypatch, mysql_test_db)`` helper that used to live
+    in individual test modules.
+    """
+    monkeypatch.setenv("ROOT_APP_ENV", "dev")
+
+    from root.entrypoints.api import create_app
+
+    return create_app()
+
+
+@pytest.fixture
+def superadmin_dev_app(monkeypatch: pytest.MonkeyPatch, mysql_test_db):
+    """``dev_app`` variant that seeds a superadmin via env-driven bootstrap.
+
+    Required by tests that exercise endpoints behind ``superadmin``-only
+    permissions (bulk rate-limit, bulk action log).
+    """
+    monkeypatch.setenv("ROOT_APP_ENV", "dev")
+    monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
+    monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
+    monkeypatch.setenv("ACCESS_PROMOTE_TO_SUPERADMIN", "true")
+
+    from root.entrypoints.api import create_app
+
+    return create_app()

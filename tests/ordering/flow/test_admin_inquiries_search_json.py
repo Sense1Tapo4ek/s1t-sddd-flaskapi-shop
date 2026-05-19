@@ -14,22 +14,15 @@ def _make_inquiry_list_out(items=None, total=0):
     return InquiryListOut(items=items or [], total=total)
 
 
-def _create_app(monkeypatch, mysql_test_db):
-    monkeypatch.setenv("ROOT_APP_ENV", "dev")
-    from root.entrypoints.api import create_app
-    return create_app()
-
-
 class TestInquiriesSearchJsonEndpoint:
-    def test_search_endpoint_exists_and_blocks_unauthenticated(self, monkeypatch, mysql_test_db):
+    def test_search_endpoint_exists_and_blocks_unauthenticated(self, dev_app):
         """
         Given no auth,
         When GET /admin/inquiries/search,
         Then returns not 404/500 — route registered, auth gate fires.
         """
         # Arrange
-        app = _create_app(monkeypatch, mysql_test_db)
-        client = app.test_client()
+        client = dev_app.test_client()
 
         # Act
         response = client.get(
@@ -40,7 +33,7 @@ class TestInquiriesSearchJsonEndpoint:
         # Assert — route exists (not 404), server doesn't crash (not 500)
         assert response.status_code not in (404, 500)
 
-    def test_search_json_shape_contract(self, monkeypatch, mysql_test_db):
+    def test_search_json_shape_contract(self):
         """
         Given a minimal InquiryListOut,
         When assembled into the search-json response payload,
