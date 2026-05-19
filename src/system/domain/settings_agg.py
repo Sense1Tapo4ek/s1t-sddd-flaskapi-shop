@@ -155,13 +155,13 @@ class SiteSettings:
     telegram_public_url: str = ""
     viber_url: str = ""
     whatsapp_url: str = ""
-    # Stage-A shim: repo/schema still read/write this field until Stage C.
-    # Remove after Stage C migrates the DB column and repo mapper.
-    working_hours: str = ""
 
     @property
     def working_hours_text(self) -> str:
-        """Human-readable schedule grouping consecutive identical days."""
+        """Compact human-readable schedule, e.g. 'Пн–Пт: 09:00–21:00; Сб: выходной'.
+        This is the canonical text representation used by the storefront and
+        the admin UI; nothing else persists a flat string anymore.
+        """
         return _build_working_hours_text(self.working_hours_schedule)
 
     @property
@@ -172,7 +172,13 @@ class SiteSettings:
     _COORD_BOUNDS = {"coords_lat": (-90.0, 90.0), "coords_lon": (-180.0, 180.0)}
 
     def update(self, **kwargs) -> None:
-        """Apply partial updates. Only non-None values are set."""
+        """Apply partial updates. Only non-None values are set.
+
+        The `working_hours_schedule` kwarg may arrive as a `dict[str, dict | None]`
+        (from a Pydantic schema or form parser); plain-dict day entries are
+        hydrated into `DaySchedule` instances here so their invariants are
+        validated centrally.
+        """
         for key, val in kwargs.items():
             if val is None:
                 continue
@@ -180,8 +186,30 @@ class SiteSettings:
                 lo, hi = self._COORD_BOUNDS[key]
                 if not (lo <= val <= hi):
                     raise InvalidCoordsError(key.split("_")[1], val)
+            if key == "working_hours_schedule":
+                val = self._hydrate_schedule(val)
             setattr(self, key, val)
         self._normalize_catalog_access()
+
+    @staticmethod
+    def _hydrate_schedule(
+        raw: dict[str, "DaySchedule | dict | None"],
+    ) -> dict[str, "DaySchedule | None"]:
+        result: dict[str, DaySchedule | None] = {d: None for d in _DAYS_ORDER}
+        for day_key, value in raw.items():
+            if day_key not in result:
+                raise InvalidScheduleError(f"unknown day key '{day_key}'")
+            if value is None:
+                result[day_key] = None
+            elif isinstance(value, DaySchedule):
+                result[day_key] = value
+            elif isinstance(value, dict):
+                result[day_key] = DaySchedule(**value)
+            else:
+                raise InvalidScheduleError(
+                    f"day '{day_key}' must be DaySchedule, dict, or None"
+                )
+        return result
 
     def _normalize_catalog_access(self) -> None:
         self.owner_can_view_category_tree = True

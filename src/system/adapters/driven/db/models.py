@@ -12,7 +12,7 @@ class SettingsModel(Base):
     phone: Mapped[str] = mapped_column(String(50), default="")
     email: Mapped[str] = mapped_column(String(100), default="")
     address: Mapped[str] = mapped_column(Text, default="")
-    working_hours: Mapped[str] = mapped_column(String(50), default="")
+    working_hours_schedule: Mapped[str] = mapped_column(Text, default="", nullable=False)
     coords_lat: Mapped[float] = mapped_column(Float, default=0.0)
     coords_lon: Mapped[float] = mapped_column(Float, default=0.0)
     instagram: Mapped[str] = mapped_column(String(255), default="")

@@ -44,7 +44,7 @@ CREATE TABLE settings (
     phone VARCHAR(50) NOT NULL DEFAULT '',
     email VARCHAR(100) NOT NULL DEFAULT '',
     address TEXT NOT NULL,
-    working_hours VARCHAR(50) NOT NULL DEFAULT '',
+    working_hours_schedule TEXT NOT NULL,
     coords_lat FLOAT NOT NULL DEFAULT 0,
     coords_lon FLOAT NOT NULL DEFAULT 0,
     instagram VARCHAR(255) NOT NULL DEFAULT '',
