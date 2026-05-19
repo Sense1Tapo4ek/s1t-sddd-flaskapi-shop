@@ -55,7 +55,7 @@
     <div class="form-group">
       <label class="form-label">Режим работы</label>
       <p class="schedule__caption">
-        На витрине: <strong>{{ settings.contacts.working_hours or 'Закрыто' }}</strong>
+        На витрине: <strong id="schedule-preview">{{ settings.contacts.working_hours or 'Закрыто' }}</strong>
       </p>
       {% set day_labels = {'mon':'Пн','tue':'Вт','wed':'Ср','thu':'Чт','fri':'Пт','sat':'Сб','sun':'Вс'} %}
       <div class="schedule">
@@ -101,13 +101,72 @@
     <script>
       (function () {
         var schedule = document.querySelector('.schedule');
+        var preview  = document.getElementById('schedule-preview');
         if (!schedule) return;
+
+        var DAYS = ['mon','tue','wed','thu','fri','sat','sun'];
+        var DAYS_RU = {mon:'Пн', tue:'Вт', wed:'Ср', thu:'Чт', fri:'Пт', sat:'Сб', sun:'Вс'};
+
+        function readSchedule() {
+          var out = {};
+          DAYS.forEach(function (day) {
+            var row = schedule.querySelector('.schedule__row[data-day="' + day + '"]');
+            if (!row) { out[day] = null; return; }
+            var off = row.querySelector('input[name="' + day + '_off"]');
+            if (off && off.checked) { out[day] = null; return; }
+            var opens  = (row.querySelector('input[name="' + day + '_opens"]')  || {}).value || '';
+            var closes = (row.querySelector('input[name="' + day + '_closes"]') || {}).value || '';
+            if (!opens || !closes) { out[day] = null; return; }
+            var bs = (row.querySelector('input[name="' + day + '_break_start"]') || {}).value || '';
+            var be = (row.querySelector('input[name="' + day + '_break_end"]')   || {}).value || '';
+            var hasBreak = row.classList.contains('has-break') && bs && be;
+            out[day] = {
+              opens_at: opens, closes_at: closes,
+              break_start: hasBreak ? bs : null,
+              break_end:   hasBreak ? be : null,
+            };
+          });
+          return out;
+        }
+
+        function dayLabel(d) {
+          if (!d) return 'выходной';
+          if (d.break_start) return d.opens_at + '–' + d.break_start + ', ' + d.break_end + '–' + d.closes_at;
+          return d.opens_at + '–' + d.closes_at;
+        }
+
+        // Mirror of system.domain.settings_agg._build_working_hours_text.
+        function buildText(schedule) {
+          var ordered = DAYS.map(function (d) { return [DAYS_RU[d], dayLabel(schedule[d])]; });
+          var groups = [];
+          ordered.forEach(function (pair) {
+            var ru = pair[0], label = pair[1];
+            if (groups.length && groups[groups.length - 1][2] === label) {
+              groups[groups.length - 1] = [groups[groups.length - 1][0], ru, label];
+            } else {
+              groups.push([ru, ru, label]);
+            }
+          });
+          if (groups.every(function (g) { return g[2] === 'выходной'; })) return 'Закрыто';
+          return groups.map(function (g) {
+            var dayPart = g[0] === g[1] ? g[0] : g[0] + '–' + g[1];
+            return dayPart + ': ' + g[2];
+          }).join('; ');
+        }
+
+        function refreshPreview() {
+          if (preview) preview.textContent = buildText(readSchedule());
+        }
+
         schedule.addEventListener('change', function (e) {
           var cb = e.target.closest('input[type=checkbox][name$="_off"]');
-          if (!cb) return;
-          var row = cb.closest('.schedule__row');
-          row.classList.toggle('is-off', cb.checked);
+          if (cb) {
+            var row = cb.closest('.schedule__row');
+            row.classList.toggle('is-off', cb.checked);
+          }
+          refreshPreview();
         });
+        schedule.addEventListener('input', refreshPreview);
         schedule.addEventListener('click', function (e) {
           var btn = e.target.closest('[data-action]');
           if (!btn) return;
@@ -123,7 +182,10 @@
             row.querySelector('input[name$="_break_start"]').value = '';
             row.querySelector('input[name$="_break_end"]').value = '';
           }
+          refreshPreview();
         });
+
+        refreshPreview();
       })();
     </script>
   </section>
