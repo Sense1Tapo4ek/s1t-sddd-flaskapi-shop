@@ -10,7 +10,12 @@
       <h2 class="page-title">Заявки</h2>
       <p style="font-size:13px; color:var(--color-text-muted); margin-top:4px;">Заказы клиентов и обращения с сайта. Переключайтесь между вкладками.</p>
     </div>
-    <button class="help-badge" onclick="document.getElementById('requests-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
+  </div>
+  <div class="page-header__right">
+    <button class="help-badge" type="button" onclick="document.getElementById('requests-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
+    {% if has_perm('create_demo_data') %}
+    <button class="btn btn--ghost btn--sm" type="button" onclick="createDemoRequests()">Создать демо-заявки</button>
+    {% endif %}
   </div>
 </div>
 
@@ -92,7 +97,23 @@
 <script src="/static/js/inquiries-cards-wiring.js"></script>
 <script>
 const CAN_MANAGE_ORDERS = {{ 'true' if has_perm('manage_orders') else 'false' }};
+const CAN_CREATE_DEMO_DATA = {{ 'true' if has_perm('create_demo_data') else 'false' }};
 const ORDERS_ENABLED = {{ 'true' if orders_on else 'false' }};
+
+async function createDemoRequests() {
+  if (!CAN_CREATE_DEMO_DATA) return;
+  if (!confirm('Создать демо-заказы и обращения? Если они уже есть — операция будет пропущена.')) return;
+  const res = await api.post('/admin/orders/demo-data', {});
+  if (res._failed) return;
+  const parts = [];
+  if (res.orders_created) parts.push(`заказов: ${res.orders_created}`);
+  if (res.inquiries_created) parts.push(`обращений: ${res.inquiries_created}`);
+  const message = parts.length ? `Создано — ${parts.join(', ')}` : 'Демо-данные уже существуют, ничего не создано';
+  document.body.dispatchEvent(new CustomEvent('showToast', {
+    detail: { message, type: parts.length ? 'success' : 'info' }
+  }));
+  setTimeout(() => window.location.reload(), 600);
+}
 
 function switchTab(name) {
   const inquiriesEl = document.getElementById('inquiries-feed');
