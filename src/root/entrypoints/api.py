@@ -51,7 +51,7 @@ from shared.adapters.driven.db.base import Base
 from shared.adapters.driven.db.schema_guard import ensure_schema_present
 
 
-def _first_admin_path() -> str:
+def _first_admin_path(orders_enabled: bool) -> str:
     payload = current_admin_payload()
     if (
         payload.get("role") == "superadmin"
@@ -61,7 +61,9 @@ def _first_admin_path() -> str:
     ):
         return "/admin/catalog/"
     if has_permission("view_orders"):
-        return "/admin/orders/"
+        # When orders are disabled via env, the /admin/orders/ blueprint
+        # isn't registered, so fall through to inquiries.
+        return "/admin/orders/" if orders_enabled else "/admin/inquiries/"
     if has_permission("manage_settings"):
         return "/admin/settings/store"
     return "/admin/account"
@@ -274,7 +276,7 @@ def create_app() -> APIFlask:
     @jwt_required
     @app.doc(hide=True)
     def admin_index():
-        return redirect(_first_admin_path())
+        return redirect(_first_admin_path(ordering_config.orders_enabled))
 
     @app.route("/admin/help")
     @jwt_required
