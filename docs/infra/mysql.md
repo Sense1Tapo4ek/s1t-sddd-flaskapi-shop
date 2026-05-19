@@ -51,7 +51,10 @@ checks the canonical tables exist and refuses to boot otherwise.
 | `category_attributes` | catalog | `CategoryAttributeModel` | Inherited by descendants |
 | `attribute_options` | catalog | `AttributeOptionModel` | For `select`/`multiselect` |
 | `product_attribute_values` | catalog | `ProductAttributeValueModel` | Typed: `value_text`, `value_number`, `value_bool`, `value_json` |
-| `orders` | ordering | `OrderModel` | `status` ∈ {`new`, `processing`, `done`, `canceled`} |
+| `inquiries` | ordering | `InquiryModel` | Public contact form submissions; `status` ∈ {`new`, `in_progress`, `closed`, `archived`} |
+| `orders` | ordering | `OrderModel` | `status` ∈ {`new`, `confirmed`, `completed`, `canceled`, `archived`}; `contact_phone`, `contact_email` |
+| `order_items` | ordering | `OrderItemModel` | FK → `orders`, ON DELETE CASCADE; snapshots `title`, `price_at_order` |
+| `customers` | access | `CustomerModel` | Storefront accounts (separate from admins); recovery via email |
 | `admins` | access | `UserModel` | `role`, `telegram_chat_id`, `password_changed_at`, `recovery_code_*` |
 | `settings` | system | `SettingsModel` | Singleton, `CHECK (id = 1)` |
 | `storage_settings` | system | `StorageSettingsModel` | Singleton, encrypted secrets |
