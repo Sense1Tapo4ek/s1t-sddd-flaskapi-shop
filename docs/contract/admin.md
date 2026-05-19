@@ -302,6 +302,24 @@ the last 15 minutes).
 Returns the discovered chat id only — it does NOT save it to global
 settings. The user binds it on their account form.
 
+## Backups (`/admin/backups/*`)
+
+All routes require `superadmin_required` (role check, not a regular
+permission). Restoring a snapshot enters maintenance mode for the
+duration of the restore — concurrent requests get 503 until the
+operation completes. See [../subsystems/admin-ui.md](../subsystems/admin-ui.md).
+
+| Route | Auth | Notes |
+|---|---|---|
+| `GET /admin/backups/` | `superadmin` | HTMX page listing snapshots |
+| `POST /admin/backups/snapshot` | `superadmin` | Create new `.sql.gz` snapshot; returns refreshed table partial |
+| `POST /admin/backups/<name>/restore` | `superadmin` | Restore DB from snapshot; HX-Redirect to `/admin/backups/` |
+| `DELETE /admin/backups/<name>` | `superadmin` | Delete a snapshot file; returns refreshed table partial |
+
+Snapshot names follow `YYYY-MM-DDTHH-MM-SS.sql.gz` (UTC). Use cases
+live in `src/system/app/use_cases/`; the mysqldump runner lives in
+`src/system/ports/driven/mysqldump_runner.py`.
+
 ### `GET /admin/settings/database-dump` (admin UI; superadmin)
 
 Returns the newest MySQL dump produced by `scripts/db_dump.py` (lives

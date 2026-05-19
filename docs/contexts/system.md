@@ -30,6 +30,10 @@ Driving facade: `SystemFacade` in `ports/driving/facade.py`.
 | `POST /system/settings/test-telegram` | `manage_settings` | Send legacy test message to global chat |
 | `POST /system/settings/telegram/fetch-chat-id` | `manage_settings` | Poll bot updates for a chat id |
 | `POST /system/settings/recover-password/{token}` | public (URL-token-gated) | Send recovery via Telegram |
+| `GET /admin/backups/` | `superadmin` | List `.sql.gz` snapshots |
+| `POST /admin/backups/snapshot` | `superadmin` | Create snapshot via `mysqldump` |
+| `POST /admin/backups/<name>/restore` | `superadmin` | Restore snapshot (enters maintenance mode for the duration) |
+| `DELETE /admin/backups/<name>` | `superadmin` | Delete snapshot file |
 
 Wire-level shapes: [../contract/public.md](../contract/public.md) and
 [../contract/admin.md](../contract/admin.md).
