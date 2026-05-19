@@ -87,9 +87,7 @@
   <section class="form-section">
     <h3 class="form-section__title">Социальные сети</h3>
     <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
-      Полная ссылка на профиль. Пустое поле — канал скрыт на витрине.
-      Доступные каналы переключаются env-флагами SYSTEM_SOCIALS_*_ENABLED
-      (см. docs/subsystems/feature-flags.md).
+      Полная ссылка на профиль. Пустое поле — иконка скрыта.
     </p>
     {% if ff.socials_instagram_enabled %}
     <div class="form-group">
@@ -123,17 +121,6 @@
              value="{{ settings.socials.viber or '' }}">
     </div>
     {% endif %}
-  </section>
-  {% endif %}
-
-  {% if request.admin_payload is defined and request.admin_payload.get('role') == 'superadmin' %}
-  <section class="form-section">
-    <h3 class="form-section__title">Обслуживание</h3>
-    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
-      Скачать последний дамп БД из папки <code>data/dumps/</code>.
-      Дампы создаются командой <code>python scripts/db_dump.py</code> (по cron на хостинге).
-    </p>
-    <a class="btn btn--ghost" href="/admin/settings/database-dump">Скачать дамп БД</a>
   </section>
   {% endif %}
 
