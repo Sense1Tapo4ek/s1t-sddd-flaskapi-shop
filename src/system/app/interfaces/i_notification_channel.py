@@ -1,9 +1,7 @@
-from abc import ABC, abstractmethod
+from typing import Protocol
 
 
-class INotificationChannel(ABC):
-    @abstractmethod
+class INotificationChannel(Protocol):
     def send(self, subject: str, body: str) -> None: ...
 
-    @abstractmethod
     def is_configured(self) -> bool: ...

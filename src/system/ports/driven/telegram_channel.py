@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from system.app.interfaces.i_notification_channel import INotificationChannel
 from system.app.interfaces.i_settings_repo import ISettingsRepo
 from shared.adapters.driven.telegram_client import TelegramClient
 
 
 @dataclass(frozen=True, slots=True)
-class TelegramNotificationChannel(INotificationChannel):
+class TelegramNotificationChannel:
+    """Structural conformance to INotificationChannel (typing.Protocol)."""
     _repo: ISettingsRepo
     _client: TelegramClient
 
