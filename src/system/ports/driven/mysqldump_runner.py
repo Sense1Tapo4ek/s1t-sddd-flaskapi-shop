@@ -11,6 +11,7 @@ Security invariants:
 """
 from __future__ import annotations
 
+import functools
 import gzip
 import os
 import shutil
@@ -25,6 +26,28 @@ from yoyo import get_backend, read_migrations
 
 from shared.generics.errors import DrivenPortError
 from system.app.interfaces.i_backup_runner import IBackupRunner
+
+
+@functools.lru_cache(maxsize=None)
+def _mysqldump_help_output(bin_path: str) -> bytes:
+    """
+    Run ``<bin> --help`` once per (bin_path, process) and cache the bytes.
+
+    The binary doesn't change during the lifetime of a Flask worker, so
+    probing it twice per backup (once for column-statistics, once for
+    MariaDB detection) is wasted subprocess work. ``lru_cache`` keys on
+    ``bin_path`` so an override (e.g. test) still gets its own probe.
+    """
+    try:
+        result = subprocess.run(
+            [bin_path, "--help"],
+            capture_output=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return b""
+    return result.stdout + result.stderr
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -180,16 +203,7 @@ class MysqldumpRunner:
         return b"mariadb" in self._mysqldump_help().lower()
 
     def _mysqldump_help(self) -> bytes:
-        try:
-            result = subprocess.run(
-                [self._mysqldump_bin, "--help"],
-                capture_output=True,
-                timeout=5,
-                check=False,
-            )
-        except (OSError, subprocess.SubprocessError):
-            return b""
-        return result.stdout + result.stderr
+        return _mysqldump_help_output(self._mysqldump_bin)
 
     @property
     def _db_name(self) -> str:

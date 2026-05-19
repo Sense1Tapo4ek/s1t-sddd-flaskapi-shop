@@ -256,6 +256,11 @@ class TestDumpNoPasswordInArgv:
         captured_args: list = []
 
         import subprocess
+        from system.ports.driven import mysqldump_runner as _mod
+
+        # Probe `--help` is cached at module level for the lifetime of the
+        # process. Clear it so this test reliably observes the call.
+        _mod._mysqldump_help_output.cache_clear()
 
         def fake_run(args, **kwargs):
             captured_args.extend(args)
