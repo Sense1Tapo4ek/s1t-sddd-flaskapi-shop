@@ -64,8 +64,11 @@ python scripts/db_rollback.py  # rollback last migration
 python scripts/db_dump.py      # write data/dumps/<ts>.sql.gz
 bash   scripts/db_shell.sh     # mysql CLI with creds from .env
 
-# Run tests (unit + flow are stdlib-only)
-PYTHONDONTWRITEBYTECODE=1 uv run --extra dev pytest -q -m "unit or flow"
+# Run unit tests (pure stdlib, no DB needed)
+PYTHONDONTWRITEBYTECODE=1 uv run --extra dev pytest -q -m unit
+
+# Run flow tests (some hit real MySQL — start `docker compose up -d db` first)
+PYTHONDONTWRITEBYTECODE=1 uv run --extra dev pytest -q -m flow
 
 # App factory smoke (assumes migrations applied)
 PYTHONPATH=src uv run python3 -c "from root.entrypoints.api import create_app; app = create_app(); print('OK', len(app.url_map._rules))"

@@ -35,7 +35,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
     "unit: pure domain and policy tests without IO",
-    "flow: application/use-case tests with fakes or mocks",
+    "flow: application/use-case tests; mostly fakes/mocks, a few SQL-repo tests need MySQL up",
     "integration: adapter and persistence tests with real infrastructure",
     "e2e: full-stack HTTP/UI tests",
 ]
