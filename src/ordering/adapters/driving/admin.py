@@ -115,12 +115,10 @@ def admin_search_schema(facade: FromDishka[InquiriesFacade]):
 @permission_required("manage_orders")
 @inject
 def update_inquiry_status(inquiry_id: int, facade: FromDishka[InquiriesFacade]):
-    status = request.form.get("status")
+    status = request.form.get("status") or (request.get_json(silent=True) or {}).get("status")
     schema = InquiryStatusUpdateIn(status=status)
     facade.change_inquiry_status(inquiry_id, schema)
-    result = facade.list_inquiries(page=1, limit=1, filters={"id__eq": str(inquiry_id)})
-    order = result.items[0] if result.items else None
-    return render_template("ordering/partials/row.html", order=order)
+    return jsonify({"success": True})
 
 
 @ordering_admin_bp.route("/<int:inquiry_id>/archive", methods=["POST"])

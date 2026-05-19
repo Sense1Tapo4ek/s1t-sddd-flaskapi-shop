@@ -37,9 +37,9 @@
 
 <!-- Feed containers -->
 {% if orders_on %}
-<div id="orders-feed"></div>
+<div id="orders-feed" class="requests-feed"></div>
 {% endif %}
-<div id="inquiries-feed" {% if orders_on %}style="display:none;"{% endif %}></div>
+<div id="inquiries-feed" class="requests-feed{% if orders_on %} requests-feed--hidden{% endif %}"></div>
 
 <!-- Help modal -->
 <div class="modal-overlay" id="requests-help-modal" role="dialog" aria-modal="true" aria-label="Справка" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
@@ -123,17 +123,18 @@ function switchTab(name) {
   const inquiriesEl = document.getElementById('inquiries-feed');
   const tabInquiries = document.getElementById('tab-inquiries');
   if (!ORDERS_ENABLED) {
-    inquiriesEl.style.display = '';
+    if (inquiriesEl) inquiriesEl.classList.remove('requests-feed--hidden');
     if (tabInquiries) tabInquiries.classList.add('tab-btn--active');
     setTabActionButtonsVisible('inquiries');
     return;
   }
   const ordersEl = document.getElementById('orders-feed');
   const tabOrders = document.getElementById('tab-orders');
+  if (!ordersEl || !inquiriesEl || !tabOrders || !tabInquiries) return;
   const showOrders = (name === 'orders');
 
-  ordersEl.style.display    = showOrders ? '' : 'none';
-  inquiriesEl.style.display = showOrders ? 'none' : '';
+  ordersEl.classList.toggle('requests-feed--hidden', !showOrders);
+  inquiriesEl.classList.toggle('requests-feed--hidden', showOrders);
   tabOrders.classList.toggle('tab-btn--active', showOrders);
   tabInquiries.classList.toggle('tab-btn--active', !showOrders);
   setTabActionButtonsVisible(showOrders ? 'orders' : 'inquiries');

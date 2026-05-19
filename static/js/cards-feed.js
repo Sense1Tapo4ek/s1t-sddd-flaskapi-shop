@@ -200,7 +200,7 @@
     if (!root) { console.error("[CardsFeed] container not found:", self.containerId); return; }
 
     root.innerHTML = "";
-    root.className = "cf-root";
+    root.classList.add("cf-root");
 
     // Toolbar
     var toolbar = document.createElement("div");

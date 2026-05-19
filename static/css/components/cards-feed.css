@@ -290,3 +290,9 @@
   color: var(--color-primary);
   cursor: default;
 }
+
+/* ─── Requests page: feed visibility toggle ──────────────────────────────── */
+
+.requests-feed--hidden {
+  display: none !important;
+}
