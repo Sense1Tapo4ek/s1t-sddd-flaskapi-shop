@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Iterable, Protocol
+from typing import Callable, Iterable, Protocol
 from uuid import UUID  # noqa: F401  re-exported via AggregateId
 
 from shared.generics.errors import ApplicationError, DomainError
@@ -118,62 +118,3 @@ class BulkRunner:
             return False
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class AsyncBulkRunner:
-    """Async variant of :class:`BulkRunner`. Kept for parity; not used
-    by the current Flask stack but available if an async UC needs it."""
-
-    process_one: Callable[[AggregateId], Awaitable[None]]
-    load_filter_page: IFilterIdLoader | None = None
-    batch_size: int = DEFAULT_BATCH_SIZE
-
-    async def run(self, target: BulkTarget) -> BulkResultSchema:
-        if isinstance(target, BulkTargetIds):
-            return await self._run_ids(target.ids)
-        if isinstance(target, BulkTargetFilter):
-            return await self._run_filter(target.filter)
-        raise TypeError(f"unknown BulkTarget: {type(target).__name__}")
-
-    async def _run_ids(self, ids: Iterable[AggregateId]) -> BulkResultSchema:
-        failed: list[BulkFailureSchema] = []
-        ok = 0
-        total = 0
-        for aggregate_id in ids:
-            total += 1
-            if await self._apply(aggregate_id, failed):
-                ok += 1
-        return BulkResultSchema(total=total, ok=ok, failed=failed)
-
-    async def _run_filter(self, filter_payload: dict) -> BulkResultSchema:
-        if self.load_filter_page is None:
-            raise RuntimeError(
-                "AsyncBulkRunner.load_filter_page is required for filter-mode targets"
-            )
-
-        failed: list[BulkFailureSchema] = []
-        ok = 0
-        total = 0
-        cursor: str | None = None
-
-        while True:
-            ids, cursor = self.load_filter_page(
-                filter_payload, cursor=cursor, limit=self.batch_size
-            )
-            if not ids:
-                break
-            total += len(ids)
-            for aggregate_id in ids:
-                if await self._apply(aggregate_id, failed):
-                    ok += 1
-            if cursor is None:
-                break
-
-        return BulkResultSchema(total=total, ok=ok, failed=failed)
-
-    async def _apply(self, aggregate_id: AggregateId, failed: list[BulkFailureSchema]) -> bool:
-        try:
-            await self.process_one(aggregate_id)
-            return True
-        except BULK_FAILURE_EXCEPTIONS as e:
-            failed.append(BulkFailureSchema(id=aggregate_id, reason=e.code))
-            return False
