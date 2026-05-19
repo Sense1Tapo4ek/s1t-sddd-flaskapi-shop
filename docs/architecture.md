@@ -110,13 +110,23 @@ Use this sequence; each step builds on the previous one.
    `src/root/container.py`.
 7. **Add adapters.** `adapters/driving/api.py` (public JSON),
    `adapters/driving/admin.py` (HTMX), `adapters/driven/db/models.py`
-   (ORM). Register blueprints in `src/root/entrypoints/api.py`.
+   (ORM). In `src/root/entrypoints/api.py`:
+   - register the blueprints,
+   - add a side-effect import of the ORM models module
+     (`import <name>.adapters.driven.db.models  # noqa: F401`) so
+     SQLAlchemy's shared `Base` picks up the tables,
+   - add an entry for the context's template folder in the Jinja
+     `ChoiceLoader` (otherwise admin templates 404 at render).
+   In `src/shared/adapters/driven/db/schema_guard.py:REQUIRED_TABLES`,
+   add the context's primary table name — otherwise the app refuses
+   to start with `SchemaNotReadyError`.
 8. **Tests + docs.** Add `unit`/`flow` tests under `tests/<name>/` and
    create `docs/contexts/<name>.md`.
 
-For a new entity inside an existing context, skip step 6 and most of
-step 7 — only the missing ORM model, repo, use case, facade method,
-and routes/templates are required.
+For a new entity inside an existing context, you typically skip
+creating a new provider but you still add a `provide(...)` line for
+every new use case / repo. Step 7's blueprint + ORM-import +
+ChoiceLoader entries are already in place.
 
 ## Operational rules
 
