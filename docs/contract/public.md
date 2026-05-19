@@ -205,6 +205,8 @@ Body:
   "items": [
     { "product_id": 5, "quantity": 2 }
   ],
+  "contact_phone": "+375 29 000-00-00",
+  "contact_email": "buyer@example.com",
   "delivery_method": "courier",
   "address": "ул. Примерная, 1",
   "delivery_comment": "",
@@ -215,6 +217,8 @@ Body:
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `items` | array | yes | Non-empty; each: `product_id` (int) + `quantity` (int ≥ 1) |
+| `contact_phone` | string | **yes** | 5–30 chars, regex `^[\d\s\+\-\(\)]+$` |
+| `contact_email` | string | no | Max 255 chars; empty string allowed |
 | `delivery_method` | `"pickup"` \| `"courier"` | yes | |
 | `address` | string | yes if courier | Required and non-empty when method is `courier` |
 | `delivery_comment` | string | no | |
@@ -229,7 +233,7 @@ Body:
 `401`: missing or invalid JWT.
 `403`: JWT is an admin token (not customer).
 `404`: a referenced product does not exist or is inactive.
-`422`: empty items list, or courier delivery without address.
+`422`: empty items list, courier delivery without address, or invalid/missing `contact_phone`.
 
 ---
 
