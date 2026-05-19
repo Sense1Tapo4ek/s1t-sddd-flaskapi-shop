@@ -101,3 +101,136 @@ select.form-input:not(.select-wrapper select) {
   background-position: right 10px center;
   padding-right: 28px;
 }
+
+/* ─── Weekly schedule editor ─────────────────────────────────────────────── */
+
+.schedule__caption {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0 0 12px;
+}
+
+.schedule {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.schedule__row {
+  display: grid;
+  grid-template-columns: 56px 130px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.schedule__row:first-child {
+  border-top: none;
+}
+
+.schedule__day {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: 0.02em;
+}
+
+.schedule__off {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.schedule__off input {
+  margin: 0;
+}
+
+.schedule__hours {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule__time {
+  width: 92px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule__dash {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.schedule__break {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  margin-left: 6px;
+  border-left: 1px solid var(--color-border);
+}
+
+.schedule__break-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.schedule__break-toggle {
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.schedule__break-toggle:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.schedule__break-toggle--add {
+  display: inline-flex;
+}
+
+.schedule__break .schedule__break-toggle {
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  color: var(--color-text-muted);
+}
+
+/* States */
+
+.schedule__row.has-break .schedule__break {
+  display: inline-flex;
+}
+.schedule__row.has-break .schedule__break-toggle--add {
+  display: none;
+}
+
+.schedule__row.is-off .schedule__hours {
+  display: none;
+}
+.schedule__row.is-off {
+  background: color-mix(in srgb, var(--color-text-muted) 6%, transparent);
+}
+.schedule__row.is-off .schedule__day {
+  color: var(--color-text-muted);
+}

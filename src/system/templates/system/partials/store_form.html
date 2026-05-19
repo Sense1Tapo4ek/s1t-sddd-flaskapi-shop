@@ -53,11 +53,79 @@
     </div>
 
     <div class="form-group">
-      <label class="form-label" for="working_hours">Режим работы</label>
-      <input class="form-input" type="text" id="working_hours" name="working_hours"
-             placeholder="Пн–Пт: 10:00–20:00"
-             value="{{ settings.contacts.working_hours }}">
+      <label class="form-label">Режим работы</label>
+      <p class="schedule__caption">
+        На витрине: <strong>{{ settings.contacts.working_hours or 'Закрыто' }}</strong>
+      </p>
+      {% set day_labels = {'mon':'Пн','tue':'Вт','wed':'Ср','thu':'Чт','fri':'Пт','sat':'Сб','sun':'Вс'} %}
+      <div class="schedule">
+        {% for day in ['mon','tue','wed','thu','fri','sat','sun'] %}
+          {% set ds = settings.contacts.working_hours_schedule.get(day) %}
+          {% set is_off = ds is none %}
+          {% set has_break = ds and ds.break_start %}
+          <div class="schedule__row{% if is_off %} is-off{% endif %}{% if has_break %} has-break{% endif %}"
+               data-day="{{ day }}">
+            <span class="schedule__day">{{ day_labels[day] }}</span>
+
+            <label class="schedule__off">
+              <input type="checkbox" name="{{ day }}_off" {% if is_off %}checked{% endif %}>
+              <span>Выходной</span>
+            </label>
+
+            <div class="schedule__hours">
+              <input class="form-input schedule__time" type="time" name="{{ day }}_opens"
+                     value="{{ ds.opens_at if ds else '09:00' }}">
+              <span class="schedule__dash">–</span>
+              <input class="form-input schedule__time" type="time" name="{{ day }}_closes"
+                     value="{{ ds.closes_at if ds else '18:00' }}">
+
+              <div class="schedule__break">
+                <span class="schedule__break-label">перерыв</span>
+                <input class="form-input schedule__time" type="time" name="{{ day }}_break_start"
+                       value="{{ ds.break_start if ds and ds.break_start else '' }}">
+                <span class="schedule__dash">–</span>
+                <input class="form-input schedule__time" type="time" name="{{ day }}_break_end"
+                       value="{{ ds.break_end if ds and ds.break_end else '' }}">
+                <button type="button" class="schedule__break-toggle" data-action="remove-break"
+                        title="Убрать перерыв">×</button>
+              </div>
+
+              <button type="button" class="schedule__break-toggle schedule__break-toggle--add"
+                      data-action="add-break" title="Добавить перерыв">+ перерыв</button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
     </div>
+
+    <script>
+      (function () {
+        var schedule = document.querySelector('.schedule');
+        if (!schedule) return;
+        schedule.addEventListener('change', function (e) {
+          var cb = e.target.closest('input[type=checkbox][name$="_off"]');
+          if (!cb) return;
+          var row = cb.closest('.schedule__row');
+          row.classList.toggle('is-off', cb.checked);
+        });
+        schedule.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-action]');
+          if (!btn) return;
+          var row = btn.closest('.schedule__row');
+          if (btn.dataset.action === 'add-break') {
+            row.classList.add('has-break');
+            var bs = row.querySelector('input[name$="_break_start"]');
+            var be = row.querySelector('input[name$="_break_end"]');
+            if (bs && !bs.value) bs.value = '13:00';
+            if (be && !be.value) be.value = '14:00';
+          } else if (btn.dataset.action === 'remove-break') {
+            row.classList.remove('has-break');
+            row.querySelector('input[name$="_break_start"]').value = '';
+            row.querySelector('input[name$="_break_end"]').value = '';
+          }
+        });
+      })();
+    </script>
   </section>
 
   <section class="form-section">
