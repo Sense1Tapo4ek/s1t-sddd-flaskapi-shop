@@ -98,6 +98,15 @@ rule `manage_inquiries → view_inquiries` is added.
 | `manage_orders` | `view_orders` |
 | `create_demo_data` | `view_category_tree`, `edit_taxonomy`, `view_products`, `edit_products` |
 
+Note on `view_category_tree` and the owner role: `resolve_permissions`
+(`src/access/permissions.py:37`) hard-codes `"view_category_tree": True`
+for the owner branch unconditionally (line 42). The concrete `AccessConfig`
+field `owner_can_view_category_tree` (`src/access/config.py:33`) matches
+the `AccessPermissionConfig` Protocol member (`src/access/permissions.py:7`)
+but is never read by `resolve_permissions` — it is dead code. There is no
+`ACCESS_OWNER_CAN_VIEW_CATEGORY_TREE` knob; the permission cannot be
+disabled for the owner role.
+
 ### Runtime vs snapshot permissions
 
 - **Runtime** (re-resolved per request from `settings`):
