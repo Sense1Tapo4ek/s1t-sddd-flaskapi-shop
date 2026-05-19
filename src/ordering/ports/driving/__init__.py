@@ -12,7 +12,6 @@ from .schemas import (
     OrderItemOut,
     OrderOut,
     OrderSearchQuery,
-    OrderStatusLiteral,
     OrderStatusUpdateIn,
     PaginatedOrdersOut,
 )
@@ -30,7 +29,6 @@ __all__ = [
     "OrderItemOut",
     "OrderOut",
     "OrderSearchQuery",
-    "OrderStatusLiteral",
     "OrderStatusUpdateIn",
     "PaginatedOrdersOut",
     "BulkOrdersStatusIn",

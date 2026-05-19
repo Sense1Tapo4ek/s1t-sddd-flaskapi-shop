@@ -12,8 +12,8 @@ from ...app.commands import (
     ChangeOrderStatusCommand,
 )
 from ...domain import Inquiry, Order
-
-InquiryStatusLiteral = Literal["new", "in_progress", "closed", "archived"]
+from ...domain.inquiry_status import InquiryStatus
+from ...domain.order_status import OrderStatus
 
 
 class InquirySearchQuery(BaseModel):
@@ -24,7 +24,7 @@ class InquirySearchQuery(BaseModel):
     sort_by: str | None = None
     sort_dir: str = Field("desc", pattern="^(asc|desc)$")
 
-    status: InquiryStatusLiteral | None = None
+    status: InquiryStatus | None = None
 
 
 class InquiryIn(BaseModel):
@@ -45,7 +45,7 @@ class InquiryIn(BaseModel):
 
 class InquiryStatusUpdateIn(BaseModel):
     model_config = ConfigDict(frozen=True)
-    status: InquiryStatusLiteral
+    status: InquiryStatus
 
     def to_command(self, inquiry_id: int) -> ChangeInquiryStatusCommand:
         return ChangeInquiryStatusCommand(inquiry_id=inquiry_id, new_status=self.status)
@@ -99,9 +99,6 @@ class BulkInquiriesStatusIn(BaseModel):
 
 # ─── Order schemas ────────────────────────────────────────────────────────────
 
-OrderStatusLiteral = Literal["new", "confirmed", "completed", "canceled", "archived"]
-
-
 class OrderItemIn(BaseModel):
     model_config = ConfigDict(frozen=True)
     product_id: int = Field(..., ge=1)
@@ -140,7 +137,7 @@ class OrderIn(BaseModel):
 
 class OrderStatusUpdateIn(BaseModel):
     model_config = ConfigDict(frozen=True)
-    status: OrderStatusLiteral
+    status: OrderStatus
 
     def to_command(self, order_id: int) -> ChangeOrderStatusCommand:
         return ChangeOrderStatusCommand(order_id=order_id, new_status=self.status)
@@ -202,7 +199,7 @@ class OrderSearchQuery(BaseModel):
     limit: int = Field(20, ge=1, le=100)
     sort_by: str | None = None
     sort_dir: str = Field("desc", pattern="^(asc|desc)$")
-    status: OrderStatusLiteral | None = None
+    status: OrderStatus | None = None
     customer_user_id: int | None = None
 
 
@@ -225,4 +222,4 @@ class PaginatedOrdersOut(BaseModel):
 class BulkOrdersStatusIn(BaseModel):
     model_config = ConfigDict(frozen=True)
     target: BulkTarget
-    status: OrderStatusLiteral
+    status: OrderStatus
