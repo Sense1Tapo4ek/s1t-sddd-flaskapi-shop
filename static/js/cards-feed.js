@@ -39,6 +39,9 @@
     this.getRowName       = typeof opts.getRowName === "function" ? opts.getRowName : function (item) { return String(item[this.rowIdKey]); }.bind(this);
     this.renderCard       = typeof opts.renderCard === "function" ? opts.renderCard : function () { return ""; };
     this.selectable       = !!opts.selectable;
+    this.showDrawerBtn    = opts.showDrawerBtn !== false;  // default true — backward compat
+    this.renderCardActions = typeof opts.renderCardActions === "function" ? opts.renderCardActions : null;
+    this.onActionClick    = typeof opts.onActionClick === "function" ? opts.onActionClick : null;
     this.initialFilters   = opts.initialFilters || {};
     this._onLoadCb        = typeof opts.onLoad === "function" ? opts.onLoad : null;
     this._selChangeCbs    = [];
@@ -355,8 +358,16 @@
       // Body
       inner += '<div class="cf-card__content">' + self.renderCard(item) + '</div>';
 
-      // Drawer button
-      inner += '<button type="button" class="btn btn--ghost btn--sm cf-card__drawer-btn" data-role="drawer-btn">Детали</button>';
+      // Inline actions zone (renderCardActions) and/or drawer button
+      if (self.renderCardActions) {
+        var actionsHtml = self.renderCardActions(item) || "";
+        if (actionsHtml) {
+          inner += '<div class="cf-card__actions" data-role="actions">' + actionsHtml + '</div>';
+        }
+      }
+      if (self.showDrawerBtn) {
+        inner += '<button type="button" class="btn btn--ghost btn--sm cf-card__drawer-btn" data-role="drawer-btn">Детали</button>';
+      }
 
       card.innerHTML = inner;
 
@@ -376,11 +387,29 @@
       }
 
       // Drawer handler
-      var drawerBtn = card.querySelector('[data-role="drawer-btn"]');
-      drawerBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        self._openDrawer(item);
-      });
+      if (self.showDrawerBtn) {
+        var drawerBtn = card.querySelector('[data-role="drawer-btn"]');
+        if (drawerBtn) {
+          drawerBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            self._openDrawer(item);
+          });
+        }
+      }
+
+      // Inline-action delegated handler
+      if (self.onActionClick) {
+        var actionsZone = card.querySelector('[data-role="actions"]');
+        if (actionsZone) {
+          actionsZone.addEventListener("click", function (e) {
+            var target = e.target.closest("[data-action]");
+            if (!target || target.disabled) return;
+            e.preventDefault();
+            e.stopPropagation();
+            self.onActionClick(item, target.getAttribute("data-action"), target);
+          });
+        }
+      }
 
       area.appendChild(card);
     });

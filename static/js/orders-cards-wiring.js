@@ -1,6 +1,5 @@
 /* Orders CardsFeed wiring.
-   Bootstraps a CardsFeed instance for /admin/orders/search.
-   Replaces bulk-orders-wiring.js (which was SmartTable-specific).
+   One-tap status pills per card. No drawer, no bulk actions.
 */
 
 (function (global) {
@@ -12,12 +11,6 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-
-  function bulkT(key, params) {
-    return (typeof global.bulkT === "function") ? global.bulkT(key, params) : key;
-  }
-
-  // ─── Status labels / classes ──────────────────────────────────────────────
 
   var ORDER_STATUS_LABELS = {
     new:       "Новый",
@@ -49,8 +42,6 @@
     return '<span class="badge ' + esc(cls) + '">' + esc(label) + '</span>';
   }
 
-  // ─── Card renderer ────────────────────────────────────────────────────────
-
   function renderOrderCard(o) {
     var itemsCount = Array.isArray(o.items) ? o.items.length : 0;
     var total = o.total != null ? String(o.total) : "—";
@@ -74,76 +65,48 @@
     );
   }
 
-  // ─── Bulk bar wiring ──────────────────────────────────────────────────────
-
-  function statusControls() {
-    var state = { status: null };
-    var optionsHtml = [
-      { value: "new",       i18n: "bulk.orders.status.new" },
-      { value: "confirmed", i18n: "bulk.orders.status.confirmed" },
-      { value: "completed", i18n: "bulk.orders.status.completed" },
-      { value: "canceled",  i18n: "bulk.orders.status.canceled" },
-    ].map(function (opt) {
-      return '<label style="display:block; padding:6px 4px;"><input type="radio" name="bulkOrderStatus" value="' + esc(opt.value) + '"> ' + esc(bulkT(opt.i18n) || opt.value) + '</label>';
+  function renderOrderActions(o) {
+    return ORDER_STATUS_OPTIONS.map(function (opt) {
+      var isCurrent = opt.value === o.status;
+      var cls = "cf-status-pill" + (isCurrent ? " cf-status-pill--current" : "");
+      var disabled = isCurrent ? " disabled" : "";
+      return '<button type="button" class="' + cls + '" data-action="set-status" data-status="' +
+             esc(opt.value) + '"' + disabled + '>' + esc(opt.label) + '</button>';
     }).join("");
-    var html = '<fieldset><legend>' + esc(bulkT("bulk.orders.modal.statusLegend") || "Новый статус") + '</legend>' + optionsHtml + '</fieldset>';
-    return {
-      html: html,
-      onMount: function (overlay, ctx) {
-        ctx.setValid(false);
-        overlay.addEventListener("change", function (e) {
-          if (e.target && e.target.name === "bulkOrderStatus") {
-            state.status = e.target.value;
-            ctx.setValid(true);
-          }
-        });
-      },
-      validate: function () { return state.status != null; },
-      getValue: function () { return { status: state.status }; },
-    };
   }
 
-  async function postBulk(url, body) {
-    var res = await global.api.post(url, body);
-    if (res && res._failed) return { cancelled: true };
-    return res;
+  function showToast(message, type) {
+    document.body.dispatchEvent(new CustomEvent("showToast", {
+      detail: { message: message, type: type || "info" }
+    }));
   }
-
-  function mountOrdersBulkBar(feed) {
-    if (!feed) return null;
-    if (!global.BulkActionBar) return null;
-    return new global.BulkActionBar({
-      table: feed,
-      getRowName: function (o) { return "Заказ #" + o.id; },
-      actions: [
-        {
-          id: "status",
-          label: bulkT("bulk.orders.action.status") || "Изменить статус",
-          icon: "arrow-right-circle",
-          confirm: "modal",
-          explain: function () { return bulkT("bulk.orders.explain.status") || "Выбранным заказам будет назначен новый статус."; },
-          customControls: function () { return statusControls(); },
-          handler: function (payload) { return postBulk("/admin/orders/bulk/status", payload); },
-        },
-      ],
-    });
-  }
-
-  // ─── Init ────────────────────────────────────────────────────────────────
 
   function initOrdersFeed(canManage) {
     var feed = new global.CardsFeed({
-      instanceName:   "ordersFeed",
-      endpoint:       "/admin/orders/search",
-      schemaEndpoint: "/admin/orders/search/schema",
-      containerId:    "orders-feed",
-      defaultSortBy:  "created_at",
-      defaultSortDir: "desc",
-      rowIdKey:       "id",
-      getRowName:     function (o) { return "Заказ #" + o.id; },
-      renderCard:     renderOrderCard,
-      selectable:     !!canManage,
-      initialFilters: { "status__neq": "archived" },
+      instanceName:    "ordersFeed",
+      endpoint:        "/admin/orders/search",
+      schemaEndpoint:  "/admin/orders/search/schema",
+      containerId:     "orders-feed",
+      defaultSortBy:   "created_at",
+      defaultSortDir:  "desc",
+      rowIdKey:        "id",
+      getRowName:      function (o) { return "Заказ #" + o.id; },
+      renderCard:      renderOrderCard,
+      renderCardActions: canManage ? renderOrderActions : null,
+      onActionClick:   canManage ? function (item, action, target) {
+        if (action !== "set-status") return;
+        var newStatus = target.getAttribute("data-status");
+        if (!newStatus || newStatus === item.status) return;
+        global.api.patch("/admin/orders/" + item.id + "/status", { status: newStatus })
+          .then(function (res) {
+            if (res && res._failed) return;
+            showToast("Статус заказа #" + item.id + " → " + (ORDER_STATUS_LABELS[newStatus] || newStatus), "success");
+            feed.load();
+          });
+      } : null,
+      selectable:      false,
+      showDrawerBtn:   false,
+      initialFilters:  { "status__neq": "archived" },
       onLoad: function (data) {
         var el = document.getElementById("orders-tab-count");
         if (el) el.textContent = data.total > 0 ? "(" + data.total + ")" : "";
@@ -151,17 +114,9 @@
     });
 
     feed._statusOptionsList = ORDER_STATUS_OPTIONS;
-
     feed.load();
-
-    if (canManage) {
-      // Mount bulk bar after first load so feed is ready
-      setTimeout(function () { mountOrdersBulkBar(feed); }, 0);
-    }
-
     global.ordersFeed = feed;
   }
 
-  global.initOrdersFeed    = initOrdersFeed;
-  global.mountOrdersBulkBar = mountOrdersBulkBar;
+  global.initOrdersFeed = initOrdersFeed;
 })(window);

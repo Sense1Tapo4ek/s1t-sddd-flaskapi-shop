@@ -24,13 +24,13 @@
 </div>
 
 <!-- Tab bar -->
-<div class="tabs">
+<div class="tabs" id="requests-tabs">
   {% if orders_on %}
-  <button id="tab-orders" class="tab-btn tab-btn--active" onclick="switchTab('orders')">
+  <button id="tab-orders" type="button" class="tab-btn tab-btn--active" data-tab="orders">
     Заказы <span id="orders-tab-count" style="font-size:12px; color:var(--color-text-muted);"></span>
   </button>
   {% endif %}
-  <button id="tab-inquiries" class="tab-btn{% if not orders_on %} tab-btn--active{% endif %}" onclick="switchTab('inquiries')">
+  <button id="tab-inquiries" type="button" class="tab-btn{% if not orders_on %} tab-btn--active{% endif %}" data-tab="inquiries">
     Обращения <span id="inquiries-tab-count" style="font-size:12px; color:var(--color-text-muted);"></span>
   </button>
 </div>
@@ -64,25 +64,9 @@
         <ul style="padding-left:18px; margin:0 0 12px;">
           <li><strong>Фильтрация:</strong> выберите статус в выпадающем списке над лентой или введите поисковый запрос.</li>
           <li><strong>Сортировка:</strong> выберите поле и направление в выпадающем списке над лентой.</li>
-          <li><strong>Детали:</strong> нажмите «Детали» на карточке — откроется боковая панель с полной информацией.</li>
-          <li><strong>Сменить статус:</strong> в боковой панели выберите новый статус и сохраните.</li>
-          <li><strong>Массовые действия:</strong> отметьте карточки чекбоксами — появится плавающая панель действий (архивировать, сменить статус…).</li>
-          <li><strong>Архив:</strong> включите переключатель «Показать архив» над лентой — отобразятся архивные записи.</li>
+          <li><strong>Сменить статус:</strong> нажмите на нужный статус в строке заявки — изменение применяется сразу.</li>
+          <li><strong>Архив:</strong> чтобы скрыть заявку, выберите статус «Архив». Включите переключатель «Показать архив» над лентой, чтобы увидеть архивные записи.</li>
           <li><strong>Пагинация:</strong> кнопки «Пред» / «След» или ввод номера страницы.</li>
-        </ul>
-      </section>
-      <section>
-        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
-        <ul style="padding-left:18px; margin:0 0 12px;">
-          <li><kbd>Esc</kbd> — закрыть открытую боковую панель деталей или модальное окно подтверждения.</li>
-        </ul>
-      </section>
-      <section>
-        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
-        <ul style="padding-left:18px; margin:0;">
-          <li>Архивированные записи не удаляются из базы — их можно восстановить через панель действий.</li>
-          <li>Права «view_orders» / «manage_orders» применяются к обеим вкладкам: просмотр и управление.</li>
-          <li>Уведомления о новых заявках приходят в Telegram, если бот настроен в разделе «Настройки».</li>
         </ul>
       </section>
     </div>
@@ -139,34 +123,41 @@ function switchTab(name) {
   const inquiriesEl = document.getElementById('inquiries-feed');
   const tabInquiries = document.getElementById('tab-inquiries');
   if (!ORDERS_ENABLED) {
-    // Inquiries-only mode — always visible, no toggle needed.
     inquiriesEl.style.display = '';
+    if (tabInquiries) tabInquiries.classList.add('tab-btn--active');
     setTabActionButtonsVisible('inquiries');
     return;
   }
   const ordersEl = document.getElementById('orders-feed');
   const tabOrders = document.getElementById('tab-orders');
+  const showOrders = (name === 'orders');
 
-  if (name === 'orders') {
-    ordersEl.style.display = '';
-    inquiriesEl.style.display = 'none';
-    tabOrders.classList.add('tab-btn--active');
-    tabInquiries.classList.remove('tab-btn--active');
-  } else {
-    ordersEl.style.display = 'none';
-    inquiriesEl.style.display = '';
-    tabInquiries.classList.add('tab-btn--active');
-    tabOrders.classList.remove('tab-btn--active');
-  }
-  setTabActionButtonsVisible(name);
+  ordersEl.style.display    = showOrders ? '' : 'none';
+  inquiriesEl.style.display = showOrders ? 'none' : '';
+  tabOrders.classList.toggle('tab-btn--active', showOrders);
+  tabInquiries.classList.toggle('tab-btn--active', !showOrders);
+  setTabActionButtonsVisible(showOrders ? 'orders' : 'inquiries');
 }
 
-// Boot feeds after DOM is ready
 document.addEventListener('DOMContentLoaded', function () {
+  // Bind tab clicks via addEventListener so a JS error elsewhere can't
+  // silently break the pill state.
+  const tabsRoot = document.getElementById('requests-tabs');
+  if (tabsRoot) {
+    tabsRoot.addEventListener('click', function (e) {
+      const btn = e.target.closest('.tab-btn[data-tab]');
+      if (!btn) return;
+      switchTab(btn.getAttribute('data-tab'));
+    });
+  }
+
   if (ORDERS_ENABLED) {
     initOrdersFeed(CAN_MANAGE_ORDERS);
   }
   initInquiriesFeed(CAN_MANAGE_ORDERS);
+
+  // Re-assert the default state (orders if enabled, inquiries otherwise).
+  switchTab(ORDERS_ENABLED ? 'orders' : 'inquiries');
 });
 </script>
 {% endblock %}
