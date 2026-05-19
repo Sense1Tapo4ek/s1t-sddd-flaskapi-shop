@@ -259,9 +259,7 @@
     sortSel.dataset.role = "sort";
     sortSel.innerHTML =
       '<option value="created_at|desc">Сначала новые</option>' +
-      '<option value="created_at|asc">Сначала старые</option>' +
-      '<option value="id|desc">ID убыв.</option>' +
-      '<option value="id|asc">ID возр.</option>';
+      '<option value="created_at|asc">Сначала старые</option>';
     sortSel.addEventListener("change", function () {
       var parts = sortSel.value.split("|");
       self._sortBy  = parts[0];
@@ -270,30 +268,6 @@
       self.load();
     });
     toolbar.appendChild(sortSel);
-
-    // Archive toggle
-    var archiveBtn = document.createElement("button");
-    archiveBtn.type = "button";
-    archiveBtn.className = "btn btn--ghost btn--sm";
-    archiveBtn.dataset.role = "archive-toggle";
-    archiveBtn.textContent = "Показать архив";
-    archiveBtn.addEventListener("click", function () {
-      self._showAll = !self._showAll;
-      if (self._showAll) {
-        delete self._filters["status__neq"];
-        archiveBtn.textContent = "Только активные";
-        archiveBtn.classList.add("btn--active");
-      } else {
-        if (self.initialFilters["status__neq"]) {
-          self._filters["status__neq"] = self.initialFilters["status__neq"];
-        }
-        archiveBtn.textContent = "Показать архив";
-        archiveBtn.classList.remove("btn--active");
-      }
-      self._page = 1;
-      self.load();
-    });
-    toolbar.appendChild(archiveBtn);
 
     root.appendChild(toolbar);
 

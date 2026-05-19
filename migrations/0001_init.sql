@@ -1,7 +1,7 @@
 -- 0001 — Initial schema.
--- Derived from src/<context>/adapters/driven/db/models.py at the time of the
--- MySQL switch. Reflects the union of all tables previously created by
--- Base.metadata.create_all + ensure_sqlite_compatibility patches.
+-- Derived from src/<context>/adapters/driven/db/models.py at the time of
+-- the MySQL switch. Schema is owned by yoyo migrations — Base.metadata
+-- is only used by the test harness (see ADR 0006).
 
 CREATE TABLE admins (
     id INT NOT NULL AUTO_INCREMENT,

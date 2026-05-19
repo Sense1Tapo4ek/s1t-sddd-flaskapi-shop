@@ -1,0 +1,68 @@
+<div id="backups-table-wrap">
+{% if not snapshots.items %}
+  <div style="padding:48px 0; text-align:center; color:var(--color-text-muted); font-size:14px;">
+    Нет снапшотов. Нажмите «Сделать снапшот», чтобы создать первый.
+  </div>
+{% else %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>Размер</th>
+        <th>Создан</th>
+        <th>Версия миграций</th>
+        <th>Тип</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in snapshots.items %}
+      <tr>
+        <td style="font-family:monospace; font-size:12px;">{{ item.display_name }}</td>
+        <td style="white-space:nowrap;">
+          {% set kb = (item.size_bytes / 1024) | round(1) %}
+          {% if item.size_bytes >= 1048576 %}
+            {{ (item.size_bytes / 1048576) | round(2) }} МБ
+          {% elif item.size_bytes >= 1024 %}
+            {{ kb }} КБ
+          {% else %}
+            {{ item.size_bytes }} Б
+          {% endif %}
+        </td>
+        <td style="white-space:nowrap;">{{ item.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>{{ item.mig_version }}</td>
+        <td>
+          {% if item.is_pre_restore %}
+            <span class="badge badge--warning" title="Автоматически создан перед восстановлением">pre-restore</span>
+          {% else %}
+            <span class="badge badge--neutral">обычный</span>
+          {% endif %}
+        </td>
+        <td style="white-space:nowrap; display:flex; gap:8px;">
+          <button class="btn btn--ghost btn--sm"
+                  onclick="showConfirmModal({
+                    title: 'Восстановить базу данных?',
+                    text: 'Будет выполнено восстановление из снапшота «{{ item.display_name }}».\nТекущие данные будут заменены. Перед этим автоматически создаётся страховочный снапшот.',
+                    confirmText: 'Восстановить',
+                    isDanger: true,
+                    onConfirm: function() {
+                      htmx.ajax('POST', '/admin/backups/{{ item.name }}/restore', {target: 'body', swap: 'none'});
+                    }
+                  })">Восстановить</button>
+          <button class="btn btn--ghost btn--sm btn--danger"
+                  onclick="showConfirmModal({
+                    title: 'Удалить снапшот?',
+                    text: 'Снапшот «{{ item.display_name }}» будет удалён без возможности восстановления.',
+                    confirmText: 'Удалить',
+                    isDanger: true,
+                    onConfirm: function() {
+                      htmx.ajax('DELETE', '/admin/backups/{{ item.name }}', {target: '#backups-table-wrap', swap: 'outerHTML'});
+                    }
+                  })">Удалить</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+</div>

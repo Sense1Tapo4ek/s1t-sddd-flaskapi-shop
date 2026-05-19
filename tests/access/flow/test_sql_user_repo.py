@@ -13,8 +13,8 @@ from shared.helpers.security import hash_password
 pytestmark = pytest.mark.flow
 
 
-def test_sql_user_repo_lists_active_order_notification_recipients(tmp_path):
-    engine = create_db_engine(f"sqlite:///{tmp_path / 'users.db'}")
+def test_sql_user_repo_lists_active_order_notification_recipients(mysql_test_db):
+    engine = create_db_engine(mysql_test_db)
     Base.metadata.create_all(engine)
     Session = sessionmaker(engine, expire_on_commit=False)
     with Session() as session:

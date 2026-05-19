@@ -116,6 +116,8 @@ class OrderIn(BaseModel):
     model_config = ConfigDict(frozen=True)
     items: list[OrderItemIn] = Field(..., min_length=1)
     delivery_method: Literal["pickup", "courier"] = "pickup"
+    contact_phone: str = Field(..., min_length=5, max_length=30, pattern=r"^[\d\s\+\-\(\)]+$")
+    contact_email: str = Field("", max_length=255)
     address: str = Field("", max_length=500)
     delivery_comment: str = Field("", max_length=500)
     comment: str = Field("", max_length=2000)
@@ -128,6 +130,8 @@ class OrderIn(BaseModel):
                 for i in self.items
             ],
             delivery_method=self.delivery_method,
+            contact_phone=self.contact_phone,
+            contact_email=self.contact_email,
             address=self.address,
             delivery_comment=self.delivery_comment,
             comment=self.comment,
@@ -163,6 +167,8 @@ class OrderOut(BaseModel):
     model_config = ConfigDict(frozen=True)
     id: int
     customer_user_id: int
+    contact_email: str
+    contact_phone: str
     items: list[OrderItemOut]
     total: Decimal
     delivery_method: str
@@ -177,6 +183,8 @@ class OrderOut(BaseModel):
         return cls(
             id=order.id,
             customer_user_id=order.customer_user_id,
+            contact_email=order.contact_email,
+            contact_phone=order.contact_phone,
             items=[OrderItemOut.from_domain(i) for i in order.items],
             total=order.total,
             delivery_method=order.delivery.method.value,

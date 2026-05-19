@@ -39,20 +39,11 @@ def runtime_template_settings(
         "socials_viber_enabled": sys_cfg.socials_viber_enabled,
     }
 
-    try:
-        settings = facade.get_settings()
-        values: dict[str, object] = {
-            "app_name": settings.branding.app_name or root_config.app_name,
-            "admin_panel_title": settings.branding.admin_panel_title or "Админ панель",
-            "feature_flags": feature_flags,
-        }
-    except Exception:
-        logger.exception("Failed to load runtime template settings")
-        values = {
-            "app_name": root_config.app_name,
-            "admin_panel_title": "Админ панель",
-            "feature_flags": feature_flags,
-        }
+    values: dict[str, object] = {
+        "app_name": root_config.app_name,
+        "admin_panel_title": root_config.admin_panel_title,
+        "feature_flags": feature_flags,
+    }
 
     if has_request_context():
         setattr(g, cache_key, values)

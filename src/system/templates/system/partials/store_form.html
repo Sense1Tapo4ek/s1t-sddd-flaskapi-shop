@@ -4,27 +4,6 @@
       class="form form--wide">
 
   <section class="form-section">
-    <h3 class="form-section__title">Приложение</h3>
-    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
-      Базовое имя шаблона и подпись админ-панели без изменения кода или env.
-    </p>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" for="app_name">Имя приложения</label>
-        <input class="form-input" type="text" id="app_name" name="app_name"
-               placeholder="Мой магазин"
-               value="{{ settings.branding.app_name }}">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="admin_panel_title">Подпись панели</label>
-        <input class="form-input" type="text" id="admin_panel_title" name="admin_panel_title"
-               placeholder="Админ панель"
-               value="{{ settings.branding.admin_panel_title }}">
-      </div>
-    </div>
-  </section>
-
-  <section class="form-section">
     <h3 class="form-section__title">Контактная информация</h3>
     <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:20px;">
       Отображается в шапке, подвале и на странице контактов.

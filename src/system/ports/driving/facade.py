@@ -1,17 +1,22 @@
 from dataclasses import dataclass
 from html import escape
 
+from root.config import RootConfig
 from system.config import SystemConfig
 from system.app.interfaces.i_notification_channel import INotificationChannel
 from shared.adapters.driven.telegram_client import TelegramClient
 
 from ...app import (
+    CreateSnapshotUseCase,
+    DeleteSnapshotUseCase,
     FetchTelegramChatIdUseCase,
     GetSettingsQuery,
     GetStorageSettingsQuery,
+    ListSnapshotsQuery,
     ManageSettingsUseCase,
     ManageStorageSettingsUseCase,
     RecoverPasswordUseCase,
+    RestoreSnapshotUseCase,
     TestNotificationUseCase,
 )
 from .schemas import (
@@ -20,6 +25,8 @@ from .schemas import (
     SettingsOut,
     SettingsUpdateIn,
     SocialsFlags,
+    SnapshotListOut,
+    SnapshotOut,
     StorageSettingsOut,
     StorageSettingsUpdateIn,
 )
@@ -33,6 +40,7 @@ class SystemFacade:
     """
 
     _config: SystemConfig
+    _root_config: RootConfig
     _get_query: GetSettingsQuery
     _get_storage_query: GetStorageSettingsQuery
     _manage_uc: ManageSettingsUseCase
@@ -42,6 +50,10 @@ class SystemFacade:
     _fetch_chat_id_uc: FetchTelegramChatIdUseCase
     _notification_channel: INotificationChannel
     _telegram_client: TelegramClient
+    _list_snapshots_query: ListSnapshotsQuery
+    _create_snapshot_uc: CreateSnapshotUseCase
+    _restore_snapshot_uc: RestoreSnapshotUseCase
+    _delete_snapshot_uc: DeleteSnapshotUseCase
 
     def get_config(self) -> SystemConfig:
         return self._config
@@ -63,7 +75,11 @@ class SystemFacade:
     def get_public_info(self) -> InfoOut:
         """Safe settings for public footer/contacts."""
         settings = self._get_query()
-        return InfoOut.from_domain(settings, self._socials_flags())
+        return InfoOut.from_domain(
+            settings,
+            app_name=self._root_config.app_name,
+            socials_flags=self._socials_flags(),
+        )
 
     def update_settings(self, schema: SettingsUpdateIn) -> SettingsOut:
         """Update settings from admin panel."""
@@ -112,6 +128,22 @@ class SystemFacade:
             chat_id=chat_id,
             text=f"<b>{escape(subject)}</b>\n{escape(body)}",
         )
+
+    def list_snapshots(self) -> SnapshotListOut:
+        """Return all snapshots, newest first."""
+        return SnapshotListOut.from_domain(self._list_snapshots_query())
+
+    def create_snapshot(self) -> SnapshotOut:
+        """Create a new snapshot with the default (empty) prefix."""
+        return SnapshotOut.from_domain(self._create_snapshot_uc(prefix=""))
+
+    def restore_snapshot(self, *, name: str) -> None:
+        """Restore the database from snapshot *name*."""
+        self._restore_snapshot_uc(name=name)
+
+    def delete_snapshot(self, *, name: str) -> None:
+        """Permanently delete snapshot *name*."""
+        self._delete_snapshot_uc(name=name)
 
     def is_notification_configured(self) -> bool:
         """Check whether the notification channel is configured."""

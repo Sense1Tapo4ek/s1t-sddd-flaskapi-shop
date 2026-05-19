@@ -17,6 +17,8 @@ class PlaceOrderCommand:
     customer_user_id: int
     items: list[PlaceOrderItem]
     delivery_method: str          # "pickup" | "courier"
+    contact_phone: str
+    contact_email: str = ""
     address: str = ""
     delivery_comment: str = ""
     comment: str = ""

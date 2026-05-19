@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sqlite3
-
 import pytest
 from sqlalchemy import select
 
@@ -29,7 +27,7 @@ def _auth(token: str) -> dict[str, str]:
 
 def test_runtime_app_identity_and_owner_catalog_access_apply_without_restart(
     monkeypatch,
-    tmp_path,
+    mysql_test_db,
 ):
     """
     Given an owner token created before settings are changed,
@@ -41,8 +39,6 @@ def test_runtime_app_identity_and_owner_catalog_access_apply_without_restart(
     (admin/changeme) is inserted via direct DB write after app creation.
     """
     # Arrange
-    db_path = tmp_path / "shop.db"
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
     monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
     monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
@@ -57,7 +53,7 @@ def test_runtime_app_identity_and_owner_catalog_access_apply_without_restart(
     app = create_app()
 
     # Insert a second owner-role user directly so we can test two distinct actors.
-    engine = create_db_engine(f"sqlite:///{db_path}")
+    engine = create_db_engine(mysql_test_db)
     with Session(engine) as session:
         owner_user = UserModel(
             login="admin",
@@ -73,13 +69,11 @@ def test_runtime_app_identity_and_owner_catalog_access_apply_without_restart(
     owner_token = _login(client, "admin", "changeme")
     superadmin_token = _login(client, "superadmin", "superadmin")
 
-    # Act
+    # Act — branding (app_name / admin_panel_title) is env-only and not in the form.
     response = client.put(
         "/admin/settings/store",
         headers=_auth(superadmin_token),
         data={
-            "app_name": "Runtime Shop",
-            "admin_panel_title": "Runtime Admin",
             "coords_lat": "53.9",
             "coords_lon": "27.56",
             "owner_can_edit_products": "on",
@@ -94,19 +88,16 @@ def test_runtime_app_identity_and_owner_catalog_access_apply_without_restart(
     # Assert
     assert response.status_code == 200
     assert settings_page.status_code == 200
-    assert "Runtime Shop" in settings_page.get_data(as_text=True)
-    assert "Runtime Admin" in settings_page.get_data(as_text=True)
     assert catalog_page.status_code == 200
 
 
-def test_default_dev_superadmin_cannot_download_sqlite_database_dump(monkeypatch, tmp_path):
+def test_default_dev_superadmin_cannot_download_database_dump(monkeypatch, mysql_test_db):
     """
-    Given the application uses SQLite,
+    Given the application has a configured database,
     When the default dev superadmin has not changed the bootstrap password,
     Then the database dump is blocked.
     """
     # Arrange
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
     monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
     monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
@@ -126,7 +117,7 @@ def test_default_dev_superadmin_cannot_download_sqlite_database_dump(monkeypatch
     assert response.status_code == 403
 
 
-def test_superadmin_can_download_latest_database_dump_after_password_change(monkeypatch, tmp_path):
+def test_superadmin_can_download_latest_database_dump_after_password_change(monkeypatch, tmp_path, mysql_test_db):
     """
     Given superadmin changed the bootstrap password AND a MySQL dump
     file exists in data/dumps/,
@@ -148,7 +139,6 @@ def test_superadmin_can_download_latest_database_dump_after_password_change(monk
     dump_file.write_bytes(b"\x1f\x8b\x08\x00fake gzip payload")
 
     try:
-        monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
         monkeypatch.setenv("ROOT_APP_ENV", "dev")
         monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
         monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
@@ -180,7 +170,7 @@ def test_superadmin_can_download_latest_database_dump_after_password_change(monk
         dump_file.unlink(missing_ok=True)
 
 
-def test_database_dump_returns_clear_error_when_no_dumps_available(monkeypatch, tmp_path):
+def test_database_dump_returns_clear_error_when_no_dumps_available(monkeypatch, tmp_path, mysql_test_db):
     """
     Given no dumps in data/dumps/,
     When superadmin requests a database dump,
@@ -199,7 +189,6 @@ def test_database_dump_returns_clear_error_when_no_dumps_available(monkeypatch, 
     dumps_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
         monkeypatch.setenv("ROOT_APP_ENV", "dev")
         monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
         monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
@@ -230,8 +219,7 @@ def test_database_dump_returns_clear_error_when_no_dumps_available(monkeypatch, 
             shutil.move(str(backup), str(dumps_dir))
 
 
-def test_owner_and_unauthenticated_users_cannot_download_sqlite_database_dump(monkeypatch, tmp_path):
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
+def test_owner_and_unauthenticated_users_cannot_download_database_dump(monkeypatch, mysql_test_db):
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
     from root.entrypoints.api import create_app
@@ -250,9 +238,7 @@ def test_owner_and_unauthenticated_users_cannot_download_sqlite_database_dump(mo
     assert unauthenticated_response.status_code in {302, 401}
 
 
-def test_owner_account_telegram_update_does_not_change_global_settings(monkeypatch, tmp_path):
-    db_path = tmp_path / "shop.db"
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{db_path}")
+def test_owner_account_telegram_update_does_not_change_global_settings(monkeypatch, mysql_test_db):
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
     from sqlalchemy.orm import Session
@@ -262,7 +248,7 @@ def test_owner_account_telegram_update_does_not_change_global_settings(monkeypat
     client = app.test_client()
     owner_token = _login(client, "admin", "changeme")
 
-    engine = create_db_engine(f"sqlite:///{db_path}")
+    engine = create_db_engine(mysql_test_db)
     with Session(engine) as session:
         settings = session.execute(
             select(SettingsModel).where(SettingsModel.id == 1)
@@ -289,7 +275,7 @@ def test_owner_account_telegram_update_does_not_change_global_settings(monkeypat
     assert settings.telegram_chat_id == "legacy-global"
 
 
-# Removed: test_legacy_sqlite_superadmin_non_default_password_is_marked_changed
-# It exercised SQLite-as-production schema evolution at app boot. The
-# project switched to MySQL + yoyo-migrations; legacy schemas are
+# Removed: test_legacy_superadmin_non_default_password_is_marked_changed
+# It exercised in-place schema evolution at app boot for a legacy backend.
+# The project switched to MySQL + yoyo-migrations; legacy schemas are
 # upgraded through migration files now, not by boot-time DDL.

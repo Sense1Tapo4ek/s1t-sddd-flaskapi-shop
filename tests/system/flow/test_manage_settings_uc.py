@@ -35,8 +35,6 @@ def _settings() -> SiteSettings:
         instagram="@shop",
         telegram_bot_token="",
         telegram_chat_id="",
-        app_name="Shop Admin",
-        admin_panel_title="Админ панель",
         owner_can_view_category_tree=True,
         owner_can_edit_taxonomy=False,
         owner_can_view_products=False,
@@ -95,11 +93,14 @@ class TestManageSettingsUseCase:
         assert repo.get_calls == 1
         assert repo.saved == []
 
-    def test_updates_runtime_template_and_catalog_access_fields(self):
+    def test_updates_catalog_access_fields(self):
         """
-        Given runtime template and catalog access fields,
+        Given catalog access fields,
         When managing settings,
         Then the use case persists those fields with the rest of SiteSettings.
+
+        Branding (app_name, admin_panel_title) lives in env (RootConfig)
+        and is no longer part of SiteSettings or UpdateSettingsCommand.
         """
         # Arrange
         settings = _settings()
@@ -109,8 +110,6 @@ class TestManageSettingsUseCase:
         # Act
         result = use_case(
             UpdateSettingsCommand(
-                app_name="Runtime Shop",
-                admin_panel_title="Панель магазина",
                 owner_can_view_products=True,
                 owner_can_edit_products=True,
                 owner_can_create_demo_data=True,
@@ -120,8 +119,6 @@ class TestManageSettingsUseCase:
         # Assert
         assert result is settings
         assert repo.saved == [settings]
-        assert settings.app_name == "Runtime Shop"
-        assert settings.admin_panel_title == "Панель магазина"
         assert settings.owner_can_view_category_tree is True
         assert settings.owner_can_view_products is True
         assert settings.owner_can_edit_products is True

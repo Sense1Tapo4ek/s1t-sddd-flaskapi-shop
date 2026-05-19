@@ -21,8 +21,6 @@ class SettingsModel(Base):
     viber_url: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     telegram_bot_token: Mapped[str] = mapped_column(String(255), default="")
     telegram_chat_id: Mapped[str] = mapped_column(String(100), default="")
-    app_name: Mapped[str] = mapped_column(String(100), default="Shop Admin", nullable=False)
-    admin_panel_title: Mapped[str] = mapped_column(String(100), default="Админ панель", nullable=False)
     owner_can_view_category_tree: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     owner_can_edit_taxonomy: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     owner_can_view_products: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

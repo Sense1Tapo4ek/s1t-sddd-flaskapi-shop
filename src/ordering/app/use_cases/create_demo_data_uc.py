@@ -60,6 +60,8 @@ _DEMO_INQUIRIES: list[dict[str, Any]] = [
 _DEMO_ORDERS: list[dict[str, Any]] = [
     {
         "customer_user_id": 900001,
+        "contact_email": "anna.ivanova@example.com",
+        "contact_phone": "+375 29 123-45-67",
         "items": [{"qty": 1}, {"qty": 2}],
         "delivery_method": "pickup",
         "address": "",
@@ -69,6 +71,8 @@ _DEMO_ORDERS: list[dict[str, Any]] = [
     },
     {
         "customer_user_id": 900001,
+        "contact_email": "anna.ivanova@example.com",
+        "contact_phone": "+375 29 123-45-67",
         "items": [{"qty": 1}],
         "delivery_method": "courier",
         "address": "г. Минск, пр. Независимости, 56, кв. 12",
@@ -78,6 +82,8 @@ _DEMO_ORDERS: list[dict[str, Any]] = [
     },
     {
         "customer_user_id": 900002,
+        "contact_email": "kozlov.s@example.com",
+        "contact_phone": "+375 44 222-11-00",
         "items": [{"qty": 3}],
         "delivery_method": "courier",
         "address": "г. Гомель, ул. Советская, 21",
@@ -87,6 +93,8 @@ _DEMO_ORDERS: list[dict[str, Any]] = [
     },
     {
         "customer_user_id": 900003,
+        "contact_email": "olga.k@example.com",
+        "contact_phone": "+375 25 777-11-22",
         "items": [{"qty": 1}, {"qty": 1}, {"qty": 2}],
         "delivery_method": "pickup",
         "address": "",
@@ -96,6 +104,8 @@ _DEMO_ORDERS: list[dict[str, Any]] = [
     },
     {
         "customer_user_id": 900004,
+        "contact_email": "",
+        "contact_phone": "+375 33 555-00-77",
         "items": [{"qty": 1}],
         "delivery_method": "courier",
         "address": "г. Брест, ул. Ленина, 7",
@@ -105,6 +115,8 @@ _DEMO_ORDERS: list[dict[str, Any]] = [
     },
     {
         "customer_user_id": 900005,
+        "contact_email": "maria@example.com",
+        "contact_phone": "+375 25 555-77-88",
         "items": [{"qty": 2}, {"qty": 1}],
         "delivery_method": "pickup",
         "address": "",
@@ -195,6 +207,8 @@ class CreateDemoOrderingDataUseCase:
                 customer_user_id=cfg["customer_user_id"],
                 items=items,
                 delivery=delivery,
+                contact_phone=cfg["contact_phone"],
+                contact_email=cfg["contact_email"],
                 comment=cfg["comment"],
             )
             self._orders.save(order)

@@ -142,8 +142,6 @@ class SiteSettings:
     instagram: str
     telegram_bot_token: str
     telegram_chat_id: str
-    app_name: str = "Shop Admin"
-    admin_panel_title: str = "Админ панель"
     owner_can_view_category_tree: bool = True
     owner_can_edit_taxonomy: bool = False
     owner_can_view_products: bool = False

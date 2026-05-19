@@ -43,6 +43,7 @@ def test_send_login_code_uses_configured_ttl_in_telegram_message():
     telegram_client = FakeTelegramClient()
     facade = SystemFacade(
         _config=SystemConfig(),
+        _root_config=object(),
         _get_query=_settings,
         _get_storage_query=object(),
         _manage_uc=object(),
@@ -52,6 +53,10 @@ def test_send_login_code_uses_configured_ttl_in_telegram_message():
         _fetch_chat_id_uc=object(),
         _notification_channel=object(),
         _telegram_client=telegram_client,
+        _list_snapshots_query=object(),
+        _create_snapshot_uc=object(),
+        _restore_snapshot_uc=object(),
+        _delete_snapshot_uc=object(),
     )
 
     # Act

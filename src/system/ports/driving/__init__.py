@@ -4,6 +4,8 @@ from .schemas import (
     InfoOut,
     SettingsOut,
     SettingsUpdateIn,
+    SnapshotListOut,
+    SnapshotOut,
     StorageSettingsOut,
     StorageSettingsUpdateIn,
 )
@@ -14,6 +16,8 @@ __all__ = [
     "InfoOut",
     "SettingsUpdateIn",
     "FetchChatIdIn",
+    "SnapshotOut",
+    "SnapshotListOut",
     "StorageSettingsOut",
     "StorageSettingsUpdateIn",
 ]

@@ -21,6 +21,167 @@
     }));
   }
 
+  const SECTION_HELP = {
+    tree: {
+      title: 'Дерево категорий — Справка',
+      body: `
+        <section>
+          <p style="margin-top:0;"><strong>Дерево категорий</strong> — иерархическая структура каталога. Корневые узлы образуют разделы магазина («Одежда», «Обувь»), их потомки — подкатегории («Платья», «Юбки», «Кроссовки»). К <em>листовым</em> категориям (без детей) привязываются товары.</p>
+        </section>
+        <section>
+          <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Как пользоваться</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Выбрать категорию:</strong> клик по узлу — справа откроется редактор (Настройки / Атрибуты / Товары).</li>
+            <li><strong>Развернуть / свернуть ветку:</strong> клик по треугольнику слева от названия.</li>
+            <li><strong>Поиск:</strong> поле «Найти категорию…» фильтрует видимые узлы по подстроке имени.</li>
+            <li><strong>Обновить:</strong> кнопка «Обновить» перезагружает дерево с сервера — полезно, если структуру правили в другой вкладке.</li>
+            <li><strong>Новая корневая категория:</strong> «+ Категория» в шапке страницы; <strong>дочерняя</strong> — кнопкой «+ Подкатегория» внутри редактора выбранного узла.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Что важно знать</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li>Иконка <strong>«—»</strong> или серый цвет узла = категория скрыта (галка «Активна» снята). На витрине её и её товаров не видно, но в БД они сохранены.</li>
+            <li>У <strong>нелистовых</strong> узлов товары можно просматривать («Товары → С подкатегориями»), но новый товар создаётся только под листом.</li>
+            <li>Перенос категории под другого родителя меняет URL на витрине — если категорию уже индексируют поисковики, делайте это осознанно.</li>
+            <li>Удаление возможно только для <strong>пустой</strong> категории: без дочерних узлов и без товаров.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Горячие клавиши</h4>
+          <ul style="padding-left:18px; margin:0;">
+            <li><kbd>Esc</kbd> — закрыть открытую модалку (форма, лайтбокс, эта справка).</li>
+            <li><kbd>Enter</kbd> — применить ввод в поле поиска / формы.</li>
+          </ul>
+        </section>
+      `
+    },
+    settings: {
+      title: 'Настройки категории — Справка',
+      body: `
+        <section>
+          <p style="margin-top:0;"><strong>Свойства категории</strong> — карточка узла дерева. Здесь меняется всё, что касается её представления и положения в иерархии.</p>
+        </section>
+        <section>
+          <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Поля формы</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Название</strong> — то, что видит покупатель в каталоге, хлебных крошках и админке.</li>
+            <li><strong>Slug</strong> — латинская часть URL (<code>/catalog/<em>slug</em></code>). Если оставить пустым при создании, сгенерируется из названия. <strong>Менять у опубликованной категории осторожно</strong> — старая ссылка перестанет открываться.</li>
+            <li><strong>Описание</strong> — текст под заголовком на витрине. Поддерживает простой markdown / переносы строк (зависит от темы фронта).</li>
+            <li><strong>Родитель</strong> — позиция в дереве. Корневые узлы родителя не имеют. Менять можно: категория переедет вместе со всеми потомками и товарами.</li>
+            <li><strong>Активна</strong> — главный переключатель видимости. Снятая галка прячет категорию <em>и</em> все её товары на витрине без удаления из БД. Полезно для сезонных разделов и временной приостановки продаж.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Действия</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Сохранить</strong> — записать изменения. Если slug или родитель изменились, дерево слева обновится автоматически.</li>
+            <li><strong>Удалить</strong> — доступно только если категория пуста (нет дочерних узлов <em>и</em> нет товаров). Если есть — сервер вернёт ошибку: сначала перенесите содержимое в другую категорию.</li>
+            <li><strong>+ Подкатегория</strong> — создаёт дочерний узел; родитель подставится автоматически.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+          <ul style="padding-left:18px; margin:0;">
+            <li>Скрытая категория не выпадает из админки — её можно найти, если включить отображение скрытых узлов (или искать по точному названию).</li>
+            <li>SEO-зависимые правки (slug, родитель) лучше делать пачкой и в одно «окно» — чтобы не плодить редиректы.</li>
+            <li>Атрибуты, объявленные на категории, наследуются всеми её потомками — переезд в другого родителя <strong>не</strong> переносит чужие атрибуты автоматически.</li>
+          </ul>
+        </section>
+      `
+    },
+    attributes: {
+      title: 'Атрибуты категории — Справка',
+      body: `
+        <section>
+          <p style="margin-top:0;"><strong>Атрибуты</strong> — типизированные поля, описывающие товар в данной категории. По ним работают карточка товара и фильтры на витрине.</p>
+        </section>
+        <section>
+          <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Наследуемые vs Свои</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Наследуемые</strong> — пришли от категорий-предков. Здесь только для просмотра; редактировать нужно у того узла, где атрибут объявлен.</li>
+            <li><strong>Свои</strong> — объявлены на этой категории. Видны на ней самой и на всех её потомках; в потомках их редактировать нельзя.</li>
+            <li>Правило: атрибут описывает максимально <em>общий</em> уровень иерархии, на котором он осмыслен. «Размер» — на «Одежде», а не на каждой подкатегории.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Поля атрибута</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Название</strong> — отображается в карточке и фильтре витрины.</li>
+            <li><strong>Код</strong> — латиница, snake_case. Стабильный идентификатор: по нему адресуются значения и URL фильтров. <strong>После сохранения не меняется</strong>.</li>
+            <li><strong>Тип</strong> определяет вид ввода и поведение фильтра:
+              <code>Текст</code>, <code>Число</code> (с единицей измерения),
+              <code>Да/нет</code>,
+              <code>Один вариант</code> / <code>Несколько вариантов</code> (тогда появляется список «Варианты»),
+              <code>Дата</code>, <code>Ссылка</code>, <code>Файл</code>, <code>Изображение</code>.</li>
+            <li><strong>Единица</strong> — для числовых: «см», «кг», «Br», «EUR».</li>
+            <li><strong>Обязательный</strong> — без значения товар нельзя сохранить.</li>
+            <li><strong>Варианты</strong> (только для select / multiselect) — порядок отображения = порядок в списке; перетаскивать можно мышью.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+          <ul style="padding-left:18px; margin:0;">
+            <li>Удаление атрибута удалит все его значения у товаров. Если он наследуется — сделать это можно только у узла-владельца.</li>
+            <li>Изменение типа атрибута опасно: уже сохранённые значения могут стать невалидными. Если нужно — создайте новый атрибут и перенесите данные.</li>
+            <li>Коды атрибутов должны быть уникальны в пределах эффективной цепочки наследования (свои + унаследованные).</li>
+          </ul>
+        </section>
+      `
+    },
+    products: {
+      title: 'Товары категории — Справка',
+      body: `
+        <section>
+          <p style="margin-top:0;"><strong>Товары категории</strong> — таблица карточек, привязанных к выбранному узлу дерева. Здесь они отображаются в админском виде с фильтрами и массовыми действиями.</p>
+        </section>
+        <section>
+          <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Режим показа</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Только эта</strong> — товары, прикреплённые к этому узлу напрямую. Для листовых категорий — естественный режим.</li>
+            <li><strong>С подкатегориями</strong> — плюс товары всех потомков. Полезно для нелистовых узлов («Одежда»), чтобы быстро оценить наполнение раздела.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Создание товара</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>+ Новый товар</strong> — создаёт карточку в выбранной категории. Доступно только в листовых узлах; в нелистовых нужно сначала выбрать конкретный лист.</li>
+            <li>В новой карточке заранее активны все атрибуты этой категории (свои + наследуемые) — заполните их сразу, не сохраняя черновик.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Таблица</h4>
+          <ul style="padding-left:18px; margin:0 0 12px;">
+            <li><strong>Фильтры и сортировка</strong> — через выпадающие меню в заголовках колонок (SmartTable).</li>
+            <li><strong>Массовые действия</strong> — отметьте строки чекбоксами, появится плавающая панель: смена активности, тегов, удаление.</li>
+            <li><strong>Shift</strong> + клик по чекбоксу выделяет диапазон строк.</li>
+            <li><strong>Двойной клик</strong> по строке открывает карточку товара для редактирования.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Подсказки</h4>
+          <ul style="padding-left:18px; margin:0;">
+            <li>Привязка к категории меняется в карточке товара — товар может принадлежать только одной категории.</li>
+            <li>Скрытая категория автоматически скрывает свои товары на витрине; в админке они остаются доступны.</li>
+            <li>Если товаров много, сначала сузьте фильтрами — массовые действия применяются только к видимой выборке.</li>
+          </ul>
+        </section>
+      `
+    }
+  };
+
+  window.openCatalogSectionHelp = function(key) {
+    const data = SECTION_HELP[key];
+    if (!data) return;
+    const titleEl = document.getElementById('catalog-section-help-title');
+    const bodyEl = document.getElementById('catalog-section-help-body');
+    const modal = document.getElementById('catalog-section-help-modal');
+    if (!titleEl || !bodyEl || !modal) return;
+    titleEl.textContent = data.title;
+    bodyEl.innerHTML = data.body;
+    modal.classList.add('modal-overlay--active');
+  };
+
   function categoryIsLeaf(category) {
     return !(category.children && category.children.length);
   }
@@ -85,17 +246,7 @@
         <div class="catalog-table-toolbar">
           <div class="catalog-section-title">
             Свойства категории
-            <details class="block-help">
-              <summary class="help-badge help-badge--inline" title="Что здесь редактируется">?</summary>
-              <div class="block-help__body">
-                <p><strong>Настройки категории</strong> — те же поля, что и в модалке создания, плюс удаление.</p>
-                <ul>
-                  <li><strong>Slug</strong> и <strong>родителя</strong> можно менять — это пересоберёт URL и положение в дереве.</li>
-                  <li><strong>Активна</strong> — снятая галка прячет категорию и её товары на витрине, но в БД они сохраняются.</li>
-                  <li><strong>Удалить</strong> — только если у категории нет дочерних узлов и нет товаров. Иначе сервер вернёт ошибку.</li>
-                </ul>
-              </div>
-            </details>
+            <button class="help-badge help-badge--inline" type="button" title="Справка: настройки категории" onclick="openCatalogSectionHelp('settings')">?</button>
           </div>
         </div>
         ${renderCategorySettings(category)}
@@ -110,18 +261,7 @@
           <div class="catalog-table-toolbar">
             <div class="catalog-section-title">
               Товары категории
-              <details class="block-help">
-                <summary class="help-badge help-badge--inline" title="Что показывает таблица товаров">?</summary>
-                <div class="block-help__body">
-                  <p><strong>Товары категории.</strong> Карточки, привязанные к выбранному узлу.</p>
-                  <ul>
-                    <li><strong>Только эта</strong> — только товары, прикреплённые непосредственно к этому узлу.</li>
-                    <li><strong>С подкатегориями</strong> — плюс товары всех потомков (полезно для нелистовых узлов).</li>
-                    <li>Новый товар можно создать только под <strong>листовой</strong> категорией. У узлов с подкатегориями кнопка «+ Новый товар» доступна, но в форме сначала выберется лист.</li>
-                    <li>Фильтры/сортировка таблицы — через заголовки колонок (SmartTable).</li>
-                  </ul>
-                </div>
-              </details>
+              <button class="help-badge help-badge--inline" type="button" title="Справка: товары категории" onclick="openCatalogSectionHelp('products')">?</button>
             </div>
             <div class="taxonomy-toggle">
               <button class="taxonomy-toggle__btn ${state.productsIncludeDescendants ? '' : 'taxonomy-toggle__btn--active'}" id="catProductsDirect" type="button" onclick="setProductsMode(false)">Только эта</button>
@@ -359,19 +499,7 @@
         <div>
           <div class="catalog-section-title">
             Атрибуты категории
-            <details class="block-help">
-              <summary class="help-badge help-badge--inline" title="Как работают атрибуты">?</summary>
-              <div class="block-help__body">
-                <p><strong>Атрибуты</strong> — это поля, по которым описываются и фильтруются товары в данной категории.</p>
-                <ul>
-                  <li><strong>Наследуемые</strong> — пришли от категорий-родителей. Здесь только для чтения; редактируй их у того узла, где они объявлены.</li>
-                  <li><strong>Свои</strong> — добавлены на этой категории. Видны во всех её потомках.</li>
-                  <li><strong>Тип</strong> атрибута определяет вид ввода у товара: текст, число (с единицей), да/нет, один/несколько вариантов, дата, ссылка, файл, изображение.</li>
-                  <li><strong>Обязательный</strong> — товар нельзя сохранить без значения.</li>
-                  <li><strong>Код</strong> атрибута уникален в пределах эффективной цепочки наследования и менять его после публикации опасно (поломает фильтры на витрине).</li>
-                </ul>
-              </div>
-            </details>
+            <button class="help-badge help-badge--inline" type="button" title="Справка: атрибуты категории" onclick="openCatalogSectionHelp('attributes')">?</button>
           </div>
           <div class="catalog-section-hint">Наследуемые читаются сверху, собственные можно редактировать здесь.</div>
         </div>

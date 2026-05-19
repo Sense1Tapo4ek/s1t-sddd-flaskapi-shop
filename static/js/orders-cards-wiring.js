@@ -42,23 +42,56 @@
     return '<span class="badge ' + esc(cls) + '">' + esc(label) + '</span>';
   }
 
+  function renderItemsList(items) {
+    if (!Array.isArray(items) || items.length === 0) return "";
+    var rows = items.map(function (it) {
+      var qty = it.quantity != null ? it.quantity : 0;
+      var price = it.unit_price != null ? String(it.unit_price) : "—";
+      var title = it.title_snapshot || ("Товар #" + it.product_id);
+      return (
+        '<li class="cf-card__item">' +
+          '<a href="/admin/products/' + esc(it.product_id) + '/edit" class="cf-card__item-link">' +
+            esc(title) +
+          '</a>' +
+          '<span class="cf-card__item-meta">' + esc(qty) + ' × ' + esc(price) + ' Br</span>' +
+        '</li>'
+      );
+    }).join("");
+    return '<ul class="cf-card__items">' + rows + '</ul>';
+  }
+
+  function renderContacts(o) {
+    var parts = [];
+    if (o.contact_email) {
+      parts.push('<a href="mailto:' + esc(o.contact_email) + '">' + esc(o.contact_email) + '</a>');
+    }
+    if (o.contact_phone) {
+      parts.push('<a href="tel:' + esc(o.contact_phone) + '">' + esc(o.contact_phone) + '</a>');
+    }
+    if (parts.length === 0) return '<div class="cf-card__contacts cf-card__contacts--empty">Контакты не указаны</div>';
+    return '<div class="cf-card__contacts">' + parts.join(' · ') + '</div>';
+  }
+
   function renderOrderCard(o) {
-    var itemsCount = Array.isArray(o.items) ? o.items.length : 0;
     var total = o.total != null ? String(o.total) : "—";
-    var delivery = o.delivery_method || "—";
-    var comment = o.comment ? String(o.comment).slice(0, 120) : "";
+    var delivery = o.delivery_method === "courier" ? "Курьер" : (o.delivery_method === "pickup" ? "Самовывоз" : (o.delivery_method || "—"));
+    var address = o.delivery_address ? '<div class="cf-card__address">📍 ' + esc(o.delivery_address) + '</div>' : "";
+    var comment = o.comment ? String(o.comment).slice(0, 200) : "";
     var commentHtml = comment
-      ? '<div class="cf-card__comment">«' + esc(comment) + (o.comment && o.comment.length > 120 ? "…" : "") + '»</div>'
+      ? '<div class="cf-card__comment">«' + esc(comment) + (o.comment && o.comment.length > 200 ? "…" : "") + '»</div>'
       : "";
 
     return (
       '<div class="cf-card-body">' +
         '<div class="cf-card-body__head">' +
           statusBadge(o.status) +
-          '<span class="cf-card-body__meta">#' + esc(o.id) + ' · ' + esc(o.created_at) + ' · customer=' + esc(o.customer_user_id) + '</span>' +
+          '<span class="cf-card-body__meta">#' + esc(o.id) + ' · ' + esc(o.created_at) + '</span>' +
         '</div>' +
         '<div class="cf-card-body__content">' +
-          '<div>' + esc(itemsCount) + ' товаров · ' + esc(total) + ' Br · ' + esc(delivery) + '</div>' +
+          renderContacts(o) +
+          renderItemsList(o.items) +
+          '<div class="cf-card__summary"><strong>' + esc(total) + ' Br</strong> · ' + esc(delivery) + '</div>' +
+          address +
           commentHtml +
         '</div>' +
       '</div>'

@@ -26,6 +26,7 @@ from shared.generics.errors import DrivingPortError
 
 system_admin_bp = APIBlueprint("system_admin", __name__, url_prefix="/admin/settings", enable_openapi=False)
 account_admin_bp = APIBlueprint("account_admin", __name__, url_prefix="/admin/account", enable_openapi=False)
+backups_admin_bp = APIBlueprint("backups_admin", __name__, url_prefix="/admin/backups", enable_openapi=False)
 
 
 TAB_TITLES = {
@@ -47,6 +48,41 @@ def _form_float(name: str, default: float = 0.0) -> float:
         return float(raw)
     except (TypeError, ValueError) as exc:
         raise DrivingPortError(f"Некорректное числовое значение: {name}") from exc
+
+
+_DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
+def _parse_working_hours_schedule() -> dict[str, dict | None]:
+    """Read seven day rows from the form.
+
+    Convention per day:
+        {day}_off          → checkbox; on means closed
+        {day}_opens        → HH:MM
+        {day}_closes       → HH:MM
+        {day}_break_start  → HH:MM (optional)
+        {day}_break_end    → HH:MM (optional)
+    """
+    f = request.form
+    schedule: dict[str, dict | None] = {}
+    for day in _DAYS:
+        if _form_bool(f"{day}_off"):
+            schedule[day] = None
+            continue
+        opens = (f.get(f"{day}_opens", "") or "").strip()
+        closes = (f.get(f"{day}_closes", "") or "").strip()
+        if not opens or not closes:
+            schedule[day] = None
+            continue
+        bs = (f.get(f"{day}_break_start", "") or "").strip() or None
+        be = (f.get(f"{day}_break_end", "") or "").strip() or None
+        schedule[day] = {
+            "opens_at": opens,
+            "closes_at": closes,
+            "break_start": bs,
+            "break_end": be,
+        }
+    return schedule
 
 
 # Project root: src/system/adapters/driving/admin.py → parents[4]. The
@@ -155,15 +191,11 @@ def account_page(access_facade: FromDishka[AdminFacade]):
 def update_store(facade: FromDishka[SystemFacade]):
     f = request.form
     schema = SettingsUpdateIn(
-        branding={
-            "app_name": f.get("app_name", ""),
-            "admin_panel_title": f.get("admin_panel_title", ""),
-        },
         contacts={
             "phone": f.get("phone", ""),
             "email": f.get("email", ""),
             "address": f.get("address", ""),
-            "working_hours": f.get("working_hours", ""),
+            "working_hours_schedule": _parse_working_hours_schedule(),
         },
         coords={
             "lat": _form_float("coords_lat"),
@@ -380,5 +412,69 @@ def update_current_user_chat_id(
     response = make_response("")
     response.headers["HX-Trigger"] = json.dumps({
         "showToast": {"message": "Привязка Telegram сохранена", "type": "success"}
+    })
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Backups admin (superadmin-only)
+# ---------------------------------------------------------------------------
+
+@backups_admin_bp.route("/")
+@superadmin_required
+@inject
+def backups_page(facade: FromDishka[SystemFacade]):
+    """List all snapshots — main backups admin page."""
+    snapshots = facade.list_snapshots()
+    return render_template("system/pages/backups.html", snapshots=snapshots)
+
+
+@backups_admin_bp.route("/snapshot", methods=["POST"])
+@superadmin_required
+@inject
+def create_snapshot(facade: FromDishka[SystemFacade]):
+    """Create a new snapshot and return a refreshed table partial + toast."""
+    facade.create_snapshot()
+    snapshots = facade.list_snapshots()
+    response = make_response(
+        render_template("system/partials/backups_table.html", snapshots=snapshots)
+    )
+    response.headers["HX-Trigger"] = json.dumps({
+        "showToast": {"message": "Снапшот создан", "type": "success"}
+    })
+    return response
+
+
+@backups_admin_bp.route("/<string:name>/restore", methods=["POST"])
+@superadmin_required
+@inject
+def restore_snapshot(facade: FromDishka[SystemFacade], name: str):
+    """
+    Restore the database from snapshot *name*.
+
+    Side effect: maintenance mode is entered (and exited) inside the use case.
+    Returns a full-page redirect so the admin is sent back to a clean state.
+    """
+    facade.restore_snapshot(name=name)
+    response = make_response("")
+    response.headers["HX-Trigger"] = json.dumps({
+        "showToast": {"message": "База данных восстановлена", "type": "success"}
+    })
+    response.headers["HX-Redirect"] = "/admin/backups/"
+    return response
+
+
+@backups_admin_bp.route("/<string:name>", methods=["DELETE"])
+@superadmin_required
+@inject
+def delete_snapshot(facade: FromDishka[SystemFacade], name: str):
+    """Delete snapshot *name* and return a refreshed table partial + toast."""
+    facade.delete_snapshot(name=name)
+    snapshots = facade.list_snapshots()
+    response = make_response(
+        render_template("system/partials/backups_table.html", snapshots=snapshots)
+    )
+    response.headers["HX-Trigger"] = json.dumps({
+        "showToast": {"message": "Снапшот удалён", "type": "success"}
     })
     return response

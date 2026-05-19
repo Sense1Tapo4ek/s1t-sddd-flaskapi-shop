@@ -36,6 +36,8 @@ def _order_out() -> OrderOut:
     return OrderOut(
         id=1,
         customer_user_id=42,
+        contact_email="customer@example.com",
+        contact_phone="+375 29 000-00-00",
         items=[
             OrderItemOut(
                 product_id=1,
@@ -137,6 +139,8 @@ class TestOrderPublicEndpoint:
     _valid_body = {
         "items": [{"product_id": 1, "quantity": 2}],
         "delivery_method": "pickup",
+        "contact_phone": "+375 29 000-00-00",
+        "contact_email": "customer@example.com",
         "address": "",
         "delivery_comment": "",
         "comment": "test",

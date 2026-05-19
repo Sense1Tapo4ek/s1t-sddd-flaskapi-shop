@@ -46,6 +46,8 @@ class CreateTestOrderUseCase:
             customer_user_id=_TEST_CUSTOMER_USER_ID,
             items=items,
             delivery=delivery,
+            contact_phone="+375 29 000-00-00",
+            contact_email="test.customer@example.com",
             comment="Создан через кнопку «Создать тестовый заказ»",
         )
         self._orders.save(order)

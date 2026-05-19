@@ -111,7 +111,7 @@ def test_product_form_image_handlers_use_js_literals():
 
 
 def test_product_form_template_renders_cancel_url_with_initial_category(
-    monkeypatch, tmp_path
+    monkeypatch, mysql_test_db
 ):
     """
     Given the new product form opened from a catalog category,
@@ -119,7 +119,6 @@ def test_product_form_template_renders_cancel_url_with_initial_category(
     Then the cancel link keeps the category context in the catalog URL.
     """
     # Arrange
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
     from flask import render_template, request

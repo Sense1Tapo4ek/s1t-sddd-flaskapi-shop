@@ -296,3 +296,71 @@
 .requests-feed--hidden {
   display: none !important;
 }
+
+/* ─── Orders card: items list + contacts ─────────────────────────────────── */
+
+.cf-card__contacts {
+  font-size: 13px;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+.cf-card__contacts a {
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--color-border);
+}
+.cf-card__contacts a:hover {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+.cf-card__contacts--empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.cf-card__items {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+  border-radius: 6px;
+}
+.cf-card__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 2px 0;
+}
+.cf-card__item + .cf-card__item {
+  border-top: 1px dashed var(--color-border);
+}
+.cf-card__item-link {
+  color: var(--color-text);
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cf-card__item-link:hover {
+  color: var(--color-primary);
+}
+.cf-card__item-meta {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cf-card__summary {
+  font-size: 13px;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+.cf-card__address {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}

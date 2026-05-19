@@ -13,8 +13,7 @@ import pytest
 pytestmark = pytest.mark.flow
 
 
-def _make_app(monkeypatch, tmp_path, *, register_limit: str, recover_limit: str):
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
+def _make_app(monkeypatch, mysql_test_db, *, register_limit: str, recover_limit: str):
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
     monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "admin")
     monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "changeme")
@@ -25,14 +24,14 @@ def _make_app(monkeypatch, tmp_path, *, register_limit: str, recover_limit: str)
     return create_app()
 
 
-def test_register_rate_limit_enforced_even_in_dev(monkeypatch, tmp_path):
+def test_register_rate_limit_enforced_even_in_dev(monkeypatch, mysql_test_db):
     """
     Given customer-register limit set to 2/min in dev,
     When 3 register requests fire within the same minute,
     Then the 3rd request returns 429 (the post-hoc limit reassignment fires).
     """
     app = _make_app(
-        monkeypatch, tmp_path,
+        monkeypatch, mysql_test_db,
         register_limit="2 per minute",
         recover_limit="100 per minute",
     )
@@ -51,14 +50,14 @@ def test_register_rate_limit_enforced_even_in_dev(monkeypatch, tmp_path):
     assert statuses[2] == 429, f"expected rate limit on 3rd attempt, got {statuses}"
 
 
-def test_recover_rate_limit_enforced_even_in_dev(monkeypatch, tmp_path):
+def test_recover_rate_limit_enforced_even_in_dev(monkeypatch, mysql_test_db):
     """
     Given customer-recover limit set to 2/min in dev,
     When 3 recover requests fire within the same minute,
     Then the 3rd request returns 429 while the first two return 202.
     """
     app = _make_app(
-        monkeypatch, tmp_path,
+        monkeypatch, mysql_test_db,
         register_limit="100 per minute",
         recover_limit="2 per minute",
     )

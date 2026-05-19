@@ -38,6 +38,8 @@ class Order:
     comment: str
     status: OrderStatus
     created_at: datetime
+    contact_email: str = ""
+    contact_phone: str = ""
 
     @classmethod
     def place(
@@ -46,6 +48,8 @@ class Order:
         customer_user_id: int,
         items: list[OrderItem],
         delivery: DeliveryInfo,
+        contact_phone: str = "",
+        contact_email: str = "",
         comment: str = "",
     ) -> "Order":
         if customer_user_id <= 0:
@@ -59,6 +63,8 @@ class Order:
         return cls(
             id=0,
             customer_user_id=customer_user_id,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
             items=list(items),
             total=total,
             delivery=delivery,

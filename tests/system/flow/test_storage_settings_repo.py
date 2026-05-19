@@ -2,7 +2,6 @@ import pytest
 from cryptography.fernet import Fernet
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from shared.adapters.driven import Base, SecretCipher
 from system.adapters.driven.db.models import StorageSettingsModel
@@ -14,12 +13,8 @@ pytestmark = pytest.mark.flow
 
 
 @pytest.fixture
-def repo_and_session():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+def repo_and_session(mysql_test_db):
+    engine = create_engine(mysql_test_db, future=True)
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(engine, expire_on_commit=False)
     cipher = SecretCipher(_key=Fernet.generate_key().decode())

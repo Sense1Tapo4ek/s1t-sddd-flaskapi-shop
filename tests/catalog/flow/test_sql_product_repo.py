@@ -5,7 +5,6 @@ from datetime import datetime
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from catalog.adapters.driven.db.models import (
     CategoryAttributeModel,
@@ -22,14 +21,15 @@ from shared.generics.pagination import PaginationParams
 pytestmark = pytest.mark.flow
 
 
-@pytest.fixture
-def product_repo():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+def _build_engine(url: str):
+    engine = create_engine(url, future=True)
     Base.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture
+def product_repo(mysql_test_db):
+    engine = _build_engine(mysql_test_db)
     session_factory = sessionmaker(engine, expire_on_commit=False)
 
     with session_factory() as session:
@@ -61,13 +61,8 @@ def product_repo():
 
 
 @pytest.fixture
-def nested_category_product_repo():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(engine)
+def nested_category_product_repo(mysql_test_db):
+    engine = _build_engine(mysql_test_db)
     session_factory = sessionmaker(engine, expire_on_commit=False)
 
     with session_factory() as session:
@@ -97,13 +92,8 @@ def nested_category_product_repo():
 
 
 @pytest.fixture
-def attribute_product_repo():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(engine)
+def attribute_product_repo(mysql_test_db):
+    engine = _build_engine(mysql_test_db)
     session_factory = sessionmaker(engine, expire_on_commit=False)
 
     with session_factory() as session:
@@ -190,7 +180,7 @@ def test_admin_search_sorts_products_by_leaf_category_title(nested_category_prod
     full path. Building the path requires a recursive CTE which MySQL 5.7
     (our deployed engine) does not support. A direct-title sort matches
     the user-facing column rendering well enough and is portable across
-    MySQL 5.7 / 8.0 / SQLite.
+    MySQL 5.7 / 8.0.
     """
     # Act
     result = nested_category_product_repo.search(
@@ -259,7 +249,6 @@ def test_admin_search_sorts_and_filters_by_attribute_columns(attribute_product_r
 
 
 # FTS tests were removed in the MySQL migration: they exercised the
-# legacy SQLite FTS5 virtual-table architecture, while production now
-# uses MySQL FULLTEXT (MATCH ... AGAINST). FTS coverage belongs in the
-# integration tier with a real MySQL container, not in flow tests on
-# in-memory SQLite.
+# legacy FTS5 virtual-table architecture, while production now uses
+# MySQL FULLTEXT (MATCH ... AGAINST). FTS coverage belongs in the
+# integration tier with a real MySQL container, not in flow tests.

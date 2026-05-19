@@ -92,6 +92,8 @@ def _cmd(
         items=[PlaceOrderItem(product_id=p, quantity=q) for p, q in items],
         delivery_method=delivery_method,
         address=address,
+        contact_phone="+375 29 000-00-00",
+        contact_email="cust@example.com",
     )
 
 

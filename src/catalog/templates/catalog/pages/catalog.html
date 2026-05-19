@@ -67,24 +67,24 @@
     </div>
   </div>
 
+  <!-- Section-level help modal: content set by openCatalogSectionHelp(key) -->
+  <div class="modal-overlay" id="catalog-section-help-modal" role="dialog" aria-modal="true" aria-label="Справка по разделу" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+    <div class="modal">
+      <div class="modal__header">
+        <span id="catalog-section-help-title">Справка</span>
+        <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('catalog-section-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+      </div>
+      <div class="modal__body" id="catalog-section-help-body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);"></div>
+    </div>
+  </div>
+
   <div class="catalog-shell">
     <aside class="catalog-tree-panel">
       <div class="catalog-tree-panel__header">
         <div>
           <div class="catalog-tree-panel__title">
             Дерево
-            <details class="block-help">
-              <summary class="help-badge help-badge--inline" title="Что такое дерево категорий">?</summary>
-              <div class="block-help__body">
-                <p><strong>Дерево категорий</strong> — структура каталога. Узел верхнего уровня — раздел («Одежда»), его дети — подкатегории («Платья»).</p>
-                <ul>
-                  <li>Клик по узлу — справа открываются настройки, атрибуты и товары категории.</li>
-                  <li>Поиск фильтрует по названию.</li>
-                  <li>Кнопка «Обновить» перезагружает дерево с сервера, если что-то изменилось в другой вкладке.</li>
-                  <li><strong>Товары привязываются только к листовым</strong> (конечным) категориям. У узлов с детьми товары можно посмотреть, но не добавлять.</li>
-                </ul>
-              </div>
-            </details>
+            <button class="help-badge help-badge--inline" type="button" title="Справка: дерево категорий" onclick="openCatalogSectionHelp('tree')">?</button>
           </div>
           <div class="catalog-tree-panel__hint">Выберите категорию</div>
         </div>

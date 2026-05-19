@@ -31,6 +31,8 @@ class OrderModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     customer_user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    contact_email: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    contact_phone: Mapped[str] = mapped_column(String(50), nullable=False, default="")
     total: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     delivery_method: Mapped[str] = mapped_column(String(20), nullable=False)
     delivery_address: Mapped[str] = mapped_column(String(500), nullable=False, default="")

@@ -31,8 +31,7 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _make_app(monkeypatch, tmp_path):
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
+def _make_app(monkeypatch, mysql_test_db):
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
     monkeypatch.setenv("ACCESS_DEFAULT_LOGIN", "superadmin")
     monkeypatch.setenv("ACCESS_DEFAULT_PASSWORD", "superadmin")
@@ -56,13 +55,13 @@ def _reset_rate_limit_state():
 
 
 class TestBulkRateLimited:
-    def test_no_rate_limit_when_disabled(self, monkeypatch, tmp_path):
+    def test_no_rate_limit_when_disabled(self, monkeypatch, mysql_test_db):
         """
         Given BULK_RATE_LIMIT_ENABLED=False,
         When 15 consecutive POSTs are issued to /admin/products/bulk/activate,
         Then all 15 responses are 200 (not 429).
         """
-        app = _make_app(monkeypatch, tmp_path)
+        app = _make_app(monkeypatch, mysql_test_db)
         app.config["BULK_RATE_LIMIT_ENABLED"] = False
         client = app.test_client()
         token = _login(client, "superadmin", "superadmin")
@@ -77,13 +76,13 @@ class TestBulkRateLimited:
                 f"request {i + 1}/15 returned {resp.status_code} with rate limiting disabled"
             )
 
-    def test_rate_limited_after_threshold(self, monkeypatch, tmp_path):
+    def test_rate_limited_after_threshold(self, monkeypatch, mysql_test_db):
         """
         Given BULK_RATE_LIMIT_ENABLED=True and max_per_min=10,
         When 10 POSTs succeed,
         Then the 11th POST returns 429 with a machine-readable code in the body.
         """
-        app = _make_app(monkeypatch, tmp_path)
+        app = _make_app(monkeypatch, mysql_test_db)
         app.config["BULK_RATE_LIMIT_ENABLED"] = True
         client = app.test_client()
         token = _login(client, "superadmin", "superadmin")
@@ -110,13 +109,13 @@ class TestBulkRateLimited:
             f"expected rate-limit indicator in body, got: {body!r}"
         )
 
-    def test_separate_actions_have_separate_buckets(self, monkeypatch, tmp_path):
+    def test_separate_actions_have_separate_buckets(self, monkeypatch, mysql_test_db):
         """
         Given BULK_RATE_LIMIT_ENABLED=True,
         When 10 POSTs hit /bulk/activate and 10 POSTs hit /bulk/delete independently,
         Then each action's 11th call returns 429 but the other action's bucket is unaffected.
         """
-        app = _make_app(monkeypatch, tmp_path)
+        app = _make_app(monkeypatch, mysql_test_db)
         app.config["BULK_RATE_LIMIT_ENABLED"] = True
         client = app.test_client()
         token = _login(client, "superadmin", "superadmin")
@@ -159,13 +158,13 @@ class TestBulkRateLimited:
             f"11th delete should be 429, got {resp_del.status_code}"
         )
 
-    def test_reset_helper_clears_buckets(self, monkeypatch, tmp_path):
+    def test_reset_helper_clears_buckets(self, monkeypatch, mysql_test_db):
         """
         Given BULK_RATE_LIMIT_ENABLED=True and the activate bucket is at limit,
         When reset_bulk_rate_limit_state() is called,
         Then the next POST returns 200 (bucket is cleared).
         """
-        app = _make_app(monkeypatch, tmp_path)
+        app = _make_app(monkeypatch, mysql_test_db)
         app.config["BULK_RATE_LIMIT_ENABLED"] = True
         client = app.test_client()
         token = _login(client, "superadmin", "superadmin")

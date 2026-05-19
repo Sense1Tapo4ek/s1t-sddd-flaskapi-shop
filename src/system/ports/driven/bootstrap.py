@@ -8,7 +8,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from access.config import AccessConfig
-from root.config import RootConfig
 from system.adapters.driven.db.models import SettingsModel, StorageSettingsModel
 
 logger = logging.getLogger("system.bootstrap")
@@ -18,25 +17,15 @@ def bootstrap_system_defaults(
     session_factory: Callable[[], Session],
     *,
     access_config: AccessConfig,
-    root_config: RootConfig,
 ) -> None:
     with session_factory() as session:
         settings = session.execute(
             select(SettingsModel).where(SettingsModel.id == 1)
         ).scalar_one_or_none()
         if not settings:
-            settings = SettingsModel(
-                id=1,
-                app_name=root_config.app_name,
-                admin_panel_title="Админ панель",
-            )
+            settings = SettingsModel(id=1)
             session.add(settings)
             logger.info("Created default system settings")
-        elif not settings.app_name:
-            settings.app_name = root_config.app_name
-
-        if not settings.admin_panel_title:
-            settings.admin_panel_title = "Админ панель"
 
         # Owner permissions: .env is the source of truth. Re-assert on every
         # boot so editing ACCESS_OWNER_CAN_* in .env propagates after restart

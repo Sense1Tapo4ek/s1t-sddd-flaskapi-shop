@@ -106,6 +106,7 @@ class TestFacadePlaceOrder:
         schema = OrderIn(
             items=[OrderItemIn(product_id=1, quantity=3)],
             delivery_method="pickup",
+            contact_phone="+375 29 000-00-00",
         )
         result = facade.place_order(schema, customer_user_id=5)
 

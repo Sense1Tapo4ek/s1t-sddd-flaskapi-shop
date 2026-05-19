@@ -1,16 +1,17 @@
 """Pre-flight check that yoyo migrations have been applied.
 
-The Flask app never issues DDL on the production backend (MySQL).
+The Flask app never issues DDL on the production backend (MySQL 5.7+).
 Schema is owned by ``migrations/*.sql``. On startup we verify the
 canonical tables exist; if not, we raise with a clear message pointing
 the operator at the migration runner.
 
-SQLite is a TEST-ONLY backend (in-memory or temp file in pytest).
-Production never points at SQLite. We treat a SQLite engine as an
-implicit test environment and auto-create the schema from SQLAlchemy
-metadata — running yoyo against SQLite would fail anyway because the
-migration SQL is MySQL-specific (utf8mb4, FULLTEXT, etc.).
+Tests bypass yoyo via the ``INFRA_TEST_AUTO_SCHEMA=1`` escape hatch:
+when set, the guard issues ``Base.metadata.create_all`` against the
+engine. This is the ONLY supported way to short-circuit migrations,
+and is intended exclusively for the pytest harness.
 """
+
+import os
 
 from sqlalchemy import inspect
 from sqlalchemy.engine import Engine
@@ -32,16 +33,15 @@ class SchemaNotReadyError(RuntimeError):
     """Raised when expected tables are missing — migrations not applied."""
 
 
-def _is_sqlite(engine: Engine) -> bool:
-    return engine.dialect.name == "sqlite"
+def _auto_schema_requested() -> bool:
+    return os.environ.get("INFRA_TEST_AUTO_SCHEMA", "").lower() in ("1", "true", "yes", "on")
 
 
 def ensure_schema_present(engine: Engine) -> None:
-    if _is_sqlite(engine):
-        # Test backend. Production never uses SQLite, so this branch
-        # never runs in prod. Tests get a fresh schema for every
-        # fixture without needing to wire yoyo against an
-        # incompatible dialect.
+    if _auto_schema_requested():
+        # Test-only escape hatch: skip migration-applied check and
+        # build the schema from SQLAlchemy metadata directly. Never
+        # enable in production — DDL ownership belongs to yoyo.
         from shared.adapters.driven import Base
 
         Base.metadata.create_all(engine)

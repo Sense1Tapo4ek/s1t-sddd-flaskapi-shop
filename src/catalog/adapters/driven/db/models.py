@@ -202,7 +202,12 @@ class ProductAttributeValueModel(Base):
     __table_args__ = (
         UniqueConstraint("product_id", "attribute_id", name="uq_product_attribute_value"),
         Index("idx_product_attribute_values_attribute_id", "attribute_id"),
-        Index("idx_product_attribute_values_text", "attribute_id", "value_text"),
+        Index(
+            "idx_product_attribute_values_text",
+            "attribute_id",
+            "value_text",
+            mysql_length={"value_text": 64},
+        ),
         Index("idx_product_attribute_values_number", "attribute_id", "value_number"),
         Index("idx_product_attribute_values_bool", "attribute_id", "value_bool"),
         mysql_table_opts(),

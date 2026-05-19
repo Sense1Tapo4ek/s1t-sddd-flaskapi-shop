@@ -20,6 +20,7 @@ class RootConfig(BaseSettings):
     )
 
     app_name: str = "Shop Admin"
+    admin_panel_title: str = "Админ панель"
     app_env: Literal["dev", "prod"] = "dev"
 
     # Allowed CORS origins — used only in prod mode.

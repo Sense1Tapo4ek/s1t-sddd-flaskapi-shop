@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set active = "backups" %}
+
+{% block title %}Резервные копии — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <div>
+      <h2 class="page-title">Резервные копии</h2>
+      <p style="font-size:13px; color:var(--color-text-muted); margin-top:4px;">Снапшоты базы данных. Хранятся локально в <code>data/dumps/</code>.</p>
+    </div>
+    <button class="help-badge" onclick="document.getElementById('backups-help-modal').classList.add('modal-overlay--active')" title="Справка">?</button>
+  </div>
+  <div class="page-header__right">
+    <button class="btn btn--primary"
+            hx-post="/admin/backups/snapshot"
+            hx-target="#backups-table-wrap"
+            hx-swap="outerHTML">Сделать снапшот</button>
+  </div>
+</div>
+
+<div id="backups-table-wrap">
+  {% include "system/partials/backups_table.html" %}
+</div>
+
+<!-- Help modal -->
+<div class="modal-overlay" id="backups-help-modal" role="dialog" aria-modal="true" aria-label="Справка по резервным копиям" onclick="if(event.target===this)this.classList.remove('modal-overlay--active')">
+  <div class="modal">
+    <div class="modal__header">
+      Резервные копии — Справка
+      <button class="modal__close" type="button" aria-label="Закрыть" onclick="document.getElementById('backups-help-modal').classList.remove('modal-overlay--active')">&times;</button>
+    </div>
+    <div class="modal__body" style="font-size:13px; line-height:1.7; color:var(--color-text-muted);">
+      <section>
+        <p style="margin-top:0;">Снапшот — это полный дамп базы данных в формате <code>.sql.gz</code>, созданный через <code>mysqldump</code>. Снапшоты хранятся на сервере в папке <code>data/dumps/</code>.</p>
+      </section>
+      <section>
+        <h4 style="margin:12px 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Нотация имён файлов</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li><code>YYYY-MM-DDTHH-MM-SS.sql.gz</code> — обычный снапшот, созданный вручную.</li>
+          <li><code>pre-restore-YYYY-MM-DDTHH-MM-SS.sql.gz</code> — автоматический снапшот, созданный перед операцией восстановления. Служит страховкой.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Политика ротации</h4>
+        <ul style="padding-left:18px; margin:0 0 12px;">
+          <li>Хранятся последние <strong>10 обычных</strong> снапшотов; старые удаляются автоматически при создании нового.</li>
+          <li>Снапшоты с префиксом <code>pre-restore-</code> <strong>никогда не удаляются автоматически</strong> — только вручную.</li>
+        </ul>
+      </section>
+      <section>
+        <h4 style="margin:0 0 6px; font-size:13px; font-weight:600; color:var(--color-text);">Восстановление</h4>
+        <p style="margin:0;">Нажмите «Восстановить» напротив нужного снапшота. Перед восстановлением автоматически создаётся страховочный снапшот <code>pre-restore-*</code>. На время операции включается режим обслуживания.</p>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

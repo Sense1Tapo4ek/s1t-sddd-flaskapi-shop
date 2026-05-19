@@ -98,16 +98,17 @@ def test_store_settings_expose_app_identity_and_dump_only():
     Given owner permissions moved to .env (source of truth) in the
     admin restructure,
     When the store settings form is rendered,
-    Then it exposes app identity + DB dump link only — and never
-    surfaces owner_can_* fields or sensitive infra config.
+    Then it exposes app identity only — and never
+    surfaces owner_can_* fields, sensitive infra config, or the
+    legacy DB-dump link (backups now live in /admin/backups/).
     """
     # Arrange / Act
     form = _read("src/system/templates/system/partials/store_form.html")
 
-    # Assert
-    assert 'name="app_name"' in form
-    assert 'name="admin_panel_title"' in form
-    assert 'href="/admin/settings/database-dump"' in form
+    # Branding (app_name, admin_panel_title) is env-only — must NOT be in the form.
+    assert 'name="app_name"' not in form
+    assert 'name="admin_panel_title"' not in form
+    assert "/admin/settings/database-dump" not in form
 
     # Owner permissions live in .env now (ACCESS_OWNER_CAN_*). The
     # form must not expose them — the bootstrap re-asserts them from
@@ -301,14 +302,13 @@ def test_catalog_products_view_does_not_autoselect_first_category_without_contex
     assert "selectFirst: shouldAutoSelectCategory()" in workspace
 
 
-def test_admin_catalog_and_account_routes_are_registered(monkeypatch, tmp_path):
+def test_admin_catalog_and_account_routes_are_registered(monkeypatch, mysql_test_db):
     """
     Given the Flask app factory,
     When admin routes are registered,
     Then the consolidated catalog and account pages are routable.
     """
     # Arrange
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
     from root.entrypoints.api import create_app
@@ -322,14 +322,13 @@ def test_admin_catalog_and_account_routes_are_registered(monkeypatch, tmp_path):
     assert "/admin/account" in rules
 
 
-def test_catalog_and_account_templates_render(monkeypatch, tmp_path):
+def test_catalog_and_account_templates_render(monkeypatch, mysql_test_db):
     """
     Given the new admin templates,
     When they are rendered inside authenticated request contexts,
     Then their Jinja dependencies are satisfied.
     """
     # Arrange
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
     from flask import render_template, request
@@ -364,14 +363,13 @@ def test_catalog_and_account_templates_render(monkeypatch, tmp_path):
         assert "Telegram для входа" in rendered
 
 
-def test_account_password_form_has_client_side_confirmation_contract(monkeypatch, tmp_path):
+def test_account_password_form_has_client_side_confirmation_contract(monkeypatch, mysql_test_db):
     """
     Given the account password form,
     When a user changes password,
     Then confirmation stays client-only and mismatch blocks HTMX submission.
     """
     # Arrange
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
     from flask import render_template, request
@@ -408,14 +406,13 @@ def test_account_password_form_has_client_side_confirmation_contract(monkeypatch
     assert "form.reset()" in rendered
 
 
-def test_login_recovery_ttl_comes_from_access_config(monkeypatch, tmp_path):
+def test_login_recovery_ttl_comes_from_access_config(monkeypatch, mysql_test_db):
     """
     Given AccessConfig recovery TTL is configurable,
     When login and recovery partials are rendered,
     Then the Telegram code hint uses configured TTL instead of hard-coded 5 minutes.
     """
     # Arrange
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
     monkeypatch.setenv("ACCESS_RECOVERY_CODE_TTL_MINUTES", "17")
 

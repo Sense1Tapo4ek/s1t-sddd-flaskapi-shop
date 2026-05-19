@@ -8,8 +8,7 @@ import pytest
 pytestmark = pytest.mark.flow
 
 
-def _create_app(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    monkeypatch.setenv("INFRA_DATABASE_URL", f"sqlite:///{tmp_path / 'shop.db'}")
+def _create_app(monkeypatch: pytest.MonkeyPatch, mysql_test_db):
     monkeypatch.setenv("ROOT_APP_ENV", "dev")
 
     from root.entrypoints.api import create_app
@@ -19,7 +18,7 @@ def _create_app(monkeypatch: pytest.MonkeyPatch, tmp_path):
 
 def test_admin_login_invalid_credentials_show_safe_visible_htmx_error(
     monkeypatch,
-    tmp_path,
+    mysql_test_db,
 ):
     """
     Given the admin login form submits with HTMX,
@@ -27,7 +26,7 @@ def test_admin_login_invalid_credentials_show_safe_visible_htmx_error(
     Then the visible error should describe login failure, not current-password failure.
     """
     # Arrange
-    app = _create_app(monkeypatch, tmp_path)
+    app = _create_app(monkeypatch, mysql_test_db)
     client = app.test_client()
 
     # Act
@@ -48,7 +47,7 @@ def test_admin_login_invalid_credentials_show_safe_visible_htmx_error(
 
 def test_auth_login_invalid_credentials_use_unified_error_json(
     monkeypatch,
-    tmp_path,
+    mysql_test_db,
 ):
     """
     Given public JSON login fails,
@@ -56,7 +55,7 @@ def test_auth_login_invalid_credentials_use_unified_error_json(
     Then they receive the shared error envelope with a safe message.
     """
     # Arrange
-    app = _create_app(monkeypatch, tmp_path)
+    app = _create_app(monkeypatch, mysql_test_db)
     client = app.test_client()
 
     # Act
@@ -74,14 +73,14 @@ def test_auth_login_invalid_credentials_use_unified_error_json(
     }
 
 
-def test_manual_public_api_errors_use_unified_error_json(monkeypatch, tmp_path):
+def test_manual_public_api_errors_use_unified_error_json(monkeypatch, mysql_test_db):
     """
     Given a public endpoint returns an application-level error itself,
     When the recovery token is invalid,
     Then the response still uses the shared error envelope.
     """
     # Arrange
-    app = _create_app(monkeypatch, tmp_path)
+    app = _create_app(monkeypatch, mysql_test_db)
     client = app.test_client()
 
     # Act
@@ -96,14 +95,14 @@ def test_manual_public_api_errors_use_unified_error_json(monkeypatch, tmp_path):
     }
 
 
-def test_apiflask_validation_errors_use_unified_error_json(monkeypatch, tmp_path):
+def test_apiflask_validation_errors_use_unified_error_json(monkeypatch, mysql_test_db):
     """
     Given request schema validation fails before a route handler runs,
     When APIFlask builds the response,
     Then the client still receives the same error envelope and validation detail.
     """
     # Arrange
-    app = _create_app(monkeypatch, tmp_path)
+    app = _create_app(monkeypatch, mysql_test_db)
     client = app.test_client()
 
     # Act
@@ -135,7 +134,7 @@ def test_infrastructure_errors_hide_internal_details_in_htmx_toast():
 
     @app.get("/broken")
     def broken():
-        raise DrivenPortError("create product failed: sqlite UNIQUE constraint")
+        raise DrivenPortError("create product failed: mysql UNIQUE constraint")
 
     # Act
     response = app.test_client().get("/broken", headers={"HX-Request": "true"})

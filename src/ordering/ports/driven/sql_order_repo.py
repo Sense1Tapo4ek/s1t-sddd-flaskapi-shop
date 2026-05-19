@@ -42,6 +42,8 @@ class SqlOrderRepo(SqlBaseRepo[Order, OrderModel], IOrderRepo):
         return Order(
             id=model.id,
             customer_user_id=model.customer_user_id,
+            contact_email=model.contact_email or "",
+            contact_phone=model.contact_phone or "",
             items=items,
             total=Decimal(str(model.total)),
             delivery=delivery,
@@ -65,6 +67,8 @@ class SqlOrderRepo(SqlBaseRepo[Order, OrderModel], IOrderRepo):
             if order.id == 0:
                 model = OrderModel(
                     customer_user_id=order.customer_user_id,
+                    contact_email=order.contact_email,
+                    contact_phone=order.contact_phone,
                     total=order.total,
                     delivery_method=order.delivery.method.value,
                     delivery_address=order.delivery.address,

@@ -133,7 +133,6 @@ def create_app() -> APIFlask:
     bootstrap_system_defaults(
         session_factory,
         access_config=access_config,
-        root_config=root_config,
     )
     bootstrap_storage_defaults(session_factory)
 
@@ -145,7 +144,7 @@ def create_app() -> APIFlask:
         return bool(payload) and payload.get("role") == "superadmin"
 
     app.jinja_env.globals["app_name"] = root_config.app_name
-    app.jinja_env.globals["admin_panel_title"] = "Админ панель"
+    app.jinja_env.globals["admin_panel_title"] = root_config.admin_panel_title
     app.jinja_env.globals["has_perm"] = has_permission
     app.jinja_env.globals["is_superadmin"] = _is_superadmin
     app.config["PERMISSION_PROVIDER"] = permission_provider

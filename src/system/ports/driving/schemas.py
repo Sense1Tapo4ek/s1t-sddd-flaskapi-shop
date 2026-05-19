@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
-from ...domain import SiteSettings, StorageSettings
+from ...domain import DaySchedule, SiteSettings, StorageSettings, SnapshotInfo
 from ...app import UpdateSettingsCommand, UpdateStorageSettingsCommand
 
 
@@ -61,11 +62,38 @@ class SocialsOut(BaseModel):
     viber: str | None = None
 
 
+class DayScheduleOut(BaseModel):
+    """Single day schedule for the admin form editor."""
+
+    model_config = ConfigDict(frozen=True)
+    opens_at: str
+    closes_at: str
+    break_start: str | None = None
+    break_end: str | None = None
+
+    @classmethod
+    def from_domain(cls, ds: DaySchedule) -> "DayScheduleOut":
+        return cls(
+            opens_at=ds.opens_at,
+            closes_at=ds.closes_at,
+            break_start=ds.break_start,
+            break_end=ds.break_end,
+        )
+
+
+def _schedule_out(s: SiteSettings) -> dict[str, "DayScheduleOut | None"]:
+    return {
+        day: (DayScheduleOut.from_domain(ds) if ds is not None else None)
+        for day, ds in s.working_hours_schedule.items()
+    }
+
+
 class ContactsOut(BaseModel):
     model_config = ConfigDict(frozen=True)
     phone: str
     email: str
     working_hours: str
+    working_hours_schedule: dict[str, DayScheduleOut | None]
     address: str
 
 
@@ -73,12 +101,6 @@ class TelegramOut(BaseModel):
     model_config = ConfigDict(frozen=True)
     bot_token: str
     chat_id: str
-
-
-class BrandingOut(BaseModel):
-    model_config = ConfigDict(frozen=True)
-    app_name: str
-    admin_panel_title: str
 
 
 class CatalogAccessOut(BaseModel):
@@ -94,7 +116,6 @@ class SettingsOut(BaseModel):
     """Full settings view for Admin."""
 
     model_config = ConfigDict(frozen=True)
-    branding: BrandingOut
     contacts: ContactsOut
     telegram: TelegramOut
     coords: CoordsOut
@@ -107,14 +128,11 @@ class SettingsOut(BaseModel):
     ) -> "SettingsOut":
         flags = socials_flags or _ALL_SOCIALS_ON
         return cls(
-            branding=BrandingOut(
-                app_name=s.app_name,
-                admin_panel_title=s.admin_panel_title,
-            ),
             contacts=ContactsOut(
                 phone=s.phone,
                 email=s.email,
-                working_hours=s.working_hours,
+                working_hours=s.working_hours_text,
+                working_hours_schedule=_schedule_out(s),
                 address=s.address,
             ),
             telegram=TelegramOut(
@@ -133,7 +151,11 @@ class SettingsOut(BaseModel):
 
 
 class InfoOut(BaseModel):
-    """Public info view (safe, no secrets)."""
+    """Public info view (safe, no secrets).
+
+    ``app_name`` is supplied by the facade from ``RootConfig`` — it is an
+    env-managed value, not a DB-persisted setting.
+    """
 
     model_config = ConfigDict(frozen=True)
     phone: str
@@ -146,24 +168,36 @@ class InfoOut(BaseModel):
 
     @classmethod
     def from_domain(
-        cls, s: SiteSettings, socials_flags: SocialsFlags | None = None
+        cls,
+        s: SiteSettings,
+        *,
+        app_name: str,
+        socials_flags: SocialsFlags | None = None,
     ) -> "InfoOut":
         flags = socials_flags or _ALL_SOCIALS_ON
         return cls(
-            app_name=s.app_name,
+            app_name=app_name,
             phone=s.phone,
             address=s.address,
             email=s.email,
-            working_hours=s.working_hours,
+            working_hours=s.working_hours_text,
             coords=CoordsOut(lat=s.coords_lat, lon=s.coords_lon),
             socials=_build_socials(s, flags),
         )
 
 
-class BrandingUpdateIn(BaseModel):
+class DayScheduleIn(BaseModel):
+    """One row of the weekly schedule, all times HH:MM.
+
+    Domain enforces invariants (opens < closes, break consistency); this
+    schema just shapes the input.
+    """
+
     model_config = ConfigDict(frozen=True)
-    app_name: str | None = None
-    admin_panel_title: str | None = None
+    opens_at: str
+    closes_at: str
+    break_start: str | None = None
+    break_end: str | None = None
 
 
 class ContactsUpdateIn(BaseModel):
@@ -171,7 +205,7 @@ class ContactsUpdateIn(BaseModel):
     phone: str | None = None
     email: str | None = None
     address: str | None = None
-    working_hours: str | None = None
+    working_hours_schedule: dict[str, DayScheduleIn | None] | None = None
 
 
 class TelegramUpdateIn(BaseModel):
@@ -216,7 +250,6 @@ class CatalogAccessUpdateIn(BaseModel):
 
 class SettingsUpdateIn(BaseModel):
     model_config = ConfigDict(frozen=True)
-    branding: BrandingUpdateIn | None = None
     contacts: ContactsUpdateIn | None = Field(
         None,
         json_schema_extra={"example": {"phone": "+375..."}},
@@ -231,8 +264,6 @@ class SettingsUpdateIn(BaseModel):
 
     def to_command(self) -> UpdateSettingsCommand:
         kwargs: dict = {}
-        if self.branding is not None:
-            kwargs.update(self.branding.model_dump(exclude_unset=True))
         if self.contacts is not None:
             kwargs.update(self.contacts.model_dump(exclude_unset=True))
         if self.telegram is not None:
@@ -292,6 +323,36 @@ class StorageSettingsOut(BaseModel):
             public_base_url=s.public_base_url,
             force_path_style=s.force_path_style,
         )
+
+
+class SnapshotOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    name: str
+    size_bytes: int
+    created_at: datetime
+    mig_version: int
+    is_pre_restore: bool
+    display_name: str
+
+    @classmethod
+    def from_domain(cls, info: SnapshotInfo) -> "SnapshotOut":
+        return cls(
+            name=info.name,
+            size_bytes=info.size_bytes,
+            created_at=info.created_at,
+            mig_version=info.mig_version,
+            is_pre_restore=info.is_pre_restore,
+            display_name=info.display_name,
+        )
+
+
+class SnapshotListOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    items: list[SnapshotOut]
+
+    @classmethod
+    def from_domain(cls, infos: list[SnapshotInfo]) -> "SnapshotListOut":
+        return cls(items=[SnapshotOut.from_domain(i) for i in infos])
 
 
 class StorageSettingsUpdateIn(BaseModel):

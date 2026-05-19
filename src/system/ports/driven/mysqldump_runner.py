@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import gzip
 import os
+import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
@@ -55,27 +56,43 @@ class MysqldumpRunner:
         """
         creds_file = self._write_defaults_file()
         try:
-            with gzip.open(dst_path, "wb") as out_fd:
+            # --skip-column-statistics is a MySQL 8.0+ flag (rejected by 5.7's
+            # mysqldump). Probe and add it only when supported.
+            cmd = [
+                self._mysqldump_bin,
+                f"--defaults-extra-file={creds_file}",
+                "--single-transaction",
+                "--quick",
+                # The shop user lacks PROCESS; without this flag mysqldump
+                # tries to inspect tablespaces and emits a noisy "Access
+                # denied" to stderr.
+                "--no-tablespaces",
+            ]
+            if self._supports_column_statistics_flag():
+                cmd.append("--skip-column-statistics")
+            cmd.append(self._db_name)
+
+            # Stream stdout through gzip ourselves. Passing a gzip file object
+            # as `stdout=` to subprocess.run uses its raw fileno() and writes
+            # uncompressed bytes — the gzip wrapper then only emits its footer
+            # on close, producing a corrupt .sql.gz file.
+            with open(dst_path, "wb") as raw_fd, \
+                 gzip.GzipFile(fileobj=raw_fd, mode="wb") as gz_out:
+                proc = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
                 try:
-                    subprocess.run(
-                        [
-                            self._mysqldump_bin,
-                            f"--defaults-extra-file={creds_file}",
-                            "--single-transaction",
-                            "--quick",
-                            "--skip-column-statistics",
-                            self._db_name,
-                        ],
-                        check=True,
-                        stdout=out_fd,
-                        stderr=subprocess.PIPE,
-                    )
-                except subprocess.CalledProcessError as e:
+                    assert proc.stdout is not None
+                    shutil.copyfileobj(proc.stdout, gz_out)
+                finally:
+                    proc.stdout.close()
+                _, stderr = proc.communicate()
+                if proc.returncode != 0:
                     raise DrivenPortError(
-                        f"mysqldump failed (rc={e.returncode}): "
-                        f"{e.stderr.decode(errors='replace')[:500]}",
+                        f"mysqldump failed (rc={proc.returncode}): "
+                        f"{stderr.decode(errors='replace')[:500]}",
                         code="DUMP_FAILED",
-                    ) from e
+                    )
         finally:
             Path(creds_file).unlink(missing_ok=True)
 
@@ -92,18 +109,29 @@ class MysqldumpRunner:
             cmd = [
                 self._mysql_bin,
                 f"--defaults-extra-file={creds_file}",
+                # NUL bytes may appear in BLOB columns inside the dump;
+                # without binary-mode the client rejects them at parse time.
+                "--binary-mode=1",
                 self._db_name,
             ]
+            # Decompress fully into memory and hand the SQL to mysql via
+            # communicate(input=...). Passing a GzipFile object as `stdin=`
+            # to subprocess uses its raw fileno() (sends the compressed
+            # bytes); hand-piping via Popen + close() is brittle because
+            # communicate() flushes an already-closed stdin. Snapshots are
+            # small enough (≪ a few MB) to buffer.
             with gzip.open(src_path, "rb") as gz_in:
-                result = subprocess.run(
-                    cmd,
-                    stdin=gz_in,
-                    capture_output=True,
-                )
+                payload = gz_in.read()
+            result = subprocess.run(
+                cmd,
+                input=payload,
+                capture_output=True,
+                check=False,
+            )
             if result.returncode != 0:
-                stderr = result.stderr.decode(errors="replace")
                 raise DrivenPortError(
-                    f"mysql exited with code {result.returncode}: {stderr[:500]}",
+                    f"mysql exited with code {result.returncode}: "
+                    f"{result.stderr.decode(errors='replace')[:500]}",
                     code="RESTORE_FAILED",
                 )
         finally:
@@ -112,7 +140,11 @@ class MysqldumpRunner:
     def apply_migrations(self) -> None:
         """Apply pending yoyo migrations programmatically."""
         try:
-            backend = get_backend(self._db_url)
+            # yoyo recognises ``mysql://``; the project uses SQLAlchemy's
+            # dialect-qualified ``mysql+pymysql://`` form. Strip the driver
+            # suffix before handing the URL to yoyo.
+            yoyo_url = self._db_url.replace("mysql+pymysql://", "mysql://", 1)
+            backend = get_backend(yoyo_url)
             migrations = read_migrations(str(self._migrations_dir))
             with backend.lock():
                 backend.apply_migrations(backend.to_apply(migrations))
@@ -140,6 +172,25 @@ class MysqldumpRunner:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def _supports_column_statistics_flag(self) -> bool:
+        haystack = self._mysqldump_help()
+        return b"--column-statistics" in haystack
+
+    def _client_is_mariadb(self) -> bool:
+        return b"mariadb" in self._mysqldump_help().lower()
+
+    def _mysqldump_help(self) -> bytes:
+        try:
+            result = subprocess.run(
+                [self._mysqldump_bin, "--help"],
+                capture_output=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return b""
+        return result.stdout + result.stderr
+
     @property
     def _db_name(self) -> str:
         """Extract the database name from the SQLAlchemy db_url."""
@@ -161,12 +212,22 @@ class MysqldumpRunner:
         user = url.username or ""
         password = url.password or ""
 
+        # The MariaDB 11 client tries TLS by default and bails on MySQL 5.7's
+        # self-signed cert. Disable TLS via the dialect-specific key (MariaDB
+        # rejects the foreign one as "unknown variable", so we cannot include
+        # both blindly).
+        if self._client_is_mariadb():
+            ssl_line = "ssl=0\n"
+        else:
+            ssl_line = "ssl-mode=DISABLED\n"
+
         content = (
             "[client]\n"
             f"host={host}\n"
             f"user={user}\n"
             f"password={password}\n"
             f"port={port}\n"
+            f"{ssl_line}"
         )
 
         fd, path = tempfile.mkstemp(suffix=".cnf", dir=tempfile.gettempdir())

@@ -44,16 +44,19 @@ class PlaceOrderUseCase:
             customer_user_id=cmd.customer_user_id,
             items=items,
             delivery=delivery,
+            contact_phone=cmd.contact_phone,
+            contact_email=cmd.contact_email,
             comment=cmd.comment,
         )
 
         # 4. Persist
         self._repo.save(order)
 
-        # 5. Notify — Stage 7 will implement the body; failure must not break placement
-        # TODO Stage 7: pass customer_email from ACL or cmd; move logging to ACL adapter
+        # 5. Notify — failure must not break placement
         try:
-            self._notification_acl.notify_order_placed(order, customer_email=None)
+            self._notification_acl.notify_order_placed(
+                order, customer_email=cmd.contact_email or None
+            )
         except Exception:  # noqa: BLE001 — notification failure is non-fatal by design
             pass
 

@@ -14,8 +14,6 @@ def _settings() -> SiteSettings:
         instagram="",
         telegram_bot_token="",
         telegram_chat_id="",
-        app_name="Shop Admin",
-        admin_panel_title="Админ панель",
         owner_can_view_category_tree=True,
         owner_can_edit_taxonomy=False,
         owner_can_view_products=False,
@@ -117,19 +115,20 @@ class TestSiteSettingsUpdate:
         assert exc_info.value.code == "INVALID_COORDS"
         assert getattr(settings, field_name) == previous_value
 
-    def test_runtime_template_and_catalog_access_settings_are_mutable(self):
+    def test_catalog_access_settings_are_mutable(self):
         """
-        Given template and catalog access settings live in SiteSettings,
+        Given catalog access flags live in SiteSettings,
         When updating them through the aggregate,
         Then the runtime values are changed without touching env config.
+
+        Branding (app_name, admin_panel_title) is intentionally not part
+        of SiteSettings anymore — those are env-only (RootConfig).
         """
         # Arrange
         settings = _settings()
 
         # Act
         settings.update(
-            app_name="Runtime Shop",
-            admin_panel_title="Панель магазина",
             owner_can_view_category_tree=False,
             owner_can_edit_taxonomy=True,
             owner_can_view_products=True,
@@ -138,8 +137,6 @@ class TestSiteSettingsUpdate:
         )
 
         # Assert
-        assert settings.app_name == "Runtime Shop"
-        assert settings.admin_panel_title == "Панель магазина"
         assert settings.owner_can_view_category_tree is True
         assert settings.owner_can_edit_taxonomy is True
         assert settings.owner_can_view_products is True
