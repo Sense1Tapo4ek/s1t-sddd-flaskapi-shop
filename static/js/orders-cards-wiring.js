@@ -106,6 +106,7 @@
       } : null,
       selectable:      false,
       showDrawerBtn:   false,
+      statusOptions:   ORDER_STATUS_OPTIONS,
       initialFilters:  { "status__neq": "archived" },
       onLoad: function (data) {
         var el = document.getElementById("orders-tab-count");
@@ -113,7 +114,6 @@
       },
     });
 
-    feed._statusOptionsList = ORDER_STATUS_OPTIONS;
     feed.load();
     global.ordersFeed = feed;
   }

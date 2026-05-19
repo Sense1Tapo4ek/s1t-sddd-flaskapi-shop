@@ -178,13 +178,14 @@
 .tab-btn {
   padding: 8px 20px;
   font-size: 13px;
+  font-weight: 400;
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, font-weight 0.15s;
 }
 
 .tab-btn:hover {
@@ -192,8 +193,9 @@
 }
 
 .tab-btn--active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: var(--color-text);
+  font-weight: 600;
+  border-bottom-color: var(--color-text);
 }
 
 .tab-panel {

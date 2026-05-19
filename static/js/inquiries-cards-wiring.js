@@ -101,6 +101,7 @@
       } : null,
       selectable:      false,
       showDrawerBtn:   false,
+      statusOptions:   INQUIRY_STATUS_OPTIONS,
       initialFilters:  { "status__neq": "archived" },
       onLoad: function (data) {
         var el = document.getElementById("inquiries-tab-count");
@@ -108,7 +109,6 @@
       },
     });
 
-    feed._statusOptionsList = INQUIRY_STATUS_OPTIONS;
     feed.load();
     global.inquiriesFeed = feed;
   }

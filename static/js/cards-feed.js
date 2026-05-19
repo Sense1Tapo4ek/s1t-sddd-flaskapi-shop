@@ -42,6 +42,7 @@
     this.showDrawerBtn    = opts.showDrawerBtn !== false;  // default true — backward compat
     this.renderCardActions = typeof opts.renderCardActions === "function" ? opts.renderCardActions : null;
     this.onActionClick    = typeof opts.onActionClick === "function" ? opts.onActionClick : null;
+    this._statusOptionsList = Array.isArray(opts.statusOptions) ? opts.statusOptions : null;
     this.initialFilters   = opts.initialFilters || {};
     this._onLoadCb        = typeof opts.onLoad === "function" ? opts.onLoad : null;
     this._selChangeCbs    = [];
@@ -175,7 +176,15 @@
     }
 
     return promise.then(function (data) {
-      if (!data || data._failed) { self._setLoading(false); return; }
+      if (!data || data._failed) {
+        // Surface failure: render empty state + clear count via onLoad.
+        self._data = { items: [], total: 0, page: self._page, limit: self._limit };
+        self._renderCards();
+        self._renderPager();
+        self._setLoading(false);
+        if (self._onLoadCb) self._onLoadCb(self._data);
+        return;
+      }
       self._data = {
         items: data.items || [],
         total: data.total || 0,
@@ -188,7 +197,11 @@
       if (self._onLoadCb) self._onLoadCb(self._data);
     }).catch(function (err) {
       console.error("[CardsFeed] load error", err);
+      self._data = { items: [], total: 0, page: self._page, limit: self._limit };
+      self._renderCards();
+      self._renderPager();
       self._setLoading(false);
+      if (self._onLoadCb) self._onLoadCb(self._data);
     });
   };
 
