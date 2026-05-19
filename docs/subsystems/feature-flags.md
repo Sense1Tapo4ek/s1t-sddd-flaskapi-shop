@@ -107,6 +107,80 @@ export SYSTEM_SOCIALS_VIBER_ENABLED=false
 Both `false` / `0` / `no` / `off` parse as `False` (pydantic-settings
 default).
 
+## Adding a new feature flag
+
+Flags are read **once at process startup** via pydantic-settings. Flipping
+a value requires a process restart. Never store flags in the DB or expose
+them through an admin endpoint.
+
+Use `ORDERING_ORDERS_ENABLED` as the canonical reference implementation.
+
+### Checklist
+
+**1. Context config** — `src/<context>/config.py`
+
+Add a field to the relevant `*Config` class:
+
+```python
+orders_enabled: bool = Field(True, description="Enable the orders aggregate.")
+```
+
+Field name matches the env var suffix (env prefix is set by the class's
+`model_config`). Default `True` so existing deployments are unaffected.
+
+**2. App factory wiring** — `src/root/entrypoints/api.py`
+
+Resolve the config from the container, then gate blueprint registration and
+CORS rules:
+
+```python
+if ordering_config.orders_enabled:
+    app.register_blueprint(orders_bp)
+    app.register_blueprint(orders_admin_bp)
+    cors_paths.append("/orders/*")
+```
+
+**3. Facade / schema / runtime template** (if the flag changes payload shape)
+
+- `src/<context>/ports/driving/facade.py` — pass the flag into the response
+  builder (`_socials_flags()` is the pattern for the system context).
+- `src/<context>/ports/driving/schemas.py` — emit `None` for disabled fields
+  instead of raising or filtering at the route level.
+- `src/<context>/ports/driving/runtime_template.py` — surface the flag on the
+  Jinja context (`feature_flags`) so templates can branch without hitting the
+  facade again.
+
+Skip this step if the flag only gates blueprint registration with no partial
+payload (i.e. the feature is fully absent when disabled, not partially
+nulled).
+
+**4. Templates** — `static/templates/`
+
+Hide UI for the disabled feature. Mirror the context tree:
+`static/templates/<context>/` for page templates,
+`static/templates/admin/base.html` for nav entries.
+
+UI hiding is **not authorization** — gate routes/blueprints first (step 2).
+Templates follow; they are presentation only.
+
+**5. Docs** — update all four homes in the same PR:
+
+- This file (`docs/subsystems/feature-flags.md`) — add a row to
+  [Available flags](#available-flags) and a subsection under
+  [Where each flag is read](#where-each-flag-is-read).
+- `../../CLAUDE.md` (repo root) — add a row to the feature-flags table and
+  update "Affected code paths".
+- `../../README.md` — add a row to the config/env-var table.
+- `../architecture.md` — add the flag to the release checklist if it gates
+  a major capability.
+
+**Apply locally:** set the env var in `.env`, then restart the app:
+
+```bash
+export <ENV_VAR>=false
+PYTHONPATH=src FLASK_DEBUG=1 uv run src/root/entrypoints/api.py
+```
+
 ## Related
 
 - [docs/contexts/ordering.md](../contexts/ordering.md) — orders/inquiries split
