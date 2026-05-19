@@ -222,27 +222,19 @@ class SqlProductRepo(SqlBaseRepo[Product, ProductModel], IProductRepo):
             )
 
         if sort_by in {"category", "category_title", "category_path"}:
-            category_paths = (
-                select(
-                    CategoryModel.id.label("id"),
-                    CategoryModel.title.label("path"),
-                )
-                .where(CategoryModel.parent_id.is_(None))
-                .cte("category_paths", recursive=True)
-            )
-            child = aliased(CategoryModel)
-            category_paths = category_paths.union_all(
-                select(
-                    child.id,
-                    (category_paths.c.path + " / " + child.title).label("path"),
-                ).where(child.parent_id == category_paths.c.id)
-            )
-            category_path = (
-                select(category_paths.c.path)
-                .where(category_paths.c.id == ProductModel.category_id)
+            # Plain string sort by the direct category title. We deliberately
+            # avoid a recursive CTE because MySQL 5.7 (the deployed engine)
+            # does not support WITH RECURSIVE; building a full ancestor path
+            # at query time is also expensive on every page load. A simple
+            # alphabetical-by-title sort matches user expectations and works
+            # on both MySQL 5.7 and 8.0.
+            category_title = (
+                select(CategoryModel.title)
+                .where(CategoryModel.id == ProductModel.category_id)
+                .correlate(ProductModel)
                 .scalar_subquery()
             )
-            sort_value = func.coalesce(category_path, "")
+            sort_value = func.coalesce(category_title, "")
             return (
                 stmt.add_columns(sort_value.label("_category_sort")).order_by(
                     self._sort_expr(sort_value, sort_dir)
