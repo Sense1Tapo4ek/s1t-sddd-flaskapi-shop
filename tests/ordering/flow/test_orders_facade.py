@@ -20,6 +20,8 @@ from ordering.app.use_cases.bulk_change_order_status_uc import (
     BulkArchiveOrderUseCase,
     BulkChangeOrderStatusUseCase,
 )
+from ordering.app.use_cases.create_demo_data_uc import CreateDemoOrderingDataUseCase
+from ordering.app.use_cases.create_test_order_uc import CreateTestOrderUseCase
 from ordering.app.queries.get_order_by_id_query import GetOrderByIdQuery
 from ordering.app.queries.get_orders_query import GetOrdersQuery
 from ordering.domain import (
@@ -71,6 +73,8 @@ def _make_facade(
     bulk_archive_uc=None,
     get_query=None,
     get_by_id_query=None,
+    demo_uc=None,
+    test_order_uc=None,
 ) -> OrdersFacade:
     return OrdersFacade(
         _place_uc=place_uc or MagicMock(spec=PlaceOrderUseCase),
@@ -80,6 +84,8 @@ def _make_facade(
         _bulk_archive_uc=bulk_archive_uc or MagicMock(spec=BulkArchiveOrderUseCase),
         _get_query=get_query or MagicMock(spec=GetOrdersQuery),
         _get_by_id_query=get_by_id_query or MagicMock(spec=GetOrderByIdQuery),
+        _demo_uc=demo_uc or MagicMock(spec=CreateDemoOrderingDataUseCase),
+        _test_order_uc=test_order_uc or MagicMock(spec=CreateTestOrderUseCase),
     )
 
 

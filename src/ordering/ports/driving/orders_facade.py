@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 from shared.ports.driving.bulk_schemas import BulkResultSchema
 
+from typing import Any
+
 from ...app import (
     ArchiveOrderCommand,
     ArchiveOrderUseCase,
@@ -11,6 +13,8 @@ from ...app import (
     BulkChangeOrderStatusUseCase,
     ChangeOrderStatusCommand,
     ChangeOrderStatusUseCase,
+    CreateDemoOrderingDataUseCase,
+    CreateTestOrderUseCase,
     GetOrderByIdQuery,
     GetOrdersQuery,
     PlaceOrderUseCase,
@@ -39,6 +43,8 @@ class OrdersFacade:
     _bulk_archive_uc: BulkArchiveOrderUseCase
     _get_query: GetOrdersQuery
     _get_by_id_query: GetOrderByIdQuery
+    _demo_uc: CreateDemoOrderingDataUseCase
+    _test_order_uc: CreateTestOrderUseCase
 
     def place_order(self, schema: OrderIn, customer_user_id: int) -> int:
         cmd = schema.to_command(customer_user_id)
@@ -86,3 +92,9 @@ class OrdersFacade:
             filters=filters or {},
         )
         return PaginatedOrdersOut.from_domain(result)
+
+    def create_demo_data(self) -> dict[str, Any]:
+        return self._demo_uc().as_dict()
+
+    def create_test_order(self) -> int:
+        return self._test_order_uc()

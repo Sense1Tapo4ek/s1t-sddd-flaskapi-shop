@@ -27,6 +27,8 @@ from .use_cases.bulk_change_order_status_uc import (
     BulkChangeOrderStatusUseCase,
     BulkArchiveOrderUseCase,
 )
+from .use_cases.create_demo_data_uc import CreateDemoOrderingDataUseCase, DemoOrderingResult
+from .use_cases.create_test_order_uc import CreateTestOrderUseCase
 from .queries.get_inquiries_query import GetInquiriesQuery
 from .queries.get_order_by_id_query import GetOrderByIdQuery
 from .queries.get_orders_query import GetOrdersQuery
@@ -60,4 +62,8 @@ __all__ = [
     "BulkChangeOrderStatusUseCase",
     "BulkArchiveOrderUseCase",
     "GetOrdersQuery",
+    # Demo
+    "CreateDemoOrderingDataUseCase",
+    "DemoOrderingResult",
+    "CreateTestOrderUseCase",
 ]

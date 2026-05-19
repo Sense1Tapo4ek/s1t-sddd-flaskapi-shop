@@ -139,14 +139,13 @@ def archive_inquiry(inquiry_id: int, facade: FromDishka[InquiriesFacade]):
 def create_test_inquiry(facade: FromDishka[InquiriesFacade]):
     from ordering.ports.driving.schemas import InquiryIn
 
-    schema = InquiryIn(name="Тестовый клиент", phone="+375291234567", message="Тестовое обращение")
-    facade.create_inquiry(schema)
-    params = parse_table_params(request.args)
-    result = facade.list_inquiries(**params)
-    return render_template(
-        "ordering/partials/table.html",
-        orders=result,
-    ), 200, {"HX-Trigger": '{"showToast":{"message":"Тестовое обращение создано","type":"success"}}'}
+    schema = InquiryIn(
+        name="Тестовый клиент",
+        phone="+375291234567",
+        message="Тестовое обращение",
+    )
+    inquiry_id = facade.create_inquiry(schema)
+    return jsonify({"ok": True, "inquiry_id": inquiry_id}), 201
 
 
 @ordering_admin_bp.route("/badge")
@@ -304,3 +303,34 @@ def orders_bulk_archive(facade: FromDishka[OrdersFacade]):
     )
     result = facade.bulk_change_orders_status(payload)
     return jsonify(result.model_dump(mode="json")), 200
+
+
+@orders_admin_bp.route("/demo-data", methods=["POST"])
+@permission_required("create_demo_data")
+@inject
+def orders_create_demo_data(facade: FromDishka[OrdersFacade]):
+    return jsonify(facade.create_demo_data()), 200
+
+
+@orders_admin_bp.route("/test", methods=["POST"])
+@permission_required("manage_orders")
+@inject
+def create_test_order(facade: FromDishka[OrdersFacade]):
+    from ordering.app.errors import ProductNotFoundForOrderError
+
+    try:
+        order_id = facade.create_test_order()
+    except ProductNotFoundForOrderError:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": (
+                        "В каталоге нет активных товаров. Создайте демо-данные "
+                        "каталога на странице категорий."
+                    ),
+                }
+            ),
+            409,
+        )
+    return jsonify({"ok": True, "order_id": order_id}), 201

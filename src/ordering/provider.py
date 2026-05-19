@@ -14,6 +14,8 @@ from ordering.app.use_cases.bulk_change_order_status_uc import (
     BulkChangeOrderStatusUseCase,
     BulkArchiveOrderUseCase,
 )
+from ordering.app.use_cases.create_demo_data_uc import CreateDemoOrderingDataUseCase
+from ordering.app.use_cases.create_test_order_uc import CreateTestOrderUseCase
 from ordering.app.queries.get_inquiries_query import GetInquiriesQuery
 from ordering.app.queries.get_order_by_id_query import GetOrderByIdQuery
 from ordering.app.queries.get_orders_query import GetOrdersQuery
@@ -59,5 +61,9 @@ class OrderingProvider(Provider):
     bulk_archive_order_uc = provide(BulkArchiveOrderUseCase)
     get_orders_query = provide(GetOrdersQuery)
     get_order_by_id_query = provide(GetOrderByIdQuery)
+
+    # ─── Demo data wiring ─────────────────────────────────────────────
+    demo_ordering_uc = provide(CreateDemoOrderingDataUseCase)
+    test_order_uc = provide(CreateTestOrderUseCase)
 
     orders_facade = provide(OrdersFacade)
